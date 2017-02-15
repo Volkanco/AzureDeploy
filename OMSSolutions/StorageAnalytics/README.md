@@ -1,7 +1,7 @@
 # Azure Storage Analytics
 
-[![Deploy to Azure](http://azuredeploy.net/deploybutton.png)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FVolkanco%2Fazuredeploy%2Fmaster%2F%2Fomssolutions%2Fstorageanalytics%2FazureStorageAnalytics.json) 
-<a href="http://armviz.io/#/?load=https%3A%2F%2Fraw.githubusercontent.com%2Fvolkanco%2Fazuredeploy%2Fmaster%2Fomssolutions%2Fstorageanalytics%2FazureStorageAnalytics.json" target="_blank">
+[![Deploy to Azure](http://azuredeploy.net/deploybutton.png)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FVolkanco%2FAzureDeploy%2Fmaster%2FOMSSolutions%2FStorageAnalytics%2FazureStorageAnalytics.json) 
+<a href="http://armviz.io/#/?load=https%3A%2F%2Fraw.githubusercontent.com%2FVolkanco%2FAzureDeploy%2Fmaster%2FOMSSolutions%2FStorageAnalytics%2FazureStorageAnalytics.json" target="_blank">
     <img src="http://armviz.io/visualizebutton.png"/>
 </a>
 
@@ -32,7 +32,7 @@ Locate your existing OMS Log Analytics Workspace and note the name of the worksp
 
 Next, create a new Automation Account and click on *New* and search for 'Automation'
 
-![alt text](images/CreateAutomation1.png "automation")
+![alt text](images/CreateAutomation1.PNG "automation")
  
 Select Automation and click *Create* 
 
@@ -45,7 +45,7 @@ Once the deployment has completed, you should see the Automation account and the
 ![alt text](images/OMSRGAA.PNG "Resource Group")
 
 ###You can now deploy the template   
-[![Deploy to Azure](http://azuredeploy.net/deploybutton.png)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fvolkanco%2Fazuredeploy%2Fmaster%2Fomssolutions%2Fstorageanaltics%2FazureStorageAnalytics.json) 
+[![Deploy to Azure](http://azuredeploy.net/deploybutton.png)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FVolkanco%2FAzureDeploy%2Fmaster%2FOMSSolutions%2FStorageAnalytics%2FazureStorageAnalytics.json) 
 
 This will send you to the Azure Portal with some default values for the template parameters. 
 Ensure that the parameters reflects your setup so that you are deploying this into the *existing* Resource Group containing the Log Analytics Workspace and the Automation account.
@@ -76,7 +76,7 @@ You should also change the values for the *Asr Ingest Schedule Guid* and *Ab Ing
 
 Once you have customized all the parameters, click *Create*
 
-![alt text](images/template.png "template")
+![alt text](images/template.PNG "template")
 
 The ingestion will start 5-10 minutes post deployment.
 
@@ -88,13 +88,13 @@ In the Resource Group where you deployed the template, you should see the soluti
 
 * AzureStorageAnalytics[workspaceName]
 
-![alt text](images/solutions.png "Solutions")
+![alt text](images/solutions.PNG "Solutions")
 
 ### Azure Storage Analytics 
 
 The views for Azure Storage Analytics  will give you an overview of all the storage accounts  within your Azure Subscription. 
 
-![alt text](images/sasolutionpng "Azure Storage Analytics view")
+![alt text](images/sasolution.PNG "Azure Storage Analytics view")
 
  Solution collects and visualizes ;
 **Inventory Data**
