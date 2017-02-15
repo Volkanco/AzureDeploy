@@ -69,7 +69,7 @@ Specify the name of the automation account you created earlier
 Select the Azure Region where your automation account is located
 
 
-You should also change the values for the *Asr Ingest Schedule Guid* and *Ab Ingest Schedule Guid*. You can generate your own using PowerShell with the following cmdlet:
+You should also change the values for the *Ingest Scheduler Guid* and *Ingest Cleanup Guid*. You can generate your own using PowerShell with the following cmdlet:
 
 
 ![alt text](images/knguid.png "guid")
@@ -124,9 +124,9 @@ The views for Azure Storage Analytics  will give you an overview of all the stor
 * ARM based quota usage
 * Classic quota usage 
 
-![alt text](images/inv1.png "Azure Storage Inventory view")
+![alt text](images/inv1.PNG "Azure Storage Inventory view")
 
-![alt text](images/metrics.png "Azure Storage Metrics view")
+![alt text](images/metrics.PNG "Azure Storage Metrics view")
 
 Solution also includes 14 preconfigured alerts  which can be used to notify for when certain thresholds are reached.  You can view the alerts and modify thresholds  from Alerts under workspace settings .
 
