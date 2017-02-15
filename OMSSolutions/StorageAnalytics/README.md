@@ -99,16 +99,19 @@ The views for Azure Storage Analytics  will give you an overview of all the stor
  Solution collects and visualizes ;
 
 **Inventory Data**
-	*Storage accounts
-	* File Shares
-	* Queues
-	* Tables 
-	* VHD files 
-	* Managed disks for virtual machines. 
+	
+*Storage accounts
+* File Shares
+* Queues
+* Tables 
+* VHD files 
+* Managed disks for virtual machines. 
+
 **Capacity Metrics**
 * UtilizedGB
 * Container Count
 * Object Count
+
 **Transaction Metrics** 
 * Availability
 * Total Requests , 
@@ -118,9 +121,11 @@ The views for Azure Storage Analytics  will give you an overview of all the stor
 * PercentErrors 
 * AverageE2E Latency
 * Average Server Latency
+
 **File Shares** 
 *Quota 
 *Usage 
+
 **Subscription Level Storage Quota Usage**
 * ARM based quota usage
 * Classic quota usage 
@@ -128,7 +133,7 @@ The views for Azure Storage Analytics  will give you an overview of all the stor
 
 ![alt text](images/Metrics.PNG "Azure Storage Metrics view")
 
-Solution also includes 14 preconfigured alerts  which can be used to notify for when certain thresholds are reached.  You can view the alerts and modify thresholds  from Alerts under workspace settings .
+Solution also includes 14 preconfigured alerts  which can be used to notify for when certain thresholds are reached.  You can view the alerts and modify thresholds  from Alerts under workspace settings.
 
 
 
