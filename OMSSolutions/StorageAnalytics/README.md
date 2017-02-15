@@ -28,7 +28,7 @@ Log into Azure Portal (https://portal.azure.com) and ensure you are in the subsc
 
 Locate your existing OMS Log Analytics Workspace and note the name of the workspace, the location of the workspace, and the Resource Group
 
-![alt text](images/omsworkspace.png "omsws") 
+![alt text](images/omsworkspace.PNG "omsws") 
 
 Next, create a new Automation Account and click on *New* and search for 'Automation'
 
@@ -38,7 +38,7 @@ Select Automation and click *Create*
 
 Specify the name of the Automation Account and ensure you are selecting 'Use existing' and selects the Resource Group containing the OMS Log Analytics workspace. If possible, use the same Azure Region for the Automation Account. Ensure that 'Create Azure Run As account' is set to 'Yes' and click 'Create'
 
-![alt text](images/CreateAutomation2.png "create")
+![alt text](images/CreateAutomation2.PNG "create")
 
 Once the deployment has completed, you should see the Automation account and the Log Analytics workspace in the same Resource Group
 
@@ -94,7 +94,7 @@ In the Resource Group where you deployed the template, you should see the soluti
 
 The views for Azure Storage Analytics  will give you an overview of all the storage accounts  within your Azure Subscription. 
 
-![alt text](images/sasolution.PNG "Azure Storage Analytics view")
+![alt text](images/Inv1.PNG "Azure Storage Inventory view")
 
  Solution collects and visualizes ;
 **Inventory Data**
@@ -124,9 +124,8 @@ The views for Azure Storage Analytics  will give you an overview of all the stor
 * ARM based quota usage
 * Classic quota usage 
 
-![alt text](images/inv1.PNG "Azure Storage Inventory view")
 
-![alt text](images/metrics.PNG "Azure Storage Metrics view")
+![alt text](images/Metrics.PNG "Azure Storage Metrics view")
 
 Solution also includes 14 preconfigured alerts  which can be used to notify for when certain thresholds are reached.  You can view the alerts and modify thresholds  from Alerts under workspace settings .
 
