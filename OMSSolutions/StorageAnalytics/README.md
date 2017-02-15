@@ -88,7 +88,7 @@ In the Resource Group where you deployed the template, you should see the soluti
 
 * AzureStorageAnalytics[workspaceName]
 
-![alt text](images/solutions.PNG "Solutions")
+![alt text](images/deploymentrg.PNG "Solutions")
 
 ### Azure Storage Analytics 
 
@@ -97,6 +97,7 @@ The views for Azure Storage Analytics  will give you an overview of all the stor
 ![alt text](images/Inv1.PNG "Azure Storage Inventory view")
 
  Solution collects and visualizes ;
+
 **Inventory Data**
 	*Storage accounts
 	* File Shares
