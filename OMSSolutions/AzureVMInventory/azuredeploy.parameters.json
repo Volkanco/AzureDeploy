@@ -1,0 +1,27 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+  "parameters": {
+    "omsLogAnalyticsWorkspaceName": {
+      "value": "GEN-UNIQUE-20"
+    },
+    "omsLogAnalyticsRegion": {
+      "value": "eastus"
+    },
+    "omsAutomationAccountName": {
+      "value": "GEN-UNIQUE-30"
+    },
+    "omsAutomationRegion": {
+      "value": "eastus2"
+    },
+    "_artifactsLocation": {
+      "value": "https://raw.githubusercontent.com/volkanco/AzureDeploy/master/OMSSolutions/StorageAnalytics"
+    },
+    "ingestSchedulerGuid": {
+      "value": "0546d49d-9d75-403d-a048-6941666077ef"
+    },
+    "ingestCleanupGuid": {
+      "value": "125f2f18-66ee-4b5d-b5ee-4c6e18cb2c30"
+    }
+  }
+}                          
