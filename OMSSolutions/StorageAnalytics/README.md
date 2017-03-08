@@ -152,3 +152,14 @@ When solution is deployed  first MinuteMetrics will be enabled on all storage ac
 Set-AzureStorageServiceMetricsProperty -MetricsType Minute -ServiceType (Blob,Table,Queue,File)  -MetricsLevel ServiceAndApi -RetentionDays 1 -Context (storageaccountcontext)
 
 Sample script to get all strorage accounts and enable metrics can be found under /Scripts/EnableMetrics.ps1
+
+
+## Adding Additional Subscriptions
+
+You can use the link below to add more subscriptions into the solution. 
+
+
+[![Add Subscriptions](http://azuredeploy.net/deploybutton.png)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FVolkanco%2FAzureDeploy%2Fmaster%2FOMSSolutions%2FStorageAnalytics%2FazuredeployAddSubs.json) 
+
+Template requires OMS Log Analytics workspace ID and Key  from the  workspace where solution is already deployed. Navigate to Log Analytics Portal / Settings / Connected Sources  to get worspace Id and Key.
+This solution will deploy only the automation components used in data collection and push data to existing log analytics workspace. 
