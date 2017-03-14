@@ -65,7 +65,7 @@
     },
     "omsAutomationSKU": {
       "type": "string",
-      "defaultValue": "Basic",
+      "defaultValue": "basic",
       "allowedValues": [
         "free",
         "basic",
@@ -88,7 +88,7 @@
       }
     },
     "collectDiskInventory": {
-      "type": "string",
+      "type": "bool",
       "defaultValue": true,
       "allowedValues": [
         true,
@@ -99,7 +99,7 @@
       }
     },
     "collectNICandNSGInventory": {
-      "type": "string",
+      "type": "bool",
       "defaultValue": true,
       "allowedValues": [
         true,
