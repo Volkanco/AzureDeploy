@@ -8,6 +8,9 @@
     "omsLogAnalyticsRegion": {
       "value": "eastus"
     },
+    "omsLogAnalyticsSku": {
+      "value": "standalone"
+    },
     "omsAutomationAccountName": {
       "value": "GEN-UNIQUE-30"
     },
@@ -18,10 +21,10 @@
       "value": "https://raw.githubusercontent.com/volkanco/AzureDeploy/master/OMSSolutions/StorageAnalytics"
     },
     "ingestSchedulerGuid": {
-      "value": "0546d49d-9d75-403d-a048-6941666077ef"
+      "value": "fee41d0f-cd9f-4932-8e5e-0d5b1706e02f"
     },
     "ingestCleanupGuid": {
-      "value": "125f2f18-66ee-4b5d-b5ee-4c6e18cb2c30"
+      "value": "103cad88-c4e6-4d77-9d3d-f9c95baa583a"
     }
   }
 }                          
