@@ -37,7 +37,7 @@ $apiverVM='2016-02-01'
 $logname='AzureVMInventory'
 
 # Runbook specific variables 
-n
+
 $VMstates = @{
 "StoppedDeallocated"="Deallocated";
 "ReadyRole"="Running";
