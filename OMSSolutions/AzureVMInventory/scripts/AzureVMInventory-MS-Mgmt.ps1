@@ -1465,6 +1465,7 @@ Foreach($usgdata in $usagecontent.value)
 
 
  $cu= New-Object PSObject -Property @{
+                              Timestamp = $timestamp
                              MetricName = 'ARMVMUsageStats';
                             Location = $loc
                             currentValue=$usgdata.currentValue

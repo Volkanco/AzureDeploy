@@ -131,80 +131,80 @@
       }
     }
   },
-    "variables": {
-      "runbooks": {
-        "ingestParentRunbook": {
-          "name": "AzureVMInventory-MS-Mgmt",
-          "version": "1.0.0.0",
-          "description": "Runbook to automatically ingest Azure Storage Inventory data and events into OMS Log Analytics",
-          "type": "PowerShell",
-          "Id": ""
-        },
-        "ingestSchedulerRunbook": {
-          "name": "AzureVMInventory-Schedules-MS-Mgmt",
-          "version": "1.0.0.0",
-          "description": "Runbook to automatically create required schedules for OMS Log Analytics ingestion",
-          "type": "PowerShell",
-          "Id": ""
-        }
+  "variables": {
+    "runbooks": {
+      "ingestParentRunbook": {
+        "name": "AzureVMInventory-MS-Mgmt",
+        "version": "1.0.0.0",
+        "description": "Runbook to automatically ingest Azure VM Inventory data and events into OMS Log Analytics",
+        "type": "PowerShell",
+        "Id": ""
       },
-        "parentRunbookUri": "[concat(parameters('_artifactsLocation'),'/scripts/AzureVMInventory-MS-Mgmt.ps1', parameters('_artifactsLocationSasToken'))]",
-        "schedulerRunbookUri": "[concat(parameters('_artifactsLocation'),'/scripts/CreateSchedules-MS-Mgmt.ps1', parameters('_artifactsLocationSasToken'))]",
-        "omsSolutions": {
-          "customSolution": {
-            "name": "Azure VM Inventory",
-            "solutionName": "[concat('AzureVMInventory', '[', parameters('omsLogAnalyticsWorkspaceName'), ']')]",
-            "publisher": "volkanc@microsoft.com",
-            "displayName": "Azure VM Inventory",
-            "description": "Monitor Azure VMs deployed across subscriptions",
-            "author": "volkanc@microsoft.com"
-          }
-        },
-        "opsInsightWorkspaceID": "AzureVMInventory-OPSINSIGHTS_WS_ID",
-        "opsInsightWorkspaceIDType": "string",
-        "opsInsightWorkspaceIDDescription": "Value of the user's omsWorkspaceId",
-        "opsInsightWorkspaceKey": "AzureVMInventory-OPSINSIGHT_WS_KEY",
-        "opsInsightWorkspaceKeyType": "string",
-        "opsInsightWorkspaceKeyDescription": "Encrypted value of the user's omsWorkspaceKey",
-        "createScheduleAutomationAccountName": "AzureVMInventory-AzureAutomationAccount",
-        "createScheduleAutomationAccountType": "string",
-        "createScheduleAutomationAccountDescription": "The name of the Automation Account",
-        "createScheduleResourceGroupName": "AzureVMInventory-AzureAutomationResourceGroup",
-        "createScheduleResourceGroupType": "string",
-        "createScheduleResourceGroupDescription": "The name of the resource group",
-        "alertArray": [
-          {
-            "searchName": "Azure Storage Account IO Throttling Limit",
-            "description": "Each standard storage account is capped to 20.000 IOPs . This alert is indicator that one of your storage accounts is at the risk of throttling and IO might be capped.",
-            "severity": "Critical",
-            "query": "Type=AzureStorage_CL   MetricName_s=Inventory  InventoryType_s=VHDIOPs StorageAccount_s in   {Type=AzureStorage_CL MetricName_s=Inventory InventoryType_s=StorageAccount Tier_s=Standard|measure count() by StorageAccount_s}| measure sum(MaxDiskIO_d) as TotalIO by StorageAccount_s  |where TotalIO > 20000 ",
-            "alertTresholdValue": 0,
-            "operator": "gt",
-            "alertThrottleInMinutes": 60,
-            "alertBreach": 1,
-            "searchCategory": "Azure Storage Analytics",
-            "scheduleIntervalInMinutes": 15,
-            "scheduleQueryTimeSpan": 15,
-            "alertName": "Azure Storage Account IO Throttling Limits Reached"
-          }
-        ],
-        "alertMetricArray": [
-          {
-            "searchName": "Azure Storage Quota Usage Critical",
-            "description": "Each Azure Subscription can host certain number of storage accounts. This alert is an indicator  that  your Azure Subscription is approaching the storage account limits.",
-            "severity": "Critical",
-            "query": "Type=AzureStorage_CL  MetricName_s=StorageQuotas  |measure avg(Quotapct_d) by AzureSubscription_s,QuotaType_s interval 15MINUTES",
-            "alertTresholdValue": 90,
-            "operator": "gt",
-            "alertThrottleInMinutes": 60,
-            "alertBreach": 1,
-            "searchCategory": "Azure Storage Analytics",
-            "scheduleIntervalInMinutes": 60,
-            "scheduleQueryTimeSpan": 60,
-            "alertName": "Azure Storage Account Quota Consumption is greater than 90%"
-          }
-        ]
-      },
+      "ingestSchedulerRunbook": {
+        "name": "AzureVMInventory-Schedules-MS-Mgmt",
+        "version": "1.0.0.0",
+        "description": "Runbook to automatically create required schedules for OMS Log Analytics ingestion",
+        "type": "PowerShell",
+        "Id": ""
+      }
+    },
+    "parentRunbookUri": "[concat(parameters('_artifactsLocation'),'/scripts/AzureVMInventory-MS-Mgmt.ps1', parameters('_artifactsLocationSasToken'))]",
+    "schedulerRunbookUri": "[concat(parameters('_artifactsLocation'),'/scripts/AzureVMInventory-Schedules-MS-Mgmt.ps1', parameters('_artifactsLocationSasToken'))]",
+    "omsSolutions": {
+      "customSolution": {
+        "name": "Azure VM Inventory",
+        "solutionName": "[concat('AzureVMInventory', '[', parameters('omsLogAnalyticsWorkspaceName'), ']')]",
+        "publisher": "volkanc@microsoft.com",
+        "displayName": "Azure VM Inventory",
+        "description": "Monitor Azure VMs deployed across subscriptions",
+        "author": "volkanc@microsoft.com"
+      }
+    },
+    "opsInsightWorkspaceID": "AzureVMInventory-OPSINSIGHTS_WS_ID",
+    "opsInsightWorkspaceIDType": "string",
+    "opsInsightWorkspaceIDDescription": "Value of the user's omsWorkspaceId",
+    "opsInsightWorkspaceKey": "AzureVMInventory-OPSINSIGHT_WS_KEY",
+    "opsInsightWorkspaceKeyType": "string",
+    "opsInsightWorkspaceKeyDescription": "Encrypted value of the user's omsWorkspaceKey",
+    "createScheduleAutomationAccountName": "AzureVMInventory-AzureAutomationAccount-MS-Mgmt",
+    "createScheduleAutomationAccountType": "string",
+    "createScheduleAutomationAccountDescription": "The name of the Automation Account",
+    "createScheduleResourceGroupName": "AzureVMInventory-AzureAutomationResourceGroup-MS-Mgmt",
+    "createScheduleResourceGroupType": "string",
+    "createScheduleResourceGroupDescription": "The name of the resource group",
+    "alertArray": [
+      {
+        "searchName": "Azure Storage Account IO Throttling Limit",
+        "description": "Each standard storage account is capped to 20.000 IOPs . This alert is indicator that one of your storage accounts is at the risk of throttling and IO might be capped.",
+        "severity": "Critical",
+        "query": "Type=AzureStorage_CL   MetricName_s=Inventory  InventoryType_s=VHDIOPs StorageAccount_s in   {Type=AzureStorage_CL MetricName_s=Inventory InventoryType_s=StorageAccount Tier_s=Standard|measure count() by StorageAccount_s}| measure sum(MaxDiskIO_d) as TotalIO by StorageAccount_s  |where TotalIO > 20000 ",
+        "alertTresholdValue": 0,
+        "operator": "gt",
+        "alertThrottleInMinutes": 60,
+        "alertBreach": 1,
+        "searchCategory": "Azure Storage Analytics",
+        "scheduleIntervalInMinutes": 15,
+        "scheduleQueryTimeSpan": 15,
+        "alertName": "Azure Storage Account IO Throttling Limits Reached"
+      }
+    ],
+    "alertMetricArray": [
+      {
+        "searchName": "Azure Storage Quota Usage Critical",
+        "description": "Each Azure Subscription can host certain number of storage accounts. This alert is an indicator  that  your Azure Subscription is approaching the storage account limits.",
+        "severity": "Critical",
+        "query": "Type=AzureStorage_CL  MetricName_s=StorageQuotas  |measure avg(Quotapct_d) by AzureSubscription_s,QuotaType_s interval 15MINUTES",
+        "alertTresholdValue": 90,
+        "operator": "gt",
+        "alertThrottleInMinutes": 60,
+        "alertBreach": 1,
+        "searchCategory": "Azure Storage Analytics",
+        "scheduleIntervalInMinutes": 60,
+        "scheduleQueryTimeSpan": 60,
+        "alertName": "Azure Storage Account Quota Consumption is greater than 90%"
+      }
+    ]
+  },
   "resources": [
     {
       "name": "[parameters('omsLogAnalyticsWorkspaceName')]",
@@ -524,7 +524,7 @@
                     "Subtitle": ""
                   },
                   "LineChart": {
-                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMInventory  | measure countdistinct(VmName_s) by Status_s interval 30Minutes",
+                    "Query": "[concat('Type=AzureVMInventory_CL MetricName_s=VMInventory  | measure countdistinct(VmName_s) by Status_s interval ', parameters('omsDataIngestionFrequency'),'Minutes')]",
                     "Callout": {
                       "Title": "Running",
                       "Series": "Running",
@@ -975,6 +975,75 @@
                     "NavigationQuery": "{selected item}"
                   }
                 }
+              },
+              {
+                "Id": "SingleQueryDonutBuilderBladeV1",
+                "Type": "Blade",
+                "Version": 0,
+                "Configuration": {
+                  "General": {
+                    "title": "Cores Utilized",
+                    "newGroup": false,
+                    "icon": "",
+                    "useIcon": false
+                  },
+                  "Header": {
+                    "Title": "Per Region",
+                    "Subtitle": ""
+                  },
+                  "Donut": {
+                    "Query": "[concat('Type=AzureVMInventory_CL MetricName_s=ARMVMUsageStats TimeGenerated>NOW-', parameters('omsDataIngestionFrequency'),'Minutes  Usagemetric_s=cores |measure max(currentValue_d) by Location_s')]",
+                    "CenterLegend": {
+                      "Text": "Total",
+                      "Operation": "Sum",
+                      "ArcsToSelect": []
+                    },
+                    "Options": {
+                      "colors": [
+                        "#0072c6",
+                        "#ffb900",
+                        "#009e49"
+                      ],
+                      "valueColorMapping": []
+                    }
+                  },
+                  "List": {
+                    "Query": "[concat('Type=AzureVMInventory_CL MetricName_s=ARMVMUsageStats TimeGenerated>NOW-', parameters('omsDataIngestionFrequency'),'Minutes  Usagemetric_s=cores |measure max(currentValue_d) by AzureSubscription_s,Location_s')]",
+                    "HideGraph": false,
+                    "enableSparklines": false,
+                    "ColumnsTitle": {
+                      "Name": "Subscription",
+                      "Value": "Count"
+                    },
+                    "Color": "#0072c6",
+                    "operation": "Summary",
+                    "thresholds": {
+                      "isEnabled": false,
+                      "values": [
+                        {
+                          "name": "Normal",
+                          "threshold": "Default",
+                          "color": "#009e49",
+                          "isDefault": true
+                        },
+                        {
+                          "name": "Warning",
+                          "threshold": "60",
+                          "color": "#fcd116",
+                          "isDefault": false
+                        },
+                        {
+                          "name": "Error",
+                          "threshold": "90",
+                          "color": "#ba141a",
+                          "isDefault": false
+                        }
+                      ]
+                    },
+                    "NameDSVSeparator": "",
+                    "NavigationQuery": "{selected item}"
+                  }
+                }
               }
             ],
             "OverviewTile": {
@@ -983,7 +1052,7 @@
               "Version": 0,
               "Configuration": {
                 "LineChart": {
-                  "Query": "Type=AzureVMInventory_CL MetricName_s=VMInventory  | measure countdistinct(VmName_s) by Status_s interval 30Minutes",
+                  "Query": "[concat('Type=AzureVMInventory_CL MetricName_s=VMInventory  | measure countdistinct(VmName_s) by Status_s interval ', parameters('omsDataIngestionFrequency'),'Minutes')]",
                   "Callout": {
                     "Title": "Running",
                     "Series": "Running",
