@@ -637,144 +637,6 @@
                 "Version": 0,
                 "Configuration": {
                   "General": {
-                    "title": "Disk Count by IO",
-                    "newGroup": true,
-                    "icon": "",
-                    "useIcon": false
-                  },
-                  "Header": {
-                    "Title": "",
-                    "Subtitle": ""
-                  },
-                  "Donut": {
-                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMDisk  | measure countdistinct(VHDUri_s) by MaxDiskIO_d",
-                    "CenterLegend": {
-                      "Text": "Total",
-                      "Operation": "Sum",
-                      "ArcsToSelect": []
-                    },
-                    "Options": {
-                      "colors": [
-                        "#00bcf2",
-                        "#ffb900",
-                        "#009e49"
-                      ],
-                      "valueColorMapping": []
-                    }
-                  },
-                  "List": {
-                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMDisk  | measure countdistinct(VHDUri_s) by DiskIOType_s",
-                    "HideGraph": false,
-                    "enableSparklines": false,
-                    "operation": "Summary",
-                    "ColumnsTitle": {
-                      "Name": "IOTYPE",
-                      "Value": "DiskCount"
-                    },
-                    "Color": "#0072c6",
-                    "thresholds": {
-                      "isEnabled": false,
-                      "values": [
-                        {
-                          "name": "Normal",
-                          "threshold": "Default",
-                          "color": "#009e49",
-                          "isDefault": true
-                        },
-                        {
-                          "name": "Warning",
-                          "threshold": "60",
-                          "color": "#fcd116",
-                          "isDefault": false
-                        },
-                        {
-                          "name": "Error",
-                          "threshold": "90",
-                          "color": "#ba141a",
-                          "isDefault": false
-                        }
-                      ]
-                    },
-                    "NameDSVSeparator": "",
-                    "NavigationQuery": "{selected item}"
-                  }
-                }
-              },
-              {
-                "Id": "SingleQueryDonutBuilderBladeV1",
-                "Type": "Blade",
-                "Version": 0,
-                "Configuration": {
-                  "General": {
-                    "title": "Disks by Location",
-                    "newGroup": false,
-                    "icon": "",
-                    "useIcon": false
-                  },
-                  "Header": {
-                    "Title": "",
-                    "Subtitle": ""
-                  },
-                  "Donut": {
-                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMDisk DiskIOType_s=Standard | measure countdistinct(VHDUri_s) by StorageAccount_s",
-                    "CenterLegend": {
-                      "Text": "Total",
-                      "Operation": "Sum",
-                      "ArcsToSelect": []
-                    },
-                    "Options": {
-                      "colors": [
-                        "#0072c6",
-                        "#ffb900",
-                        "#55d455"
-                      ],
-                      "valueColorMapping": []
-                    }
-                  },
-                  "List": {
-                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMDisk DiskIOType_s=Standard | measure countdistinct(VHDUri_s) by StorageAccount_s",
-                    "HideGraph": false,
-                    "enableSparklines": false,
-                    "operation": "Summary",
-                    "ColumnsTitle": {
-                      "Name": "Location",
-                      "Value": "Count"
-                    },
-                    "Color": "#0072c6",
-                    "thresholds": {
-                      "isEnabled": false,
-                      "values": [
-                        {
-                          "name": "Normal",
-                          "threshold": "Default",
-                          "color": "#009e49",
-                          "isDefault": true
-                        },
-                        {
-                          "name": "Warning",
-                          "threshold": "60",
-                          "color": "#fcd116",
-                          "isDefault": false
-                        },
-                        {
-                          "name": "Error",
-                          "threshold": "90",
-                          "color": "#ba141a",
-                          "isDefault": false
-                        }
-                      ]
-                    },
-                    "NameDSVSeparator": "",
-                    "NavigationQuery": "{selected item}"
-                  }
-                }
-              },
-              {
-                "Id": "SingleQueryDonutBuilderBladeV1",
-                "Type": "Blade",
-                "Version": 0,
-                "Configuration": {
-                  "General": {
                     "title": "VMs by Subnet",
                     "newGroup": false,
                     "icon": "",
@@ -982,6 +844,75 @@
                 "Version": 0,
                 "Configuration": {
                   "General": {
+                    "title": "NSG - Allowed Ports ",
+                    "newGroup": false,
+                    "icon": "",
+                    "useIcon": false
+                  },
+                  "Header": {
+                    "Title": "Count of Computers",
+                    "Subtitle": ""
+                  },
+                  "Donut": {
+                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMNSGrule  access_s=Allow  | measure countdistinct(VmName_s) by destinationPortRange_s",
+                    "CenterLegend": {
+                      "Text": "Total",
+                      "Operation": "Sum",
+                      "ArcsToSelect": []
+                    },
+                    "Options": {
+                      "colors": [
+                        "#00bcf2",
+                        "#7fba00",
+                        "#fcd116"
+                      ],
+                      "valueColorMapping": []
+                    }
+                  },
+                  "List": {
+                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMNSGrule  access_s=Allow  | measure countdistinct(VmName_s) by sourcePortRange_s,destinationPortRange_s,protocol_s",
+                    "HideGraph": false,
+                    "enableSparklines": false,
+                    "ColumnsTitle": {
+                      "Name": "Source",
+                      "Value": "Count"
+                    },
+                    "Color": "#0072c6",
+                    "operation": "Summary",
+                    "thresholds": {
+                      "isEnabled": false,
+                      "values": [
+                        {
+                          "name": "Normal",
+                          "threshold": "Default",
+                          "color": "#009e49",
+                          "isDefault": true
+                        },
+                        {
+                          "name": "Warning",
+                          "threshold": "60",
+                          "color": "#fcd116",
+                          "isDefault": false
+                        },
+                        {
+                          "name": "Error",
+                          "threshold": "90",
+                          "color": "#ba141a",
+                          "isDefault": false
+                        }
+                      ]
+                    },
+                    "NameDSVSeparator": "",
+                    "NavigationQuery": "{selected item}"
+                  }
+                }
+              },
+              {
+                "Id": "SingleQueryDonutBuilderBladeV1",
+                "Type": "Blade",
+                "Version": 0,
+                "Configuration": {
+                  "General": {
                     "title": "Cores Utilized",
                     "newGroup": false,
                     "icon": "",
@@ -1017,6 +948,144 @@
                     },
                     "Color": "#0072c6",
                     "operation": "Summary",
+                    "thresholds": {
+                      "isEnabled": false,
+                      "values": [
+                        {
+                          "name": "Normal",
+                          "threshold": "Default",
+                          "color": "#009e49",
+                          "isDefault": true
+                        },
+                        {
+                          "name": "Warning",
+                          "threshold": "60",
+                          "color": "#fcd116",
+                          "isDefault": false
+                        },
+                        {
+                          "name": "Error",
+                          "threshold": "90",
+                          "color": "#ba141a",
+                          "isDefault": false
+                        }
+                      ]
+                    },
+                    "NameDSVSeparator": "",
+                    "NavigationQuery": "{selected item}"
+                  }
+                }
+              },
+              {
+                "Id": "SingleQueryDonutBuilderBladeV1",
+                "Type": "Blade",
+                "Version": 0,
+                "Configuration": {
+                  "General": {
+                    "title": "Disk Count by IO",
+                    "newGroup": true,
+                    "icon": "",
+                    "useIcon": false
+                  },
+                  "Header": {
+                    "Title": "",
+                    "Subtitle": ""
+                  },
+                  "Donut": {
+                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMDisk  | measure countdistinct(VHDUri_s) by MaxDiskIO_d",
+                    "CenterLegend": {
+                      "Text": "Total",
+                      "Operation": "Sum",
+                      "ArcsToSelect": []
+                    },
+                    "Options": {
+                      "colors": [
+                        "#00bcf2",
+                        "#ffb900",
+                        "#009e49"
+                      ],
+                      "valueColorMapping": []
+                    }
+                  },
+                  "List": {
+                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMDisk  | measure countdistinct(VHDUri_s) by DiskIOType_s",
+                    "HideGraph": false,
+                    "enableSparklines": false,
+                    "operation": "Summary",
+                    "ColumnsTitle": {
+                      "Name": "IOTYPE",
+                      "Value": "DiskCount"
+                    },
+                    "Color": "#0072c6",
+                    "thresholds": {
+                      "isEnabled": false,
+                      "values": [
+                        {
+                          "name": "Normal",
+                          "threshold": "Default",
+                          "color": "#009e49",
+                          "isDefault": true
+                        },
+                        {
+                          "name": "Warning",
+                          "threshold": "60",
+                          "color": "#fcd116",
+                          "isDefault": false
+                        },
+                        {
+                          "name": "Error",
+                          "threshold": "90",
+                          "color": "#ba141a",
+                          "isDefault": false
+                        }
+                      ]
+                    },
+                    "NameDSVSeparator": "",
+                    "NavigationQuery": "{selected item}"
+                  }
+                }
+              },
+              {
+                "Id": "SingleQueryDonutBuilderBladeV1",
+                "Type": "Blade",
+                "Version": 0,
+                "Configuration": {
+                  "General": {
+                    "title": "Disks by Location",
+                    "newGroup": false,
+                    "icon": "",
+                    "useIcon": false
+                  },
+                  "Header": {
+                    "Title": "",
+                    "Subtitle": ""
+                  },
+                  "Donut": {
+                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMDisk DiskIOType_s=Standard | measure countdistinct(VHDUri_s) by StorageAccount_s",
+                    "CenterLegend": {
+                      "Text": "Total",
+                      "Operation": "Sum",
+                      "ArcsToSelect": []
+                    },
+                    "Options": {
+                      "colors": [
+                        "#0072c6",
+                        "#ffb900",
+                        "#55d455"
+                      ],
+                      "valueColorMapping": []
+                    }
+                  },
+                  "List": {
+                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMDisk DiskIOType_s=Standard | measure countdistinct(VHDUri_s) by StorageAccount_s",
+                    "HideGraph": false,
+                    "enableSparklines": false,
+                    "operation": "Summary",
+                    "ColumnsTitle": {
+                      "Name": "Location",
+                      "Value": "Count"
+                    },
+                    "Color": "#0072c6",
                     "thresholds": {
                       "isEnabled": false,
                       "values": [
