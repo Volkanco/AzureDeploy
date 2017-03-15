@@ -1111,6 +1111,7 @@ Foreach ($nicobj in $vm.properties.networkProfile.networkInterfaces)
                             VmName=$vm.Name
                             ID=$nic.id
                             NetworkInterface=$nic.name
+                            VNetName=$nic.properties.ipConfigurations[0].properties.subnet.id.split('/')[8]
                             ResourceGroup=$nic.id.split('/')[4]
                             Location=$nic.location
                             Primary=$nic.properties.primary
