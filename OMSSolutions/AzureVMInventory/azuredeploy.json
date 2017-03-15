@@ -95,7 +95,7 @@
         0
       ],
       "metadata": {
-        "description": "Specify if you want to collect disk informsation for VMs"
+        "description": "Specify if you want to collect disk information for VMs"
       }
     },
     "collectNICandNSGInventory": {
