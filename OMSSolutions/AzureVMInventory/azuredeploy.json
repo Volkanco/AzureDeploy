@@ -89,10 +89,10 @@
     },
     "collectDiskInventory": {
       "type": "bool",
-      "defaultValue": true,
+      "defaultValue": 1,
       "allowedValues": [
-        true,
-        false
+        1,
+        0
       ],
       "metadata": {
         "description": "Specify if you want to collect disk informsation for VMs"
@@ -100,10 +100,10 @@
     },
     "collectNICandNSGInventory": {
       "type": "bool",
-      "defaultValue": true,
+      "defaultValue": 1,
       "allowedValues": [
-        true,
-        false
+        1,
+        0
       ],
       "metadata": {
         "description": "Specify if you want to collect Network Interface and NEtwork Security Rules  for VMs"
