@@ -47,6 +47,8 @@ $varVMIopsList="AzureVMInventory-VM-IOPSLimits"
 
 # Remove old solution components
 
+
+<#
 $delTask = "Runbook=AzureVMInventory-MS-Mgmt;Runbook=CreateSchedules-MS-Mgmt;Schedule=AzureVMInventory-HourlySchedule-MS-Mgmt;Variable=AzureVMInventory-OPSINSIGHTS_WS_ID;Variable=AzureVMInventory-OPSINSIGHTS_WS_KEY;Variable=AzureVMInventory-AzureAutomationAccount-MS-Mgmt;Variable=AzureVMInventory-AzureAutomationResourceGroup-MS-Mgmt"
 
 
@@ -59,21 +61,21 @@ foreach ($item in $dList)
         if ($actionItem[0] -eq "Runbook")
         {
             Write-Verbose "CleanUp:  Removing runbook $actionItem[1]"
-            Remove-AzureRmAutomationRunbook -Name $actionItem[1] -AutomationAccountName $automationaccount -ResourceGroupName $resourcegroup -Force 
+            Remove-AzureRmAutomationRunbook -Name $actionItem[1] -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup  -Force 
         } 
         elseif ($actionItem[0] -eq "Schedule")
         {
             Write-Verbose "CleanUp:  Removing schedule $actionItem[1]"
-            Remove-AzureRmAutomationSchedule -Name $actionItem[1] -AutomationAccountName $automationaccount -ResourceGroupName $resourcegroup -Force
+            Remove-AzureRmAutomationSchedule -Name $actionItem[1] -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup  -Force
 
-            $RBsch=Get-AzureRmAutomationSchedule -AutomationAccountName $automationaccount -ResourceGroupName $resourcegroup|where{$_.name -match 'AzureVMInventory-Schedule-MS-Mgmt'}
+            $RBsch=Get-AzureRmAutomationSchedule -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup |where{$_.name -match 'AzureVMInventory-Schedule-MS-Mgmt'}
 
                 IF($RBsch)
                 {
                     foreach ($sch in $RBsch)
                     {
 
-                    Remove-AzureRmAutomationSchedule -AutomationAccountName $automationaccount -Name $sch.Name -ResourceGroupName $resourcegroup -Force
+                    Remove-AzureRmAutomationSchedule -AutomationAccountName $AAAccount -Name $sch.Name -ResourceGroupName $AAResourceGroup  -Force
                                
                     }
                 }
@@ -97,11 +99,14 @@ foreach ($item in $dList)
         elseif ($actionItem[0] -eq "Variable")
         {
             Write-Verbose "CleanUp:  Removing variable $actionItem[1]"
-           Remove-AzureRmAutomationVariable -Name  $actionItem[1]  -AutomationAccountName $automationaccount -ResourceGroupName $resourcegroup 
+           Remove-AzureRmAutomationVariable -Name  $actionItem[1]  -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup  
 
         }
     }
 }
+
+#>
+
 
 #create new variales and schedules
 
@@ -213,8 +218,28 @@ $RunbookStartTime = $Date = $([DateTime]::Now.AddMinutes($Frequency))
 
 
 $NumberofSchedules = 60 / $Frequency
-Write-Verbose "$NumberofSchedules schedules will be created"
 
+$checkschdl=@(get-AzureRmAutomationScheduledRunbook -RunbookName $RunbookName -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup)
+
+If ($NumberofSchedules -ne  $checkschdl.Count)
+{
+
+
+    $sch=$null
+    $RBsch=Get-AzureRmAutomationSchedule -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup|where{$_.name -match $ScheduleName}
+    IF($RBsch)
+    {
+	    foreach ($sch in $RBsch)
+	    {
+		    Remove-AzureRmAutomationSchedule -AutomationAccountName $AAAccount -Name $sch.Name -ResourceGroupName $AAResourceGroup -Force
+		
+	    }
+    }
+
+
+
+
+Write-Verbose "$NumberofSchedules schedules will be created"
 
 $params = @{"getNICandNSG"=$getNICandNSG;"getDiskInfo" = $getDiskInfo}
 
@@ -232,4 +257,4 @@ While ($count -lt $NumberofSchedules)
 
 Start-AzureRmAutomationRunbook -AutomationAccountName $AAAccount -Name $RunbookName -ResourceGroupName $AAResourceGroup -Parameters $params
 
-
+}

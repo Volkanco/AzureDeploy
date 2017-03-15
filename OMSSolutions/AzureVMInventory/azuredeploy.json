@@ -172,6 +172,9 @@
     "createScheduleResourceGroupName": "AzureVMInventory-AzureAutomationResourceGroup-MS-Mgmt",
     "createScheduleResourceGroupType": "string",
     "createScheduleResourceGroupDescription": "The name of the resource group",
+    "ingestInterval": "1",
+    "ingestFrequency": "day",
+    "ingestScheduleName": "AzureVMInventory-Scheduler",
     "alertArray": [
       {
         "searchName": "Azure Storage Account IO Throttling Limit",
@@ -1162,7 +1165,7 @@
         }
       },
       "resources": [
-          {
+        {
           "name": "[variables('opsInsightWorkspaceID')]",
           "type": "variables",
           "apiVersion": "2015-10-31",
@@ -1253,7 +1256,7 @@
           "dependsOn": [
             "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'))]",
             "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'), '/variables/', variables('opsInsightWorkspaceID'))]",
-            "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'), '/variables/', variables('opsInsightWorkspaceKey'))]",
+            "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'), '/variables/', variables('opsInsightWorkspaceKey'))]"
           ],
           "tags": {},
           "properties": {
@@ -1268,13 +1271,31 @@
           }
         },
         {
+          "name": "[concat(parameters('omsAutomationAccountName'), '/', variables('ingestscheduleName'))]",
+          "type": "microsoft.automation/automationAccounts/schedules",
+          "apiVersion": "2015-10-31",
+          "location": "[parameters('omsAutomationRegion')]",
+          "dependsOn": [
+             "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'))]",
+            "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'), '/runbooks/', variables('runbooks').ingestSchedulerRunbook.name)]"
+         ],
+          "tags": {},
+          "properties": {
+            "description": "OMS Ingestion API Scheduler",
+            "startTime": "",
+            "isEnabled": "true",
+            "interval": "[variables('ingestInterval')]",
+            "frequency": "[variables('ingestFrequency')]"
+          }
+        },
+        {
           "name": "[concat(parameters('omsAutomationAccountName'), '/', parameters('ingestSchedulerGuid'))]",
           "type": "Microsoft.Automation/automationAccounts/jobs",
           "apiVersion": "2015-10-31",
           "location": "[parameters('omsAutomationRegion')]",
           "dependsOn": [
             "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'))]",
-            "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'), '/runbooks/', variables('runbooks').ingestSchedulerRunbook.name)]",
+            "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'), '/runbooks/', variables('runbooks').ingestSchedulerRunbook.name)]"
           ],
           "tags": {},
           "properties": {

@@ -841,6 +841,7 @@ $allvhds=@()
 $invendpoints=@()
 $invnsg=@()
 $invnic=@() 
+$invextensions=@()
 $colltime=get-date
 
 
@@ -888,6 +889,31 @@ $vm.properties.extensions|?{$extlist+=$_.extension+";"}
                     }
                               
                 $allvms+=$cuvm
+
+    #inv extensions
+    IF(![string]::IsNullOrEmpty($vm.properties.extensions))
+    {
+    Foreach ($extobj in $vm.properties.extensions)
+        {
+
+        $invextensions+=New-Object PSObject -Property @{
+                            Timestamp = $colltime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
+                            MetricName = 'VMExtensions';
+                           VmName=$vm.Name
+                          Extension=$extobj.Extension
+                          publisher=$extobj.publisher
+                        version=$extobj.version
+                        state=$extobj.state
+                        referenceName=$extobj.referenceName
+                        ID=$vm.id+"/extensions/"+$extobj.Extension
+                          
+                                   }
+
+        }
+
+
+    }
+    
 
     #inv endpoints
 
@@ -1190,6 +1216,29 @@ Foreach ($nicobj in $vm.properties.networkProfile.networkInterfaces)
 
                 }
                 
+# inv  extensions
+
+            IF(![string]::IsNullOrEmpty($vm.resources.id))
+            {	
+                  Foreach ($extobj in $vm.resources)
+                    {
+                        if($extobj.id.Split('/')[9] -eq 'extensions')
+                        {
+                            $invextensions+=New-Object PSObject -Property @{
+                                        Timestamp = $colltime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
+                                        MetricName = 'VMExtensions';
+                           VmName=$vm.Name
+                          Extension=$extobj.Extension
+                         ID=$extobj.id
+                          
+                                   }
+                        }
+        }
+
+                
+
+            }
+        
 
 
         If($vm.tags)
@@ -1499,6 +1548,7 @@ $allvmusage+=$cu
   $jsoninvnic = ConvertTo-Json -InputObject $invnic
 $jsoninvnsg = ConvertTo-Json -InputObject $invnsg
 $jsoninvendpoint = ConvertTo-Json -InputObject $invendpoints
+$jsoninveextensions = ConvertTo-Json -InputObject $invextensions
 
 
 
@@ -1580,6 +1630,18 @@ If($jsoninvendpoint){$postres7=Post-OMSData -customerId $customerId -sharedKey $
 	Else
 	{
 		Write-Warning " Failed to upload  $($invendpoints.count) input endpoint metrics to OMS"
+	}
+
+
+If($jsoninveextensions){$postres8=Post-OMSData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsoninveextensions)) -logType $logname}
+
+	If ($postres8 -ge 200 -and $postres8 -lt 300)
+	{
+		Write-Output " Succesfully uploaded $($invendpoints.count) extensionsto OMS"
+	}
+	Else
+	{
+		Write-Warning " Failed to upload  $($invendpoints.count) extensions  to OMS"
 	}
 #endregion
 
