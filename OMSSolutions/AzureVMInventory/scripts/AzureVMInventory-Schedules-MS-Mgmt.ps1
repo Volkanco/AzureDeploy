@@ -216,6 +216,11 @@ New-AzureRmAutomationVariable -Name $varVMIopsList -Description "Variable to sto
 
 #check and create a  weekly schedule to check  and redeploy scheduler runbook
 "Rescheduling the runbook to check and fix scheules weekly"
+$prevjobs=Get-AzureRmAutomationJob -RunbookName $schedulerrunbookname -ResourceGroupName $AAResourceGroup -AutomationAccountName $AAAccount
+
+If($prevjobs.count -gt 1)
+{
+
 $RunbookStartTime = $Date = $([DateTime]::Now.AddMinutes($Frequency))
     $RBsch=$null
     $RBsch=Get-AzureRmAutomationSchedule  -Name  'AzureVMInventory-Scheduler' -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup
@@ -227,17 +232,18 @@ $RunbookStartTime = $Date = $([DateTime]::Now.AddMinutes($Frequency))
 	    $params1 = @{"frequency"=$frequency;"getNICandNSG"=$getNICandNSG;"getDiskInfo" = $getDiskInfo}
 	 Remove-AzureRmAutomationSchedule -AutomationAccountName $AAAccount -Name $RBsch.Name -ResourceGroupName $AAResourceGroup -Force
      $Schedule1 = New-AzureRmAutomationSchedule -Name 'AzureVMInventory-Scheduler' -StartTime $RunbookStartTime -DayInterval 7 -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup
-    $Sch = Register-AzureRmAutomationScheduledRunbook -RunbookName $schedulerrunbookname -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup -ScheduleName 'AzureVMInventory-Scheduler' -Parameters $params1
+    $Sch1 = Register-AzureRmAutomationScheduledRunbook -RunbookName $schedulerrunbookname -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup -ScheduleName 'AzureVMInventory-Scheduler' -Parameters $params1
     
             
     }Else
     {
     "Weekly frequency found for scheduler , will not make any change" 
+    $runnow=$false
     
     }
 
 
-    
+ }   
 
 
 
@@ -275,10 +281,11 @@ While ($count -lt $NumberofSchedules)
     Write-Verbose "Creating schedule $ScheduleName-$Count for $RunbookStartTime for runbook $RunbookName"
     $Schedule = New-AzureRmAutomationSchedule -Name "$ScheduleName-$Count" -StartTime $RunbookStartTime -HourInterval 1 -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup
     $Sch = Register-AzureRmAutomationScheduledRunbook -RunbookName $RunbookName -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup -ScheduleName "$ScheduleName-$Count" -Parameters $params
-    $RunbookStartTime = $RunbookStartTime.AddMinutes($RunFrequency)
+    $RunbookStartTime = $RunbookStartTime.AddMinutes($frequency)
 }
 
-
-Start-AzureRmAutomationRunbook -AutomationAccountName $AAAccount -Name $RunbookName -ResourceGroupName $AAResourceGroup -Parameters $params
-
+    If($runnow)
+    {
+        Start-AzureRmAutomationRunbook -AutomationAccountName $AAAccount -Name $RunbookName -ResourceGroupName $AAResourceGroup -Parameters $params
+    }
 }
