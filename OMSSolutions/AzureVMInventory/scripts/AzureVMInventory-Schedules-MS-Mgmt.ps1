@@ -215,12 +215,14 @@ New-AzureRmAutomationVariable -Name $varVMIopsList -Description "Variable to sto
 #schedules
 
 #check and create a  weekly schedule to check  and redeploy scheduler runbook
+"Rescheduling the runbook to check and fix scheules weekly"
 $RunbookStartTime = $Date = $([DateTime]::Now.AddMinutes($Frequency))
     $sch=$null
     $RBsch=Get-AzureRmAutomationSchedule  -Name  'AzureVMInventory-Scheduler' -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup
 
     IF($RBsch.Frequency -eq 'Hour')
     {
+    "Initial schedule found. We will replace initital schedule with a weekly one"
         $RunbookStartTime = $RunbookStartTime.Addhours(24)
 	    $params1 = @{"frequency"=$frequency;"getNICandNSG"=$getNICandNSG;"getDiskInfo" = $getDiskInfo}
 	 Remove-AzureRmAutomationSchedule -AutomationAccountName $AAAccount -Name $RBsch.Name -ResourceGroupName $AAResourceGroup -Force
@@ -257,7 +259,7 @@ If ($NumberofSchedules -ne  $checkschdl.Count)
 
 
 
-Write-Verbose "$NumberofSchedules schedules will be created"
+Write-Verbose "$NumberofSchedules schedules will be created for VM inventory "
 
 $params = @{"getNICandNSG"=$getNICandNSG;"getDiskInfo" = $getDiskInfo}
 
