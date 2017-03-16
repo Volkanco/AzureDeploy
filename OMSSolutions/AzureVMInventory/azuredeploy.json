@@ -173,7 +173,7 @@
     "createScheduleResourceGroupType": "string",
     "createScheduleResourceGroupDescription": "The name of the resource group",
     "ingestInterval": "1",
-    "ingestFrequency": "day",
+    "ingestFrequency": "hour",
     "ingestScheduleName": "AzureVMInventory-Scheduler",
     "alertArray": [
       {
@@ -1276,9 +1276,9 @@
           "apiVersion": "2015-10-31",
           "location": "[parameters('omsAutomationRegion')]",
           "dependsOn": [
-             "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'))]",
+            "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'))]",
             "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'), '/runbooks/', variables('runbooks').ingestSchedulerRunbook.name)]"
-         ],
+          ],
           "tags": {},
           "properties": {
             "description": "OMS Ingestion API Scheduler",
@@ -1286,6 +1286,26 @@
             "isEnabled": "true",
             "interval": "[variables('ingestInterval')]",
             "frequency": "[variables('ingestFrequency')]"
+          }
+        },
+        {
+          "name": "[concat(parameters('omsAutomationAccountName'), '/', parameters('ingestSchedulerGuid'))]",
+          "type": "microsoft.automation/automationAccounts/jobSchedules",
+          "apiVersion": "2015-10-31",
+          "location": "[parameters('omsAutomationRegion')]",
+          "dependsOn": [
+            "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'), '/schedules/', variables('ingestscheduleName'))]",
+            "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'), '/runbooks/', variables('runbooks').ingestParentRunbook.name)]",
+            "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'))]"
+          ],
+          "tags": {},
+          "properties": {
+            "schedule": {
+              "name": "[variables('ingestScheduleName')]"
+            },
+            "runbook": {
+              "name": "[variables('Runbooks').omsASRMonitoring.name]"
+            }
           }
         },
         {
