@@ -861,6 +861,7 @@ $vm.properties.extensions|?{$extlist+=$_.extension+";"}
   $cuvm = New-Object PSObject -Property @{
                             Timestamp = $colltime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
                             MetricName = 'VMInventory';
+                            ResourceGroup=$vm.id.Split('/')[4]
                             HWProfile=$vm.properties.hardwareProfile.size.ToString()
                             Deploymentname=$vm.properties.hardwareProfile.deploymentName.ToString()
                             Status=$VMstates.get_item($vm.properties.instanceView.status.ToString())
@@ -1090,12 +1091,13 @@ Foreach ($vm in $vmsarm)
         $cuvm = New-Object PSObject -Property @{
                             Timestamp = $colltime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
                             MetricName = 'VMInventory';
+                            ResourceGroup=$vm.id.split('/')[4]
                             HWProfile=$vm.properties.hardwareProfile.vmSize.ToString()
                             DeploymentType='ARM'
                             Location=$vm.location
                             VmName=$vm.Name
                             ID=$vm.id
-                            ResourceGroup=$vm.id.split('/')[4]
+                            
                        
                            	SubscriptionId = $subscriptioninfo.subscriptionId
         AzureSubscription = $subscriptionInfo.displayName
