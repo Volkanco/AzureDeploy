@@ -217,7 +217,7 @@ New-AzureRmAutomationVariable -Name $varVMIopsList -Description "Variable to sto
 #check and create a  weekly schedule to check  and redeploy scheduler runbook
 "Rescheduling the runbook to check and fix scheules weekly"
 $RunbookStartTime = $Date = $([DateTime]::Now.AddMinutes($Frequency))
-    $sch=$null
+    $RBsch=$null
     $RBsch=Get-AzureRmAutomationSchedule  -Name  'AzureVMInventory-Scheduler' -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup
 
     IF($RBsch.Frequency -eq 'Hour')
@@ -230,6 +230,10 @@ $RunbookStartTime = $Date = $([DateTime]::Now.AddMinutes($Frequency))
     $Sch = Register-AzureRmAutomationScheduledRunbook -RunbookName $schedulerrunbookname -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup -ScheduleName 'AzureVMInventory-Scheduler' -Parameters $params1
     
             
+    }Else
+    {
+    "Weekly frequency found for scheduler , will not make any change" 
+    
     }
 
 
