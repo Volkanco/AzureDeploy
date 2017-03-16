@@ -1,16 +1,23 @@
-# Azure Storage Analytics (Preview)
+# Azure Virtual Machine Inventory
 
-[![Deploy to Azure](http://azuredeploy.net/deploybutton.png)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure%2Fazure-quickstart-templates%2Fmaster%2Foms-azure-storage-analytics-solution%2Fazuredeploy.json) 
-<a href="http://armviz.io/#/?load=https%3A%2F%2Fraw.githubusercontent.com%2FAzure%2Fazure-quickstart-templates%2Fmaster%2Foms-azure-storage-analytics-solution%2Fazuredeploy.json" target="_blank">
+[![Deploy to Azure](http://azuredeploy.net/deploybutton.png)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FVolkanco%2FAzureDeploy%2Fmaster%2FOMSSolutions%2FAzureVMInventory%2Fazuredeploy.json) 
+<a href="http://armviz.io/#/?load=https%3A%2F%2Fraw.githubusercontent.com%2FVolkanco%2FAzureDeploy%2Fmaster%2FOMSSolutions%2FAzureVMInventory%2Fazuredeploy.json" target="_blank">
     <img src="http://armviz.io/visualizebutton.png"/>
 </a>
 
->[AZURE.NOTE]This is preliminary documentation for Azure Storage Analytics, a management solution you can deploy into OMS that will provide insights and analytics of your storage accounts. The solution is currently in preview. 
+>[AZURE.NOTE]This is preliminary documentation for Azure VM Inventory , a management solution you can deploy into OMS that will provide insights of virtual machines across subscriptions. 
 
- Microsoft Azure Storage is the cloud storage solution for modern applications that rely on durability, availability, and scalability to meet the needs of their customers. Azure storage provides  Blob storage, Table storage, Queue storage, and File storage services.
-Azure Storage Analytics Solution collects and visualizes inventory information, capacity metrics, transaction metrics and storage errors for storage accounts in an Azure subscription. Users can easily create additional rules to monitor storage resources. This solution leverages Azure Automation, the Log Analytics Ingestion API, together with Log Analytics views to present data about all your storage accounts  in a single  workspace. 
 
-![alt text](images/sasolution.png "Overview")
+Azure VM Inventory  Solution collects and visualizes inventory information of a virtual machine along with ;
+* Data and OS disks
+* input endpoints for Classic VMs
+* NSG Rules for ARM VMs
+* VM Extensions
+* Virtual Network,Subnet, internal and public IP information. 
+
+Solution also collects overall core usage and other subscription level limits .. This solution leverages Azure Automation, the Log Analytics Ingestion API, together with Log Analytics views to present data about all your virtual machines from different subscriptions  in a single  workspace. 
+
+![alt text](images/vminventory_solution.png "Overview")
 
 ## Pre-reqs
 
@@ -20,7 +27,7 @@ Before you deploy this template, you must create an Automation Account in the Az
 
 If you **dont** have an existing OMS Log Analytics Workspace, the template will create and deploy this for you.
 
-## Deploying the Azure Storage Analytics Solution
+## Deploying the Azure VM Inventory Solution
 
 ### Follow these instructions to deploy the solution into an existing - or new Log Analytics Workspace
 
@@ -45,10 +52,13 @@ Once the deployment has completed, you should see the Automation account and the
 ![alt text](images/omsrgaa.png "Resource Group")
 
 ###You can now deploy the template   
-[![Deploy to Azure](http://azuredeploy.net/deploybutton.png)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure%2Fazure-quickstart-templates%2Fmaster%2Foms-azure-storage-analytics-solution%2Fazuredeploy.json) 
+[![Deploy to Azure](http://azuredeploy.net/deploybutton.png)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FVolkanco%2FAzureDeploy%2Fmaster%2FOMSSolutions%2FAzureVMInventory%2Fazuredeploy.json) 
 
 This will send you to the Azure Portal with some default values for the template parameters. 
 Ensure that the parameters reflects your setup so that you are deploying this into the *existing* Resource Group containing the Log Analytics Workspace and the Automation account.
+
+#### Please take caution on  OMS workspace SKU and Automation Account SKU as selections might effect the existing deployment.
+#### Solution requires a new guid to be created every time  ARM template deployed. Using same guid will cause deployment to fail!
 
 #### Parameters
 
@@ -76,65 +86,84 @@ You should also change the values for the *Ingest Scheduler Guid* and *Ingest Cl
 
 Once you have customized all the parameters, click *Create*
 
-![alt text](images/template.png "template")
+![alt text](images/vminventory_template.png "template")
 
 The ingestion will start 5-10 minutes post deployment.
 
 ## Exploring the views
 
-Once the template has successfully been deployed,  storage account inventory data ingestion should occur within 15 minutes post deployment. Metrics data requires  storage analytics minute metrics , which will be automatically  enabled  after solution is deployed. As a result, initial metrics collection might take up to 60 mins to ingest into the workspace.  If you are deploying the solution to a new workspace, it can take approximately 30 minutes before the indexing has completed for the workspace in general. 
+Once the template has successfully been deployed, Azure VM  inventory data ingestion should occur within 15 minutes post deployment.  If you are deploying the solution to a new workspace, it can take approximately 30 minutes before the indexing has completed for the workspace in general. 
 
 In the Resource Group where you deployed the template, you should see the solution resource.
 
-* AzureStorageAnalytics[workspaceName]
+* AzureVMInventory[workspaceName]
 
-![alt text](images/deploymentrg.png "Solutions")
+![alt text](images/vminventory_deployedres.png "Solutions")
 
-### Azure Storage Analytics 
+### Azure VM Inventory
 
-The views for Azure Storage Analytics  will give you an overview of all the storage accounts  within your Azure Subscription. 
+The views for Azure VM Inventory   will give you an overview of all the VMs  within your Azure Subscription.  Multiple subscriptions can be added to provide overview for all.
 
-![alt text](images/inv1.png "Azure Storage Inventory view")
+![alt text](images/vminventory_inv1.png "Azure VM Inventory view")
 
  Solution collects and visualizes ;
 
-**Inventory Data**
-	
-*Storage accounts
-* File Shares
-* Queues
-* Tables 
-* VHD files 
-* Managed disks for virtual machines. 
+**VM Inventory Data**
+Subnet
+DeploymentName
+DeplymentType
+VM Name
+FQDN
+Location 
+HW Profile (Size)
+Status
+VirtualNetwork
+Subnet
+Subscription
+Resource Group
 
-**Capacity Metrics**
-* UtilizedGB
-* Container Count
-* Object Count
-
-**Transaction Metrics** 
-* Availability
-* Total Requests , 
-* Ingress KB
-* Egress KB
-* PercentSuccess
-* PercentErrors 
-* AverageE2E Latency
-* Average Server Latency
-
-**File Shares** 
-*Quota 
-*Usage 
-
-**Subscription Level Storage Quota Usage**
-* ARM based quota usage
-* Classic quota usage 
+**NIC Details**
+VirtualNetwork
+IPAllocation (Static/Dynamic)
+Subnet
+NIC
+Private IP
+MAC Address
+IpForwarding
 
 
-![alt text](images/metrics.png "Azure Storage Metrics view")
+**Input Endpointss** 
+Name
+enableDirectServerReturn
+Public Port
+Private Port
+Protocol
 
-Solution also includes 14 preconfigured alerts  which can be used to notify for when certain thresholds are reached.  You can view the alerts and modify thresholds  from Alerts under workspace settings.
 
+**NSG Rules** 
+RuleName
+DestinationPortRange
+Source Prefix
+Destination Prefix
+Protocal
+Direction
+Access (Allow/Deny)
+NIC
+
+**Extensions**
+
+Name
+VErsion
+Publisher
+
+
+**Disk**
+StorageAccount
+VHDUri
+IO Type
+DiskType (unmanaged/Managed)
+Size
+MaxIO
 
 ### Troubleshooting 
 
@@ -143,12 +172,28 @@ Solution relies on Automation Account with Runas Accounts  configured. Both SPN 
 ![alt text](images/runasaccounts.png "Azure Automation Runas Accounts")
 
 General Troubleshooting steps ;
+* Make sure you specify a new Guid each time template is deployed
 * Check if automation account can start  the runbooks
 * Check if Runas Accounts configured properly and has permission to query subscription details and can access storage keys  
 * Check if AzureStorageIngestion.......  Automation Schedules are enabled
+* Navigate to Resource group , delete AzureVMInventory[workspaceName] solution and redeploy template with a new Guid
 
-When solution is deployed  first MinuteMetrics will be enabled on all storage accounts. Transaction and capacity metrics will be logged after these metrics are first enabled. Based on the number of the storage accounts these runbook job can take  long time to finish. If you want to speed up the process you can enable metrics by running the following cdmlet;
 
-Set-AzureStorageServiceMetricsProperty -MetricsType Minute -ServiceType (Blob,Table,Queue,File)  -MetricsLevel ServiceAndApi -RetentionDays 1 -Context (storageaccountcontext)
+## Adding Additional Subscriptions | Partial Deployment 
 
-Sample script to get all strorage accounts and enable metrics can be found under /Scripts/EnableMetrics.ps1
+Deploying all resources in a single resource group is the prefferred way for deploying the solution. But if you have your OMS workspace and Automation account in different resource groups  you can use the partial templates to deploy the solution. 
+
+First deploy the OMS Solution Views by following the link below 
+
+[![Deploy OMS Views](http://azuredeploy.net/deploybutton.png)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FVolkanco%2FAzureDeploy%2Fmaster%2FOMSSolutions%2FAzureVMInventory%2Fazuredeployonlyloganalytics.json) 
+
+
+
+Second use the link below to deploy the automation components to an existing automation account.
+
+This second template also used to onboard additional subscriptions to the solution !
+
+[![Deploy Automation/ Add Subscriptions](http://azuredeploy.net/deploybutton.png)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FVolkanco%2FAzureDeploy%2Fmaster%2FOMSSolutions%2FAzureVMInventory%2Fazuredeployonlyautomation.json) 
+
+Template requires OMS Log Analytics workspace ID and Key  from the  workspace where solution is already deployed. Navigate to Log Analytics Portal / Settings / Connected Sources  to get worspace Id and Key.
+This solution will deploy only the automation components used in data collection and push data to existing log analytics workspace. 

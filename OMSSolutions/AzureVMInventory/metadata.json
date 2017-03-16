@@ -1,7 +1,7 @@
 {
-  "itemDisplayName": "OMS - Azure Storage Analytics Solution",
-  "description": "Enables Azure Storage Analytics Solution in OMS. Solution collects Azure storage account inventory and storage usage metrics into OMS workspace.",
-  "summary": "This template deploys  Azure Storage Analytics solution with OMS workspace and Automation account.",
+  "itemDisplayName": "OMS - Azure VM Inventory Solution",
+  "description": "Enables Azure VM Inventory Solution in OMS. Solution collects Azure VM inventory along with disks, networking components, NSG rules and extensions into OMS workspace.",
+  "summary": "This template deploys  Azure VM Inventory solution with OMS workspace and Automation account.",
   "githubUsername": "volkanco",
-  "dateUpdated": "2017-2-15"
+  "dateUpdated": "2017-3-16"
 }

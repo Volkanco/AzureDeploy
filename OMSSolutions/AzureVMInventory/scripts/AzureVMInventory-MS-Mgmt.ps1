@@ -871,7 +871,6 @@ $vm.properties.extensions|?{$extlist+=$_.extension+";"}
                             VmName=$vm.Name
                             ID=$vm.id
                             privateIpAddress=$vm.properties.instanceView.privateIpAddress
-                            VMExtension=$extlist
                             SubscriptionId = $subscriptioninfo.subscriptionId
                              AzureSubscription = $subscriptionInfo.displayName
       
@@ -1345,7 +1344,7 @@ Foreach ($nicobj in $vm.properties.networkProfile.networkInterfaces)
 
         $cudisk = New-Object PSObject -Property @{
 		    Timestamp = $colltime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
-		    MetricName = 'VMdisk';
+		    MetricName = 'VMDisk';
 		    DiskType='Unmanaged'
 		    Deploymentname=$vm.id.split('/')[4]   # !!! consider chnaging this to ResourceGroup here or in query
 		    DeploymentType='ARM'
