@@ -719,7 +719,7 @@
                     "Subtitle": ""
                   },
                   "Donut": {
-                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMEndpoint | measure count() by endpointName_s",
+                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMEndpoint | measure countdistinct(VmName_s) by endpointName_s",
                     "CenterLegend": {
                       "Text": "Total",
                       "Operation": "Sum",
@@ -735,7 +735,7 @@
                     }
                   },
                   "List": {
-                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMEndpoint | measure count() by endpointName_s,privatePort_d",
+                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMEndpoint | measure countdistinct(VmName_s) by endpointName_s,privatePort_d",
                     "HideGraph": false,
                     "enableSparklines": false,
                     "ColumnsTitle": {
@@ -788,7 +788,7 @@
                     "Subtitle": ""
                   },
                   "Donut": {
-                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMNSGrule | measure count() by RuleName_s",
+                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMNSGrule | measure countdistinct(VmName_s) by RuleName_s",
                     "CenterLegend": {
                       "Text": "Total",
                       "Operation": "Sum",
@@ -804,7 +804,7 @@
                     }
                   },
                   "List": {
-                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMNSGrule | measure count() by RuleName_s",
+                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMNSGrule | measure countdistinct(VmName_s) by RuleName_s",
                     "HideGraph": false,
                     "enableSparklines": false,
                     "ColumnsTitle": {
