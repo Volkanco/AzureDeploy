@@ -1304,7 +1304,7 @@
               "name": "[variables('ingestScheduleName')]"
             },
             "runbook": {
-              "name": "[variables('Runbooks').omsASRMonitoring.name]"
+              "name": "[variables('Runbooks').ingestParentRunbook.name]"
             }
           }
         },
