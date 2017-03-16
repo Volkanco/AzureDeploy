@@ -42,7 +42,8 @@ Select-AzureRmSubscription -SubscriptionId $Conn.SubscriptionID -TenantId $Conn.
 $AAResourceGroup = Get-AutomationVariable -Name 'AzureVMInventory-AzureAutomationResourceGroup-MS-Mgmt'
 $AAAccount = Get-AutomationVariable -Name 'AzureVMInventory-AzureAutomationAccount-MS-Mgmt'
 $RunbookName = "AzureVMInventory-MS-Mgmt"
-$ScheduleName = "AzureVMInventory-Schedule-MS-Mgmt"
+$ScheduleName = "AzureVMInventory-Schedule"
+$schedulerrunbookname="AzureVMInventory-Schedules-MS-Mgmt"
 $varVMIopsList="AzureVMInventory-VM-IOPSLimits"
 
 # Remove old solution components
@@ -109,7 +110,6 @@ foreach ($item in $dList)
 
 
 #create new variales and schedules
-
 
 $vmiolimits=@{"Basic_A0"=300;
 "Basic_A1"=300;
@@ -213,8 +213,26 @@ $vmiolimits=@{"Basic_A0"=300;
 New-AzureRmAutomationVariable -Name $varVMIopsList -Description "Variable to store IOPS limits for Azure VM Sizes." -Value $vmiolimits -Encrypted 0 -ResourceGroupName $AAResourceGroup -AutomationAccountName $AAAccount  -ea 0
 
 #schedules
-    
+
+#check and create a  weekly schedule to check  and redeploy scheduler runbook
 $RunbookStartTime = $Date = $([DateTime]::Now.AddMinutes($Frequency))
+    $sch=$null
+    $RBsch=Get-AzureRmAutomationSchedule  -Name  'AzureVMInventory-Scheduler' -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup
+
+    IF($RBsch.Frequency -eq 'Hour')
+    {
+        $RunbookStartTime = $RunbookStartTime.Addhours(24)
+	    $params1 = @{"frequency"=$frequency;"getNICandNSG"=$getNICandNSG;"getDiskInfo" = $getDiskInfo}
+	 Remove-AzureRmAutomationSchedule -AutomationAccountName $AAAccount -Name $RBsch.Name -ResourceGroupName $AAResourceGroup -Force
+     $Schedule1 = New-AzureRmAutomationSchedule -Name 'AzureVMInventory-Scheduler' -StartTime $RunbookStartTime -DayInterval 7 -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup
+    $Sch = Register-AzureRmAutomationScheduledRunbook -RunbookName $schedulerrunbookname -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup -ScheduleName 'AzureVMInventory-Scheduler' -Parameters $params1
+    
+            
+    }
+
+
+    
+
 
 
 $NumberofSchedules = 60 / $Frequency

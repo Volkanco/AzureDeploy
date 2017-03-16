@@ -135,14 +135,14 @@
     "runbooks": {
       "ingestParentRunbook": {
         "name": "AzureVMInventory-MS-Mgmt",
-        "version": "1.0.0.0",
+        "version": "1.0.0.1",
         "description": "Runbook to automatically ingest Azure VM Inventory data and events into OMS Log Analytics",
         "type": "PowerShell",
         "Id": ""
       },
       "ingestSchedulerRunbook": {
         "name": "AzureVMInventory-Schedules-MS-Mgmt",
-        "version": "1.0.0.0",
+        "version": "1.0.0.1",
         "description": "Runbook to automatically create required schedules for OMS Log Analytics ingestion",
         "type": "PowerShell",
         "Id": ""
@@ -1295,7 +1295,7 @@
           "location": "[parameters('omsAutomationRegion')]",
           "dependsOn": [
             "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'), '/schedules/', variables('ingestscheduleName'))]",
-            "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'), '/runbooks/', variables('runbooks').ingestParentRunbook.name)]",
+            "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'), '/runbooks/', variables('runbooks').ingestSchedulerRunbook.name)]",
             "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'))]"
           ],
           "tags": {},
@@ -1304,7 +1304,7 @@
               "name": "[variables('ingestScheduleName')]"
             },
             "runbook": {
-              "name": "[variables('Runbooks').ingestParentRunbook.name]"
+              "name": "[variables('Runbooks').ingestSchedulerRunbook.name]"
             }
           }
         },
