@@ -295,7 +295,7 @@
           "tags": {},
           "properties": {
             "schedule": {
-              "name": "[variables('ingestScheduleName')]"
+              "name": "[concat(variables('ingestscheduleName'),'-',parameters('ingestSchedulerGuid'))]"
             },
             "runbook": {
               "name": "[variables('Runbooks').ingestSchedulerRunbook.name]"
