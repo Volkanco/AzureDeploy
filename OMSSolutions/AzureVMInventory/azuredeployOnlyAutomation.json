@@ -309,7 +309,8 @@
           "location": "[parameters('omsAutomationRegion')]",
           "dependsOn": [
             "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'))]",
-            "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'), '/runbooks/', variables('runbooks').ingestSchedulerRunbook.name)]"
+            "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'), '/runbooks/', variables('runbooks').ingestSchedulerRunbook.name)]",
+            "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'), '/runbooks/', variables('runbooks').ingestParentRunbook.name)]"
           ],
           "tags": {},
           "properties": {
