@@ -154,8 +154,6 @@ New-AzureRmAutomationVariable -Name $varVMIopsList -Description "Variable to sto
 "Rescheduling the runbook to check and fix scheules weekly"
 #$prevjobs=Get-AzureRmAutomationJob -RunbookName $schedulerrunbookname -ResourceGroupName $AAResourceGroup -AutomationAccountName $AAAccount
 
-#If($prevjobs.count -gt 1)
-#{
 
 $RunbookStartTime = $Date = $([DateTime]::Now.AddMinutes($Frequency))
     
@@ -163,7 +161,7 @@ $RunbookStartTime = $Date = $([DateTime]::Now.AddMinutes($Frequency))
 
     $RBsch=get-AzureRmAutomationScheduledRunbook -RunbookName $schedulerrunbookname -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup 
 
-    $RBsch|where{$_.ScheduleName -match 'AzureVMInventory-Scheduler-Hourly'}
+    $RBsch=$RBsch|where{$_.ScheduleName -match 'AzureVMInventory-Scheduler-Hourly'}
 
     #$RBsch=Get-AzureRmAutomationSchedule  -Name  'AzureVMInventory-Scheduler' -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup
 
