@@ -169,21 +169,23 @@ $RunbookStartTime = $Date = $([DateTime]::Now.AddMinutes($Frequency))
     {
           "No schedule found, will create a new weekly schedule"
     $params1 = @{"frequency"=$frequency;"getNICandNSG"=$getNICandNSG;"getDiskInfo" = $getDiskInfo}
-	 $Schedule1 = New-AzureRmAutomationSchedule -Name 'AzureVMInventory-Scheduler' -StartTime $RunbookStartTime -DayInterval 7 -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup
-    $Sch1 = Register-AzureRmAutomationScheduledRunbook -RunbookName $schedulerrunbookname -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup -ScheduleName 'AzureVMInventory-Scheduler' -Parameters $params1
+	 $Schedule1 = New-AzureRmAutomationSchedule -Name 'AzureVMInventory-Scheduler-Weekly' -StartTime $RunbookStartTime -DayInterval 7 -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup
+    $Sch1 = Register-AzureRmAutomationScheduledRunbook -RunbookName $schedulerrunbookname -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup -ScheduleName 'AzureVMInventory-Scheduler-Weekly' -Parameters $params1
     
     $runnow=$true
 
 
-    }Elseif($RBsch.Frequency -eq 'Hour')
+    }Elseif($RBsch.ScheduleName  -match 'Hourly')
     {
     "Initial schedule found. We will replace initital schedule with a weekly one"
         $RunbookStartTime = $RunbookStartTime.Addhours(24)
+
 	    $params1 = @{"frequency"=$frequency;"getNICandNSG"=$getNICandNSG;"getDiskInfo" = $getDiskInfo}
-	 Remove-AzureRmAutomationSchedule -AutomationAccountName $AAAccount -Name $RBsch.Name -ResourceGroupName $AAResourceGroup -Force
-     $Schedule1 = New-AzureRmAutomationSchedule -Name 'AzureVMInventory-Scheduler' -StartTime $RunbookStartTime -DayInterval 7 -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup
-    $Sch1 = Register-AzureRmAutomationScheduledRunbook -RunbookName $schedulerrunbookname -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup -ScheduleName 'AzureVMInventory-Scheduler' -Parameters $params1
-    
+
+	 Remove-AzureRmAutomationSchedule -AutomationAccountName $AAAccount -Name $RBsch.ScheduleName  -ResourceGroupName $AAResourceGroup -Force
+     $Schedule1 = New-AzureRmAutomationSchedule -Name 'AzureVMInventory-Scheduler-Weekly' -StartTime $RunbookStartTime -DayInterval 7 -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup
+    $Sch1 = Register-AzureRmAutomationScheduledRunbook -RunbookName $schedulerrunbookname -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup -ScheduleName 'AzureVMInventory-Scheduler-Weekly' -Parameters $params1
+    $runnow=$true
             
     }Else
     {
