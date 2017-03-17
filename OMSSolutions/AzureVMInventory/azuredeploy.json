@@ -174,37 +174,37 @@
     "createScheduleResourceGroupDescription": "The name of the resource group",
     "ingestInterval": "1",
     "ingestFrequency": "hour",
-    "ingestScheduleName": "AzureVMInventory-Scheduler",
+    "ingestScheduleName": "AzureVMInventory-Scheduler-Hourly",
     "alertArray": [
       {
-        "searchName": "Azure Storage Account IO Throttling Limit",
-        "description": "Each standard storage account is capped to 20.000 IOPs . This alert is indicator that one of your storage accounts is at the risk of throttling and IO might be capped.",
-        "severity": "Critical",
-        "query": "Type=AzureStorage_CL   MetricName_s=Inventory  InventoryType_s=VHDIOPs StorageAccount_s in   {Type=AzureStorage_CL MetricName_s=Inventory InventoryType_s=StorageAccount Tier_s=Standard|measure count() by StorageAccount_s}| measure sum(MaxDiskIO_d) as TotalIO by StorageAccount_s  |where TotalIO > 20000 ",
+        "searchName": "Azure VMs in Stopped State ",
+        "description": "Azure VMs which shutdown from within operating system  will continue incurring charges. Stop the VM from the portal to prevent unnecessary consumption.",
+        "severity": "Warning",
+        "query": "Type=AzureVMInventory_CL MetricName_s=VMInventory Status_s=Stopped | measure countdistinct(ID_s) by AzureSubscription_s,VmName_s",
         "alertTresholdValue": 0,
         "operator": "gt",
         "alertThrottleInMinutes": 60,
         "alertBreach": 1,
-        "searchCategory": "Azure Storage Analytics",
+        "searchCategory": "Azure VM Inventory",
         "scheduleIntervalInMinutes": 15,
         "scheduleQueryTimeSpan": 15,
-        "alertName": "Azure Storage Account IO Throttling Limits Reached"
+        "alertName": "Azure VM Stoppped State"
       }
     ],
     "alertMetricArray": [
       {
-        "searchName": "Azure Storage Quota Usage Critical",
-        "description": "Each Azure Subscription can host certain number of storage accounts. This alert is an indicator  that  your Azure Subscription is approaching the storage account limits.",
+        "searchName": "Azure Quota Usage",
+        "description": "Each Azure Subscription has quotas for VM cores per region. If the quota is reached new VMs annot be created",
         "severity": "Critical",
-        "query": "Type=AzureStorage_CL  MetricName_s=StorageQuotas  |measure avg(Quotapct_d) by AzureSubscription_s,QuotaType_s interval 15MINUTES",
+        "query": "[concat('Type=AzureVMInventory_CL MetricName_s=ARMVMUsageStats   | EXTEND div(product(currentValue_d,100),limit_d) as UsedPct | Measure Max(UsedPct) by Location_s,Usagemetric_s interval ', parameters('omsDataIngestionFrequency'),'Minutes')]",
         "alertTresholdValue": 90,
         "operator": "gt",
         "alertThrottleInMinutes": 60,
         "alertBreach": 1,
-        "searchCategory": "Azure Storage Analytics",
+        "searchCategory": "Azure VM Inventory",
         "scheduleIntervalInMinutes": 60,
         "scheduleQueryTimeSpan": 60,
-        "alertName": "Azure Storage Account Quota Consumption is greater than 90%"
+        "alertName": "Azure Quota Usage Reached  90% of the Subscription Quota"
       }
     ]
   },
@@ -1271,7 +1271,7 @@
           }
         },
         {
-          "name": "[concat(parameters('omsAutomationAccountName'), '/', variables('ingestscheduleName'))]",
+          "name": "[concat(parameters('omsAutomationAccountName'), '/', variables('ingestscheduleName'),'-',parameters('ingestSchedulerGuid'))]",
           "type": "microsoft.automation/automationAccounts/schedules",
           "apiVersion": "2015-10-31",
           "location": "[parameters('omsAutomationRegion')]",

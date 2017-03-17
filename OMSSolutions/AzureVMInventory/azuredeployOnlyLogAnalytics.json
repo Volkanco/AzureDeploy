@@ -15,7 +15,9 @@
       "allowedValues": [
         "westeurope",
         "eastus",
-        "southeastasia"
+        "southeastasia",
+        "Australia Southeast",
+        "wescentralus"
       ],
       "metadata": {
         "description": "Specify the Azure Region for your new or existing OMS workspace"
@@ -30,12 +32,46 @@
         "pernode"
       ],
       "metadata": {
-        "description": "Specify the Azure Region for your OMS Automation Account"
+        "description": "Specify the SKU for Log Analytics"
+      }
+    },
+    "omsDataIngestionFrequency": {
+      "type": "int",
+      "defaultValue": 30,
+      "allowedValues": [
+        15,
+        30,
+        60
+      ],
+      "metadata": {
+        "description": "Specify the Azure VM Inventory retrieval frequency"
+      }
+    },
+    "collectDiskInventory": {
+      "type": "int",
+      "defaultValue": 1,
+      "allowedValues": [
+        1,
+        0
+      ],
+      "metadata": {
+        "description": "Specify if you want to collect disk information for VMs"
+      }
+    },
+    "collectNICandNSGInventory": {
+      "type": "int",
+      "defaultValue": 1,
+      "allowedValues": [
+        1,
+        0
+      ],
+      "metadata": {
+        "description": "Specify if you want to collect Network Interface and NEtwork Security Rules  for VMs"
       }
     },
     "_artifactsLocation": {
       "type": "string",
-      "defaultValue": "https://raw.githubusercontent.com/volkanco/AzureDeploy/master/OMSSolutions/StorageAnalytics",
+      "defaultValue": "https://raw.githubusercontent.com/volkanco/AzureDeploy/master/OMSSolutions/AzureVMInventory",
       "metadata": {
         "description": "The base URI where artifacts required by this template are located"
       }
@@ -49,214 +85,58 @@
     }
   },
   "variables": {
-    "omsSolutions": {
+   "omsSolutions": {
       "customSolution": {
-        "name": "Azure Storage Analytics",
-        "solutionName": "[concat('AzureStorageAnalytics', '[', parameters('omsLogAnalyticsWorkspaceName'), ']')]",
+        "name": "Azure VM Inventory",
+        "solutionName": "[concat('AzureVMInventory', '[', parameters('omsLogAnalyticsWorkspaceName'), ']')]",
         "publisher": "volkanc@microsoft.com",
-        "displayName": "Azure Storage Analytics",
-        "description": "Monitor and analyze Azure Storage Accounts",
+        "displayName": "Azure VM Inventory",
+        "description": "Monitor Azure VMs deployed across subscriptions",
         "author": "volkanc@microsoft.com"
       }
     },
+    "opsInsightWorkspaceID": "AzureVMInventory-OPSINSIGHTS_WS_ID",
+    "opsInsightWorkspaceIDType": "string",
+    "opsInsightWorkspaceIDDescription": "Value of the user's omsWorkspaceId",
+    "opsInsightWorkspaceKey": "AzureVMInventory-OPSINSIGHT_WS_KEY",
+    "opsInsightWorkspaceKeyType": "string",
+    "opsInsightWorkspaceKeyDescription": "Encrypted value of the user's omsWorkspaceKey",
+    "createScheduleAutomationAccountName": "AzureVMInventory-AzureAutomationAccount-MS-Mgmt",
+    "createScheduleAutomationAccountType": "string",
+    "createScheduleAutomationAccountDescription": "The name of the Automation Account",
+    "createScheduleResourceGroupName": "AzureVMInventory-AzureAutomationResourceGroup-MS-Mgmt",
+    "createScheduleResourceGroupType": "string",
+    "createScheduleResourceGroupDescription": "The name of the resource group",
     "alertArray": [
       {
-        "searchName": "Azure Storage Account IO Throttling Limit",
-        "description": "Each standard storage account is capped to 20.000 IOPs . This alert is indicator that one of your storage accounts is at the risk of throttling and IO might be capped.",
-        "severity": "Critical",
-        "query": "Type=AzureStorage_CL   MetricName_s=Inventory  InventoryType_s=VHDIOPs StorageAccount_s in   {Type=AzureStorage_CL MetricName_s=Inventory InventoryType_s=StorageAccount Tier_s=Standard|measure count() by StorageAccount_s}| measure sum(MaxDiskIO_d) as TotalIO by StorageAccount_s  |where TotalIO > 20000 ",
+        "searchName": "Azure VMs in Stopped State ",
+        "description": "Azure VMs which shutdown from within operating system  will continue incurring charges. Stop the VM from the portal to prevent unnecessary consumption.",
+        "severity": "Warning",
+        "query": "Type=AzureVMInventory_CL MetricName_s=VMInventory Status_s=Stopped | measure countdistinct(ID_s) by AzureSubscription_s,VmName_s",
         "alertTresholdValue": 0,
         "operator": "gt",
         "alertThrottleInMinutes": 60,
         "alertBreach": 1,
-        "searchCategory": "Azure Storage Analytics",
+        "searchCategory": "Azure VM Inventory",
         "scheduleIntervalInMinutes": 15,
         "scheduleQueryTimeSpan": 15,
-        "alertName": "Azure Storage Account IO Throttling Limits Reached"
-      },
-      {
-        "searchName": "Azure Premium Storage Account NotinUse",
-        "description": "Azure does not delete the vhd files associated with VMs when the VM is deleted. If the VM is suing premium storage  you will be chardged for that storage untill you  migarte the data and delete the storage account.",
-        "severity": "Critical",
-        "query": "Type=AzureStorage_CL  MetricName_s=Inventory InventoryType_s=VHDIOPs VHDUri_s=NullUri TimeGenerated>NOW-1HOUR |measure count() by StorageAccount_s",
-        "alertTresholdValue": 0,
-        "operator": "gt",
-        "alertThrottleInMinutes": 240,
-        "alertBreach": 1,
-        "searchCategory": "Azure Storage Analytics",
-        "scheduleIntervalInMinutes": 60,
-        "scheduleQueryTimeSpan": 60,
-        "alertName": "Azure Premium Storage Account NotinUse"
+        "alertName": "Azure VM Stoppped State"
       }
     ],
     "alertMetricArray": [
       {
-        "searchName": "Azure Storage Quota Usage Critical",
-        "description": "Each Azure Subscription can host certain number of storage accounts. This alert is an indicator  that  your Azure Subscription is approaching the storage account limits.",
+        "searchName": "Azure Quota Usage",
+        "description": "Each Azure Subscription has quotas for VM cores per region. If the quota is reached new VMs annot be created",
         "severity": "Critical",
-        "query": "Type=AzureStorage_CL  MetricName_s=StorageQuotas  |measure avg(Quotapct_d) by AzureSubscription_s,QuotaType_s interval 15MINUTES",
+        "query": "[concat('Type=AzureVMInventory_CL MetricName_s=ARMVMUsageStats   | EXTEND div(product(currentValue_d,100),limit_d) as UsedPct | Measure Max(UsedPct) by Location_s,Usagemetric_s interval ', parameters('omsDataIngestionFrequency'),'Minutes')]",
         "alertTresholdValue": 90,
         "operator": "gt",
         "alertThrottleInMinutes": 60,
         "alertBreach": 1,
-        "searchCategory": "Azure Storage Analytics",
+        "searchCategory": "Azure VM Inventory",
         "scheduleIntervalInMinutes": 60,
         "scheduleQueryTimeSpan": 60,
-        "alertName": "Azure Storage Account Quota Consumption is greater than 90%"
-      },
-      {
-        "searchName": "Azure Storage Quota Usage Warning",
-        "description": "Each Azure Subscription can host certain number of storage accounts. This alert is an indicator  that  your Azure Subscription is approacihing the storage account limits.",
-        "severity": "Warning",
-        "query": "Type=AzureStorage_CL  MetricName_s=StorageQuotas |measure avg(Quotapct_d) by AzureSubscription_s,QuotaType_s interval 15MINUTES",
-        "alertTresholdValue": 80,
-        "operator": "gt",
-        "alertThrottleInMinutes": 60,
-        "alertBreach": 1,
-        "searchCategory": "Azure Storage Analytics",
-        "scheduleIntervalInMinutes": 60,
-        "scheduleQueryTimeSpan": 60,
-        "alertName": "Azure Storage Account Quota Consumption is greater than 80%"
-      },
-      {
-        "searchName": "Azure Storage Availability Below 95pct",
-        "description": "Any value less than 100% indicates that some storage requests are failing. Examine other ErrorPercentage information to see the reason for failures. This alert is an indicator  that  Availability for requests fall below %95.",
-        "severity": "Critical",
-        "query": "Type=AzureStorage_CL MetricName_s=MetricsTransactions | measure avg(Availability_d) by StorageAccount_s interval 15Minutes",
-        "alertTresholdValue": 95,
-        "operator": "lt",
-        "alertThrottleInMinutes": 240,
-        "alertBreach": 2,
-        "searchCategory": "Azure Storage Analytics",
-        "scheduleIntervalInMinutes": 60,
-        "scheduleQueryTimeSpan": 60,
-        "alertName": "Azure Storage Availability Below 95pct"
-      },
-      {
-        "searchName": "Azure Storage End2End Latency Too High",
-        "description": "AverageE2ELatency is a measure of end-to-end latency that includes the time taken to read the request and send the response in addition to the time taken to process the request including network latency. This alert is an indicator  that  AvergaeE2ELAtency for storage account is above 100ms.",
-        "severity": "Warning",
-        "query": "Type=AzureStorage_CL MetricName_s=MetricsTransactions | measure avg(Availability_d) by StorageAccount_s interval 15Minutes",
-        "alertTresholdValue": 100,
-        "operator": "gt",
-        "alertThrottleInMinutes": 60,
-        "alertBreach": 2,
-        "searchCategory": "Azure Storage Analytics",
-        "scheduleIntervalInMinutes": 60,
-        "scheduleQueryTimeSpan": 60,
-        "alertName": "Azure Storage End2End Latency Above 100ms"
-      },
-      {
-        "searchName": "Azure Storage High PercentThrottlingError",
-        "description": "Throttling errors occur when you exceed the scalability targets of a storage service. The storage service does this to ensure that no single client or tenant can use the service at the expense of others. This alert is an indicator  that  storage account has reached the throttling limits and some requests are failing.",
-        "severity": "Critical",
-        "query": "Type=AzureStorage_CL MetricName_s=MetricsTransactions | measure avg(PercentThrottlingError_d) by StorageAccount_s interval 15Minutes",
-        "alertTresholdValue": 0,
-        "operator": "gt",
-        "alertThrottleInMinutes": 60,
-        "alertBreach": 1,
-        "searchCategory": "Azure Storage Analytics",
-        "scheduleIntervalInMinutes": 60,
-        "scheduleQueryTimeSpan": 60,
-        "alertName": "Azure Storage High PercentThrottlingError"
-      },
-      {
-        "searchName": "Azure Storage High PercentTimeoutError",
-        "description": "The PercentTimeoutError metric represents the timeout in storage requests and  is an aggregation of the following metrics: ClientTimeoutError, AnonymousClientTimeoutError, SASClientTimeoutError, ServerTimeoutError, AnonymousServerTimeoutError, and SASServerTimeoutError.This alert is an indicator  that  storage account has reached the throttling limits and some requests are failing.",
-        "severity": "Warning",
-        "query": "Type=AzureStorage_CL MetricName_s=MetricsTransactions | measure avg(PercentTimeoutError_d) by StorageAccount_s interval 15Minutes",
-        "alertTresholdValue": 1,
-        "operator": "gt",
-        "alertThrottleInMinutes": 60,
-        "alertBreach": 1,
-        "searchCategory": "Azure Storage Analytics",
-        "scheduleIntervalInMinutes": 60,
-        "scheduleQueryTimeSpan": 60,
-        "alertName": "Azure Storage High PercentTimeoutError"
-      },
-      {
-        "searchName": "Azure Storage High PercentNetworkError",
-        "description": "The PercentNetworkError metric is an aggregation of the following metrics NetworkError, AnonymousNetworkError, and SASNetworkError. These occur when the storage service detects a network error when the client makes a storage request.This alert is an indicator  that  storage account is facing network related errors.",
-        "severity": "Warning",
-        "query": "Type=AzureStorage_CL MetricName_s=MetricsTransactions | measure avg(PercentNetworkError_d) by StorageAccount_s interval 15Minutes",
-        "alertTresholdValue": 1,
-        "operator": "gt",
-        "alertThrottleInMinutes": 60,
-        "alertBreach": 1,
-        "searchCategory": "Azure Storage Analytics",
-        "scheduleIntervalInMinutes": 60,
-        "scheduleQueryTimeSpan": 60,
-        "alertName": "Azure Storage High PercentNetworkError"
-      },
-      {
-        "searchName": "Azure Storage SASAuthorizationError",
-        "description": "If the client application attempts to use a SAS key that does not include the necessary permissions for the operation, the storage service returns an HTTP 404 (Not found) message to the client. At the same time, you will also see a non-zero value for SASAuthorizationError in the metrics. This alert is an indicator  that  storage account is facing SAS Autorizations errors.",
-        "severity": "Warning",
-        "query": "Type=AzureStorage_CL MetricName_s=MetricsTransactions | measure avg(SASAuthorizationError_d) by StorageAccount_s interval 15Minutes",
-        "alertTresholdValue": 1,
-        "operator": "gt",
-        "alertThrottleInMinutes": 60,
-        "alertBreach": 2,
-        "searchCategory": "Azure Storage Analytics",
-        "scheduleIntervalInMinutes": 60,
-        "scheduleQueryTimeSpan": 60,
-        "alertName": "Azure Storage SASAuthorizationError Detected"
-      },
-      {
-        "searchName": "Azure Storage High PercentAuthorizationError",
-        "description": "The percentage of requests that failed with an AuthorizationError. This alert is an indicator  that  storage account is facing authorization  errors.",
-        "severity": "Warning",
-        "query": "Type=AzureStorage_CL MetricName_s=MetricsTransactions | measure avg(PercentAuthorizationError_d) by StorageAccount_s interval 15Minutes",
-        "alertTresholdValue": 1,
-        "operator": "gt",
-        "alertThrottleInMinutes": 60,
-        "alertBreach": 2,
-        "searchCategory": "Azure Storage Analytics",
-        "scheduleIntervalInMinutes": 60,
-        "scheduleQueryTimeSpan": 60,
-        "alertName": "Azure Storage High PercentAuthorizationError"
-      },
-      {
-        "searchName": "Azure Storage PercentClientOtherError",
-        "description": "Authenticated request that failed as expected. This error can represent many 300-400 level HTTP status codes and conditions such as NotFound and ResourceAlreadyExists. This alert is an indicator  that  more than 1% of the requests failed with such errors.",
-        "severity": "Warning",
-        "query": "Type=AzureStorage_CL MetricName_s=MetricsTransactions | measure avg(PercentClientOtherError_d) by StorageAccount_s interval 15Minutes",
-        "alertTresholdValue": 1,
-        "operator": "gt",
-        "alertThrottleInMinutes": 60,
-        "alertBreach": 2,
-        "searchCategory": "Azure Storage Analytics",
-        "scheduleIntervalInMinutes": 60,
-        "scheduleQueryTimeSpan": 60,
-        "alertName": "Azure Storage High PercentClientOtherError"
-      },
-      {
-        "searchName": "Azure Storage High PercentServerOtherError",
-        "description": "Authenticated request that failed due to unknown server errors, most commonly returning an HTTP 500 status code. This alert is an indicator  that  more than 1% of the requests failed with such errors.",
-        "severity": "Warning",
-        "query": "Type=AzureStorage_CL MetricName_s=MetricsTransactions | measure avg(PercentServerOtherError_d) by StorageAccount_s interval 15Minutes",
-        "alertTresholdValue": 1,
-        "operator": "gt",
-        "alertThrottleInMinutes": 60,
-        "alertBreach": 2,
-        "searchCategory": "Azure Storage Analytics",
-        "scheduleIntervalInMinutes": 60,
-        "scheduleQueryTimeSpan": 60,
-        "alertName": "Azure Storage High PercentServerOtherError"
-      },
-      {
-        "searchName": "Azure File Share Quota Usage Warning",
-        "description": "Each Azure Subscription can host certain number of storage accounts. This alert is an indicator  that  your Azure Subscription is approacihing the storage account limits.",
-        "severity": "Warning",
-        "query": "Type=AzureStorage_CL  InventoryType_s=File | EXTEND product(div(ShareUsedGB_d,Quota_d),100)  as ShareUsage | measure avg(ShareUsage) by FileShare_s  interval 15MINUTES",
-        "alertTresholdValue": 80,
-        "operator": "gt",
-        "alertThrottleInMinutes": 60,
-        "alertBreach": 1,
-        "searchCategory": "Azure Storage Analytics",
-        "scheduleIntervalInMinutes": 60,
-        "scheduleQueryTimeSpan": 60,
-        "alertName": "Azure File Share Quota Usage is greater than 80%"
+        "alertName": "Azure Quota Usage Reached  90% of the Subscription Quota"
       }
     ]
   },
@@ -288,48 +168,22 @@
             "Source": "Local",
             "Dashboard": [
               {
-                "Id": "InformationBlade",
-                "Type": "Blade",
-                "Version": 0,
-                "Configuration": {
-                  "General": {
-                    "Title": "Azure  Storage Analytics",
-                    "NewGroup": false,
-                    "Color": "#0072c6"
-                  },
-                  "Header": {
-                    "Image": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAztJREFUeNrUmktoE1EUhqexKj4zJWoaqIpVaVGxKr6ogsaNbhS0YKkKFeKmriwFEaXYnY+FYjeCbmtRRBeuXIlLMe1CXGlduBOt0rS1FaF2/A+ciWMy0yT3njvN/PBtMuHc8899zJ1zp8ZxHEtAKXAE7AdNYBOwGVKO+QQ+gDfgFfii23CNhoHV4CyzWzHGEBgEA2BUKQIZqJAG0A+mHTn9AvfB2krzqeTPi8AVMOWYE92UPrBY2kAzeOeEp/fcZsncYmWMsjaQBdut8LSN22zTnQMXwYwzf5rhHJSGUJdTPeoKyjNoGT0JnoIFCt1/GXwOuNYIbirE/APawbNyhlATmNS4W4fm6NW0Rlxa/baWmsQLwROwXGMC2orXSmkpeMw55lVooAe0aK4gcUMG3NWpJ8hAA+gVWAJtRXPlqpdzLTJwlbvJpAFbID7leK3QwCpwXughFDdsgNTJOecN0A9LhIKbHkIW59rpNdAhuA2wQ+gB0hnXQBLsiqCBnaCeDKTpxUYwcDwkA5TzYTLQKryTDGMOuDoQ44eDFcEhRNpCBtYJB42HaGC9O4klVRuwl1opPNdIa2KaG7dK7nSdgXZWxCwzskOYwPmtxISBuPEQxj9pnAx8NRC4LiQDo2RgJMI98DHGtUpppbgXvNSbMEAv9af5NTKKaicDtK/+ZmCNNi0qpyRpCH3nKnHUNOROYtIj4eDTXP9JMzfAlHAbg966UEKwXE71m70+NSH67bdgFTvhrQv9AA+E7sw98Nbnd/rtjlAbDznn/ypzKc2KnKuDc1TmWgXiT3KuRZU5Oq+6LrQ6BGlWIH6f5TlbK9zM9YNhzQaOKV4rR8M8RD23q7ibG0FOo4snwA6fuC18TVWU08Zyy+snwHNLrbxu8ZJ5F7zkIXUUdNP+XTEelddPgRfFAzZ4wmXAbBUcblAOF1QP+TJVcMSU0T2lPA7G5iH5HLctcsy6AWRDTD7LbYoedNeCS2DcYOK0SnVzW+In9S5JcEtzSfRL/DbHrigfnY896C2LPvQ4B/b4PBRLiZ7KdJg9wLvhMaUCqdDnNgkqtIJ9oBlspqITWMYvSj/5pWnE+ve5zev8hkxDfwUYAP0NkvYTPlJVAAAAAElFTkSuQmCC",
-                    "Label": "Azure Storage Account Monitoring",
-                    "Link": {
-                      "Label": "More info ",
-                      "Url": "https://raw.githubusercontent.com/volkanco/AzureDeploy/master/OMSSolutions/StorageAnalytics/readme.md"
-                    }
-                  },
-                  "List": [
-                    {
-                      "Title": "Solution Overview",
-                      "Content": "\nAzure Storage Account Monitoring utilzes  native **Storage REST API** capabilities and **Azure Storage Analytics**  to enable inventory and monitoring storage accounts.\n\n[Links](https://microsoft.com \"Links\") or Images\n\n![MS Logo](https://assets.onestore.ms/cdnfiles/onestorerolling-1607-15000/shell/v3/images/logo/microsoft.png \"Microsoft\")"
-                    }
-                  ]
-                }
-              },
-              {
                 "Id": "SingleQueryDonutBuilderBladeV1",
                 "Type": "Blade",
                 "Version": 0,
                 "Configuration": {
                   "General": {
-                    "title": "Storage Account Usage  for Subscription",
+                    "title": "VMs by Subscription",
                     "newGroup": false,
                     "icon": "",
                     "useIcon": false
                   },
                   "Header": {
-                    "Title": "Storage Accounts by Deployment type",
+                    "Title": "VM Count",
                     "Subtitle": ""
                   },
                   "Donut": {
-                    "Query": "Type=AzureStorage_CL    MetricName_s=StorageQuotas TimeGenerated >NOW-60MINUTES |measure avg(SACurrent_d) by QuotaType_s",
+                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMInventory |measure countdistinct(ID_s) by AzureSubscription_s",
                     "CenterLegend": {
                       "Text": "Total",
                       "Operation": "Sum",
@@ -337,91 +191,20 @@
                     },
                     "Options": {
                       "colors": [
-                        "#00188f",
-                        "#55d455",
-                        "#ffb900"
+                        "#9b4f96",
+                        "#00d8cc",
+                        "#00bcf2"
                       ],
                       "valueColorMapping": []
                     }
                   },
                   "List": {
-                    "Query": "Type=AzureStorage_CL  MetricName_s=StorageQuotas TimeGenerated >NOW-60MINUTES |measure avg(Quotapct_d) by AzureSubscription_s,QuotaType_s",
+                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMInventory |measure countdistinct(ID_s) by AzureSubscription_s,Status_s",
                     "HideGraph": false,
                     "enableSparklines": false,
                     "operation": "Summary",
                     "ColumnsTitle": {
-                      "Name": "Storage Account Quota",
-                      "Value": "% Utilized"
-                    },
-                    "Color": "#0072c6",
-                    "thresholds": {
-                      "isEnabled": true,
-                      "values": [
-                        {
-                          "name": "Normal",
-                          "threshold": "Default",
-                          "color": "#009e49",
-                          "isDefault": true
-                        },
-                        {
-                          "name": "Warning",
-                          "threshold": "80",
-                          "color": "#fcd116",
-                          "isDefault": false
-                        },
-                        {
-                          "name": "Error",
-                          "threshold": "90",
-                          "color": "#ba141a",
-                          "isDefault": false
-                        }
-                      ]
-                    },
-                    "NameDSVSeparator": "",
-                    "NavigationQuery": "{selected item}"
-                  }
-                }
-              },
-              {
-                "Id": "SingleQueryDonutBuilderBladeV1",
-                "Type": "Blade",
-                "Version": 0,
-                "Configuration": {
-                  "General": {
-                    "title": "Azure Storage Inventory",
-                    "newGroup": false,
-                    "icon": "",
-                    "useIcon": false
-                  },
-                  "Header": {
-                    "Title": "Storage Inventory",
-                    "Subtitle": ""
-                  },
-                  "Donut": {
-                    "Query": "Type=AzureStorage_CL    MetricName_s=Inventory AND NOT  InventoryType_s=VHDIOPs | measure countdistinct(Uri_s) by InventoryType_s",
-                    "CenterLegend": {
-                      "Text": "Total",
-                      "Operation": "Sum",
-                      "ArcsToSelect": [
-                        "StorageAccount"
-                      ]
-                    },
-                    "Options": {
-                      "colors": [
-                        "#0072c6",
-                        "#ffb900",
-                        "#009e49"
-                      ],
-                      "valueColorMapping": []
-                    }
-                  },
-                  "List": {
-                    "Query": "Type=AzureStorage_CL    MetricName_s=Inventory AND NOT  InventoryType_s=VHDIOPs | measure countdistinct(Uri_s) by InventoryType_s",
-                    "HideGraph": false,
-                    "enableSparklines": false,
-                    "operation": "Summary",
-                    "ColumnsTitle": {
-                      "Name": "Inventory",
+                      "Name": "Subscription",
                       "Value": "Count"
                     },
                     "Color": "#0072c6",
@@ -459,17 +242,17 @@
                 "Version": 0,
                 "Configuration": {
                   "General": {
-                    "title": "Storage Account Capacity Usage",
+                    "title": "VMs by Size",
                     "newGroup": false,
                     "icon": "",
                     "useIcon": false
                   },
                   "Header": {
-                    "Title": "Utilized (GB)",
+                    "Title": "Size",
                     "Subtitle": ""
                   },
                   "Donut": {
-                    "Query": "Type=AzureStorage_CL    MetricName_s=MetricsCapacity TimeGenerated>NOW-1HOUR |measure avg(Capacity_d) as UsedGB by StorageAccount_s",
+                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMInventory  | measure countdistinct(VmName_s) by HWProfile_s",
                     "CenterLegend": {
                       "Text": "Total",
                       "Operation": "Sum",
@@ -477,159 +260,21 @@
                     },
                     "Options": {
                       "colors": [
+                        "#0072c6",
                         "#fcd116",
-                        "#0072c6",
-                        "#55d455"
+                        "#7fba00"
                       ],
                       "valueColorMapping": []
                     }
                   },
                   "List": {
-                    "Query": "Type=AzureStorage_CL    MetricName_s=MetricsCapacity TimeGenerated>NOW-1HOUR |measure avg(Capacity_d) as UsedGB by StorageAccount_s",
+                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMInventory  | measure countdistinct(VmName_s) by HWProfile_s",
                     "HideGraph": false,
                     "enableSparklines": false,
                     "operation": "Summary",
                     "ColumnsTitle": {
-                      "Name": "STORAGE Account",
-                      "Value": "UsedinGB"
-                    },
-                    "Color": "#0072c6",
-                    "thresholds": {
-                      "isEnabled": true,
-                      "values": [
-                        {
-                          "name": "Normal",
-                          "threshold": "Default",
-                          "color": "#009e49",
-                          "isDefault": true
-                        },
-                        {
-                          "name": "Warning",
-                          "threshold": "400000",
-                          "color": "#fcd116",
-                          "isDefault": false
-                        },
-                        {
-                          "name": "Error",
-                          "threshold": "450000",
-                          "color": "#ba141a",
-                          "isDefault": false
-                        }
-                      ]
-                    },
-                    "NameDSVSeparator": "",
-                    "NavigationQuery": "{selected item}"
-                  }
-                }
-              },
-              {
-                "Id": "SingleQueryDonutBuilderBladeV1",
-                "Type": "Blade",
-                "Version": 0,
-                "Configuration": {
-                  "General": {
-                    "title": "STORAGE ACCOUNT INVENTORY",
-                    "newGroup": false,
-                    "icon": "",
-                    "useIcon": false
-                  },
-                  "Header": {
-                    "Title": "SA by Tier",
-                    "Subtitle": ""
-                  },
-                  "Donut": {
-                    "Query": "Type=AzureStorage_CL      MetricName_s=Inventory  InventoryType_s=StorageAccount  |measure countdistinct(StorageAccount_s) by Sku_s",
-                    "CenterLegend": {
-                      "Text": "Total",
-                      "Operation": "Sum",
-                      "ArcsToSelect": []
-                    },
-                    "Options": {
-                      "colors": [
-                        "#00188f",
-                        "#0072c6",
-                        "#00bcf2"
-                      ],
-                      "valueColorMapping": []
-                    }
-                  },
-                  "List": {
-                    "Query": "Type=AzureStorage_CL      MetricName_s=Inventory  InventoryType_s=StorageAccount  |measure countdistinct(StorageAccount_s) by Location_s",
-                    "HideGraph": false,
-                    "enableSparklines": false,
-                    "operation": "Summary",
-                    "ColumnsTitle": {
-                      "Name": "SA by Location",
+                      "Name": "VMSIZE",
                       "Value": "Count"
-                    },
-                    "Color": "#0072c6",
-                    "thresholds": {
-                      "isEnabled": false,
-                      "values": [
-                        {
-                          "name": "Normal",
-                          "threshold": "Default",
-                          "color": "#009e49",
-                          "isDefault": true
-                        },
-                        {
-                          "name": "Warning",
-                          "threshold": "200",
-                          "color": "#fcd116",
-                          "isDefault": false
-                        },
-                        {
-                          "name": "Error",
-                          "threshold": "250",
-                          "color": "#ba141a",
-                          "isDefault": false
-                        }
-                      ]
-                    },
-                    "NameDSVSeparator": "",
-                    "NavigationQuery": "{selected item}"
-                  }
-                }
-              },
-              {
-                "Id": "SingleQueryDonutBuilderBladeV1",
-                "Type": "Blade",
-                "Version": 0,
-                "Configuration": {
-                  "General": {
-                    "title": "BLOB - Total Requests",
-                    "newGroup": false,
-                    "icon": "",
-                    "useIcon": false
-                  },
-                  "Header": {
-                    "Title": "TotalRequests per Storage Acc",
-                    "Subtitle": ""
-                  },
-                  "Donut": {
-                    "Query": "Type=AzureStorage_CL    MetricName_s=MetricsTransactions StorageService_s=Blob  TimeGenerated>NOW-1HOUR |measure sum(TotalRequests_d) by StorageAccount_s",
-                    "CenterLegend": {
-                      "Text": "Total",
-                      "Operation": "Sum",
-                      "ArcsToSelect": []
-                    },
-                    "Options": {
-                      "colors": [
-                        "#0072c6",
-                        "#55d455",
-                        "#fcd116"
-                      ],
-                      "valueColorMapping": []
-                    }
-                  },
-                  "List": {
-                    "Query": "Type=AzureStorage_CL    MetricName_s=MetricsTransactions     StorageService_s=Blob | measure sum(TotalRequests_d) by StorageAccount_s",
-                    "HideGraph": false,
-                    "enableSparklines": false,
-                    "operation": "Summary",
-                    "ColumnsTitle": {
-                      "Name": "Storage Account",
-                      "Value": "RequestCount"
                     },
                     "Color": "#0072c6",
                     "thresholds": {
@@ -666,17 +311,17 @@
                 "Version": 0,
                 "Configuration": {
                   "General": {
-                    "title": "BLOB - E2E Latency (ms)",
+                    "title": "VMs by Location",
                     "newGroup": false,
                     "icon": "",
                     "useIcon": false
                   },
                   "Header": {
-                    "Title": "--",
+                    "Title": "Location",
                     "Subtitle": ""
                   },
                   "Donut": {
-                    "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions  StorageService_s=Blob  |measure avg(AverageE2ELatency_d) by StorageAccount_s",
+                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMInventory | measure countdistinct(VmName_s) by Location_s",
                     "CenterLegend": {
                       "Text": "Total",
                       "Operation": "Sum",
@@ -684,25 +329,25 @@
                     },
                     "Options": {
                       "colors": [
-                        "#00188f",
-                        "#0072c6",
-                        "#00bcf2"
+                        "#55d455",
+                        "#ff8c00",
+                        "#eb3c00"
                       ],
                       "valueColorMapping": []
                     }
                   },
                   "List": {
-                    "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions  StorageService_s=Blob   |measure avg(AverageE2ELatency_d) by StorageAccount_s",
+                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMInventory | measure countdistinct(VmName_s) by Location_s",
                     "HideGraph": false,
                     "enableSparklines": false,
                     "operation": "Summary",
                     "ColumnsTitle": {
-                      "Name": "Storage Account",
-                      "Value": "Latency"
+                      "Name": "Location",
+                      "Value": "Count"
                     },
                     "Color": "#0072c6",
                     "thresholds": {
-                      "isEnabled": true,
+                      "isEnabled": false,
                       "values": [
                         {
                           "name": "Normal",
@@ -712,13 +357,13 @@
                         },
                         {
                           "name": "Warning",
-                          "threshold": "50",
+                          "threshold": "60",
                           "color": "#fcd116",
                           "isDefault": false
                         },
                         {
                           "name": "Error",
-                          "threshold": "100",
+                          "threshold": "90",
                           "color": "#ba141a",
                           "isDefault": false
                         }
@@ -735,17 +380,17 @@
                 "Version": 0,
                 "Configuration": {
                   "General": {
-                    "title": "IAAS - Disks by SA",
+                    "title": "VM by Deployement Type",
                     "newGroup": false,
                     "icon": "",
                     "useIcon": false
                   },
                   "Header": {
-                    "Title": "VHDs  Attached to VMs",
-                    "Subtitle": "VHD Count"
+                    "Title": "Classic vs ARM",
+                    "Subtitle": ""
                   },
                   "Donut": {
-                    "Query": "Type=AzureStorage_CL      MetricName_s=Inventory  InventoryType_s=VHDIOPs   | measure countdistinct(VHDUri_s) by StorageAccount_s",
+                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMInventory | measure countdistinct(VmName_s) by DeploymentType_s",
                     "CenterLegend": {
                       "Text": "Total",
                       "Operation": "Sum",
@@ -753,25 +398,25 @@
                     },
                     "Options": {
                       "colors": [
-                        "#00188f",
-                        "#0072c6",
+                        "#55d455",
+                        "#ff8c00",
                         "#00bcf2"
                       ],
                       "valueColorMapping": []
                     }
                   },
                   "List": {
-                    "Query": "Type=AzureStorage_CL      MetricName_s=Inventory  InventoryType_s=VHDIOPs   | measure countdistinct(VHDUri_s) by StorageAccount_s",
+                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMInventory | measure countdistinct(ID_s) by   AzureSubscription_s,DeploymentType_s",
                     "HideGraph": false,
                     "enableSparklines": false,
                     "operation": "Summary",
                     "ColumnsTitle": {
-                      "Name": "STORAGEACCOUNT",
-                      "Value": "VHD COUNT"
+                      "Name": "VMCount",
+                      "Value": "Count"
                     },
                     "Color": "#0072c6",
                     "thresholds": {
-                      "isEnabled": true,
+                      "isEnabled": false,
                       "values": [
                         {
                           "name": "Normal",
@@ -781,82 +426,13 @@
                         },
                         {
                           "name": "Warning",
-                          "threshold": "35",
+                          "threshold": "60",
                           "color": "#fcd116",
                           "isDefault": false
                         },
                         {
                           "name": "Error",
-                          "threshold": "40",
-                          "color": "#ba141a",
-                          "isDefault": false
-                        }
-                      ]
-                    },
-                    "NameDSVSeparator": "",
-                    "NavigationQuery": "{selected item}"
-                  }
-                }
-              },
-              {
-                "Id": "SingleQueryDonutBuilderBladeV1",
-                "Type": "Blade",
-                "Version": 0,
-                "Configuration": {
-                  "General": {
-                    "title": "IAAS - IO PRESSURE FOR STORAGE ACCOUNTS",
-                    "newGroup": false,
-                    "icon": "",
-                    "useIcon": false
-                  },
-                  "Header": {
-                    "Title": "MAX Estimated IO ",
-                    "Subtitle": "Limit 20.000 IOPS Per SA"
-                  },
-                  "Donut": {
-                    "Query": "Type=AzureStorage_CL     MetricName_s=Inventory  InventoryType_s=VHDIOPs TimeGenerated>NOW-1HOUR StorageAccount_s in   {Type=AzureStorage_CL MetricName_s=Inventory InventoryType_s=StorageAccount Tier_s=Standard|measure count() by StorageAccount_s} | measure sum(MaxDiskIO_d) by StorageAccount_s",
-                    "CenterLegend": {
-                      "Text": "Total",
-                      "Operation": "Sum",
-                      "ArcsToSelect": []
-                    },
-                    "Options": {
-                      "colors": [
-                        "#00188f",
-                        "#0072c6",
-                        "#00bcf2"
-                      ],
-                      "valueColorMapping": []
-                    }
-                  },
-                  "List": {
-                    "Query": "Type=AzureStorage_CL     MetricName_s=Inventory  InventoryType_s=VHDIOPs TimeGenerated>NOW-1HOUR StorageAccount_s in   {Type=AzureStorage_CL MetricName_s=Inventory InventoryType_s=StorageAccount Tier_s=Standard|measure count() by StorageAccount_s}| measure sum(MaxDiskIO_d) by StorageAccount_s",
-                    "HideGraph": false,
-                    "enableSparklines": false,
-                    "operation": "Summary",
-                    "ColumnsTitle": {
-                      "Name": "Storage Account",
-                      "Value": "MaxPossibleIO"
-                    },
-                    "Color": "#0072c6",
-                    "thresholds": {
-                      "isEnabled": true,
-                      "values": [
-                        {
-                          "name": "Normal",
-                          "threshold": "Default",
-                          "color": "#009e49",
-                          "isDefault": true
-                        },
-                        {
-                          "name": "Warning",
-                          "threshold": "18000",
-                          "color": "#fcd116",
-                          "isDefault": false
-                        },
-                        {
-                          "name": "Error",
-                          "threshold": "19500",
+                          "threshold": "90",
                           "color": "#ba141a",
                           "isDefault": false
                         }
@@ -873,21 +449,21 @@
                 "Version": 0,
                 "Configuration": {
                   "General": {
-                    "title": "Storage Account Throttling Errors",
+                    "title": "VM Status",
                     "newGroup": false,
                     "icon": "",
                     "useIcon": false
                   },
                   "Header": {
-                    "Title": "Throttling ErrorPct by Storage Service",
+                    "Title": "",
                     "Subtitle": ""
                   },
                   "LineChart": {
-                    "Query": "Type=AzureStorage_CL     |measure avg(PercentThrottlingError_d) by StorageService_s",
+                    "Query": "[concat('Type=AzureVMInventory_CL MetricName_s=VMInventory  | measure countdistinct(VmName_s) by Status_s interval ', parameters('omsDataIngestionFrequency'),'Minutes')]",
                     "Callout": {
-                      "Title": "Avg per hour",
-                      "Series": "",
-                      "Operation": "Average"
+                      "Title": "Running",
+                      "Series": "Running",
+                      "Operation": "Last Sample"
                     },
                     "yAxis": {
                       "isLogarithmic": false,
@@ -900,13 +476,13 @@
                     }
                   },
                   "List": {
-                    "Query": "Type=AzureStorage_CL     |measure avg(PercentThrottlingError_d) by StorageAccount_s",
+                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMInventory Status_s=Running |  measure countdistinct(VmName_s)  by  HWProfile_s",
                     "HideGraph": false,
                     "enableSparklines": false,
                     "operation": "Summary",
                     "ColumnsTitle": {
-                      "Name": "STORAGEACCOUNT",
-                      "Value": "Error %"
+                      "Name": "Size",
+                      "Value": "RuningVM"
                     },
                     "Color": "#0072c6",
                     "thresholds": {
@@ -938,71 +514,56 @@
                 }
               },
               {
-                "Id": "LineChartCalloutStackedBuilderBlade",
+                "Id": "NumberTileListBuilderBlade",
                 "Type": "Blade",
                 "Version": 0,
                 "Configuration": {
                   "General": {
-                    "title": "BLOB STORAGE METRICS",
-                    "newGroup": false
+                    "title": "TAGGED VMs",
+                    "newGroup": true,
+                    "icon": "",
+                    "useIcon": false
                   },
-                  "charts": [
-                    {
-                      "Header": {
-                        "Title": "Ingress Traffic KB Over Time",
-                        "Subtitle": " Top 10 "
-                      },
-                      "LineChart": {
-                        "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions  StorageService_s=Blob  StorageAccount_s IN {Type=AzureStorage_CL     MetricName_s=MetricsTransactions  StorageService_s=Blob | measure sum(TotalIngress_d) by StorageAccount_s |top 10 } | EXTEND div(TotalIngress_d,1024)  as IngressKB | measure sum(IngressKB) by StorageAccount_s  interval 15Minutes",
-                        "yAxis": {
-                          "isLogarithmic": false,
-                          "units": {
-                            "baseUnitType": "Count",
-                            "baseUnit": "Ones",
-                            "displayUnit": "AUTO"
-                          },
-                          "customLabel": ""
-                        }
-                      }
+                  "Tile": {
+                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMInventory |measure countdistinct(Tag_s) by AzureSubscription_s",
+                    "Legend": "Tagged VM Count"
+                  },
+                  "List": {
+                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMInventory |measure countdistinct(VmName_s) by Tag_s",
+                    "HideGraph": false,
+                    "enableSparklines": false,
+                    "operation": "Summary",
+                    "ColumnsTitle": {
+                      "Name": "Computer",
+                      "Value": "Count"
                     },
-                    {
-                      "Header": {
-                        "Title": "Egress Traffic KB Over Time",
-                        "Subtitle": "TOP 10"
-                      },
-                      "LineChart": {
-                        "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions StorageService_s=Blob StorageAccount_s IN {Type=AzureStorage_CL     MetricName_s=MetricsTransactions  StorageService_s=Blob | measure sum(TotalEgress_d) by StorageAccount_s |top 10 } | EXTEND div(TotalEgress_d,1024)  as EgressKB | measure sum(EgressKB)  by StorageAccount_s  interval 15Minutes",
-                        "yAxis": {
-                          "isLogarithmic": false,
-                          "units": {
-                            "baseUnitType": "",
-                            "baseUnit": "",
-                            "displayUnit": ""
-                          },
-                          "customLabel": ""
+                    "Color": "#0072c6",
+                    "thresholds": {
+                      "isEnabled": false,
+                      "values": [
+                        {
+                          "name": "Normal",
+                          "threshold": "Default",
+                          "color": "#009e49",
+                          "isDefault": true
+                        },
+                        {
+                          "name": "Warning",
+                          "threshold": "60",
+                          "color": "#fcd116",
+                          "isDefault": false
+                        },
+                        {
+                          "name": "Error",
+                          "threshold": "90",
+                          "color": "#ba141a",
+                          "isDefault": false
                         }
-                      }
+                      ]
                     },
-                    {
-                      "Header": {
-                        "Title": "Total Requests Over time",
-                        "Subtitle": ""
-                      },
-                      "LineChart": {
-                        "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions StorageService_s=Blob StorageAccount_s IN {Type=AzureStorage_CL     MetricName_s=MetricsTransactions  StorageService_s=Blob | measure sum(TotalRequests_d) by StorageAccount_s |top 10 }  |measure sum(TotalRequests_d) by StorageAccount_s  Interval 15Minutes",
-                        "yAxis": {
-                          "isLogarithmic": false,
-                          "units": {
-                            "baseUnitType": "",
-                            "baseUnit": "",
-                            "displayUnit": ""
-                          },
-                          "customLabel": ""
-                        }
-                      }
-                    }
-                  ]
-
+                    "NameDSVSeparator": "",
+                    "NavigationQuery": "{selected item}"
+                  }
                 }
               },
               {
@@ -1011,17 +572,86 @@
                 "Version": 0,
                 "Configuration": {
                   "General": {
-                    "title": "BLOB - Ingres Traffic",
+                    "title": "VMs by Subnet",
                     "newGroup": false,
                     "icon": "",
                     "useIcon": false
                   },
                   "Header": {
-                    "Title": "--",
+                    "Title": "Subnets",
                     "Subtitle": ""
                   },
                   "Donut": {
-                    "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions  StorageService_s=Blob   | EXTEND div(TotalIngress_d,1024)  as IngressKB | measure sum(IngressKB)  by StorageAccount_s",
+                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMNIC | measure countdistinct(VmName_s) by subnet_s",
+                    "CenterLegend": {
+                      "Text": "Total",
+                      "Operation": "Sum",
+                      "ArcsToSelect": []
+                    },
+                    "Options": {
+                      "colors": [
+                        "#00bcf2",
+                        "#ffb900",
+                        "#009e49"
+                      ],
+                      "valueColorMapping": []
+                    }
+                  },
+                  "List": {
+                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMNIC | measure countdistinct(VmName_s) by AzureSubscription_s,subnet_s",
+                    "HideGraph": false,
+                    "enableSparklines": false,
+                    "ColumnsTitle": {
+                      "Name": "Subscription",
+                      "Value": "Count"
+                    },
+                    "Color": "#0072c6",
+                    "operation": "Summary",
+                    "thresholds": {
+                      "isEnabled": false,
+                      "values": [
+                        {
+                          "name": "Normal",
+                          "threshold": "Default",
+                          "color": "#009e49",
+                          "isDefault": true
+                        },
+                        {
+                          "name": "Warning",
+                          "threshold": "60",
+                          "color": "#fcd116",
+                          "isDefault": false
+                        },
+                        {
+                          "name": "Error",
+                          "threshold": "90",
+                          "color": "#ba141a",
+                          "isDefault": false
+                        }
+                      ]
+                    },
+                    "NameDSVSeparator": "",
+                    "NavigationQuery": "{selected item}"
+                  }
+                }
+              },
+              {
+                "Id": "SingleQueryDonutBuilderBladeV1",
+                "Type": "Blade",
+                "Version": 0,
+                "Configuration": {
+                  "General": {
+                    "title": "InputEndpoints ",
+                    "newGroup": false,
+                    "icon": "",
+                    "useIcon": false
+                  },
+                  "Header": {
+                    "Title": "No of VMs",
+                    "Subtitle": ""
+                  },
+                  "Donut": {
+                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMEndpoint | measure countdistinct(VmName_s) by endpointName_s",
                     "CenterLegend": {
                       "Text": "Total",
                       "Operation": "Sum",
@@ -1037,13 +667,289 @@
                     }
                   },
                   "List": {
-                    "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions  StorageService_s=Blob  | EXTEND div(TotalIngress_d,1024)  as IngressKB | measure sum(IngressKB) by StorageAccount_s",
+                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMEndpoint | measure countdistinct(VmName_s) by endpointName_s,privatePort_d",
+                    "HideGraph": false,
+                    "enableSparklines": false,
+                    "ColumnsTitle": {
+                      "Name": "EndpointName",
+                      "Value": "Count"
+                    },
+                    "Color": "#0072c6",
+                    "operation": "Summary",
+                    "thresholds": {
+                      "isEnabled": false,
+                      "values": [
+                        {
+                          "name": "Normal",
+                          "threshold": "Default",
+                          "color": "#009e49",
+                          "isDefault": true
+                        },
+                        {
+                          "name": "Warning",
+                          "threshold": "60",
+                          "color": "#fcd116",
+                          "isDefault": false
+                        },
+                        {
+                          "name": "Error",
+                          "threshold": "90",
+                          "color": "#ba141a",
+                          "isDefault": false
+                        }
+                      ]
+                    },
+                    "NameDSVSeparator": "",
+                    "NavigationQuery": "{selected item}"
+                  }
+                }
+              },
+              {
+                "Id": "SingleQueryDonutBuilderBladeV1",
+                "Type": "Blade",
+                "Version": 0,
+                "Configuration": {
+                  "General": {
+                    "title": "NSG Rules Applied",
+                    "newGroup": false,
+                    "icon": "",
+                    "useIcon": false
+                  },
+                  "Header": {
+                    "Title": "No of VMs",
+                    "Subtitle": ""
+                  },
+                  "Donut": {
+                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMNSGrule | measure countdistinct(VmName_s) by RuleName_s",
+                    "CenterLegend": {
+                      "Text": "Total",
+                      "Operation": "Sum",
+                      "ArcsToSelect": []
+                    },
+                    "Options": {
+                      "colors": [
+                        "#fcd116",
+                        "#0072c6",
+                        "#009e49"
+                      ],
+                      "valueColorMapping": []
+                    }
+                  },
+                  "List": {
+                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMNSGrule | measure countdistinct(VmName_s) by RuleName_s",
+                    "HideGraph": false,
+                    "enableSparklines": false,
+                    "ColumnsTitle": {
+                      "Name": "Rule",
+                      "Value": "CountVM"
+                    },
+                    "Color": "#0072c6",
+                    "operation": "Summary",
+                    "thresholds": {
+                      "isEnabled": false,
+                      "values": [
+                        {
+                          "name": "Normal",
+                          "threshold": "Default",
+                          "color": "#009e49",
+                          "isDefault": true
+                        },
+                        {
+                          "name": "Warning",
+                          "threshold": "60",
+                          "color": "#fcd116",
+                          "isDefault": false
+                        },
+                        {
+                          "name": "Error",
+                          "threshold": "90",
+                          "color": "#ba141a",
+                          "isDefault": false
+                        }
+                      ]
+                    },
+                    "NameDSVSeparator": "",
+                    "NavigationQuery": "{selected item}"
+                  }
+                }
+              },
+              {
+                "Id": "SingleQueryDonutBuilderBladeV1",
+                "Type": "Blade",
+                "Version": 0,
+                "Configuration": {
+                  "General": {
+                    "title": "NSG - Allowed Ports ",
+                    "newGroup": false,
+                    "icon": "",
+                    "useIcon": false
+                  },
+                  "Header": {
+                    "Title": "Count of Computers",
+                    "Subtitle": ""
+                  },
+                  "Donut": {
+                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMNSGrule  access_s=Allow  | measure countdistinct(VmName_s) by destinationPortRange_s",
+                    "CenterLegend": {
+                      "Text": "Total",
+                      "Operation": "Sum",
+                      "ArcsToSelect": []
+                    },
+                    "Options": {
+                      "colors": [
+                        "#00bcf2",
+                        "#7fba00",
+                        "#fcd116"
+                      ],
+                      "valueColorMapping": []
+                    }
+                  },
+                  "List": {
+                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMNSGrule  access_s=Allow  | measure countdistinct(VmName_s) by sourcePortRange_s,destinationPortRange_s,protocol_s",
+                    "HideGraph": false,
+                    "enableSparklines": false,
+                    "ColumnsTitle": {
+                      "Name": "Source",
+                      "Value": "Count"
+                    },
+                    "Color": "#0072c6",
+                    "operation": "Summary",
+                    "thresholds": {
+                      "isEnabled": false,
+                      "values": [
+                        {
+                          "name": "Normal",
+                          "threshold": "Default",
+                          "color": "#009e49",
+                          "isDefault": true
+                        },
+                        {
+                          "name": "Warning",
+                          "threshold": "60",
+                          "color": "#fcd116",
+                          "isDefault": false
+                        },
+                        {
+                          "name": "Error",
+                          "threshold": "90",
+                          "color": "#ba141a",
+                          "isDefault": false
+                        }
+                      ]
+                    },
+                    "NameDSVSeparator": "",
+                    "NavigationQuery": "{selected item}"
+                  }
+                }
+              },
+              {
+                "Id": "SingleQueryDonutBuilderBladeV1",
+                "Type": "Blade",
+                "Version": 0,
+                "Configuration": {
+                  "General": {
+                    "title": "Cores Utilized",
+                    "newGroup": false,
+                    "icon": "",
+                    "useIcon": false
+                  },
+                  "Header": {
+                    "Title": "Per Region",
+                    "Subtitle": ""
+                  },
+                  "Donut": {
+                    "Query": "[concat('Type=AzureVMInventory_CL MetricName_s=ARMVMUsageStats TimeGenerated>NOW-', parameters('omsDataIngestionFrequency'),'Minutes  Usagemetric_s=cores |measure max(currentValue_d) by Location_s')]",
+                    "CenterLegend": {
+                      "Text": "Total",
+                      "Operation": "Sum",
+                      "ArcsToSelect": []
+                    },
+                    "Options": {
+                      "colors": [
+                        "#0072c6",
+                        "#ffb900",
+                        "#009e49"
+                      ],
+                      "valueColorMapping": []
+                    }
+                  },
+                  "List": {
+                    "Query": "[concat('Type=AzureVMInventory_CL MetricName_s=ARMVMUsageStats TimeGenerated>NOW-', parameters('omsDataIngestionFrequency'),'Minutes  Usagemetric_s=cores |measure max(currentValue_d) by AzureSubscription_s,Location_s')]",
+                    "HideGraph": false,
+                    "enableSparklines": false,
+                    "ColumnsTitle": {
+                      "Name": "Subscription",
+                      "Value": "Count"
+                    },
+                    "Color": "#0072c6",
+                    "operation": "Summary",
+                    "thresholds": {
+                      "isEnabled": false,
+                      "values": [
+                        {
+                          "name": "Normal",
+                          "threshold": "Default",
+                          "color": "#009e49",
+                          "isDefault": true
+                        },
+                        {
+                          "name": "Warning",
+                          "threshold": "60",
+                          "color": "#fcd116",
+                          "isDefault": false
+                        },
+                        {
+                          "name": "Error",
+                          "threshold": "90",
+                          "color": "#ba141a",
+                          "isDefault": false
+                        }
+                      ]
+                    },
+                    "NameDSVSeparator": "",
+                    "NavigationQuery": "{selected item}"
+                  }
+                }
+              },
+              {
+                "Id": "SingleQueryDonutBuilderBladeV1",
+                "Type": "Blade",
+                "Version": 0,
+                "Configuration": {
+                  "General": {
+                    "title": "Disk Count by IO",
+                    "newGroup": true,
+                    "icon": "",
+                    "useIcon": false
+                  },
+                  "Header": {
+                    "Title": "",
+                    "Subtitle": ""
+                  },
+                  "Donut": {
+                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMDisk  | measure countdistinct(VHDUri_s) by MaxDiskIO_d",
+                    "CenterLegend": {
+                      "Text": "Total",
+                      "Operation": "Sum",
+                      "ArcsToSelect": []
+                    },
+                    "Options": {
+                      "colors": [
+                        "#00bcf2",
+                        "#ffb900",
+                        "#009e49"
+                      ],
+                      "valueColorMapping": []
+                    }
+                  },
+                  "List": {
+                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMDisk  | measure countdistinct(VHDUri_s) by DiskIOType_s",
                     "HideGraph": false,
                     "enableSparklines": false,
                     "operation": "Summary",
                     "ColumnsTitle": {
-                      "Name": "STORAGE ACCOUNT",
-                      "Value": "Ingress Traffic"
+                      "Name": "IOTYPE",
+                      "Value": "DiskCount"
                     },
                     "Color": "#0072c6",
                     "thresholds": {
@@ -1080,7 +986,7 @@
                 "Version": 0,
                 "Configuration": {
                   "General": {
-                    "title": "BLOB - Egress Traffic KB",
+                    "title": "Disks by Location",
                     "newGroup": false,
                     "icon": "",
                     "useIcon": false
@@ -1090,7 +996,7 @@
                     "Subtitle": ""
                   },
                   "Donut": {
-                    "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions StorageService_s=Blob  | EXTEND div(TotalEgress_d,1024)  as EgressKB | measure sum(EgressKB)  by StorageAccount_s",
+                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMDisk DiskIOType_s=Standard | measure countdistinct(VHDUri_s) by StorageAccount_s",
                     "CenterLegend": {
                       "Text": "Total",
                       "Operation": "Sum",
@@ -1098,21 +1004,21 @@
                     },
                     "Options": {
                       "colors": [
-                        "#00188f",
                         "#0072c6",
-                        "#00bcf2"
+                        "#ffb900",
+                        "#55d455"
                       ],
                       "valueColorMapping": []
                     }
                   },
                   "List": {
-                    "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions  StorageService_s=Blob  | EXTEND div(TotalEgress_d,1024)  as EgressKB | measure sum(EgressKB)  by StorageAccount_s",
+                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMDisk DiskIOType_s=Standard | measure countdistinct(VHDUri_s) by StorageAccount_s",
                     "HideGraph": false,
                     "enableSparklines": false,
                     "operation": "Summary",
                     "ColumnsTitle": {
-                      "Name": "STORAGE ACCOUNT",
-                      "Value": "Egress Traffic KB"
+                      "Name": "Location",
+                      "Value": "Count"
                     },
                     "Color": "#0072c6",
                     "thresholds": {
@@ -1141,820 +1047,6 @@
                     "NameDSVSeparator": "",
                     "NavigationQuery": "{selected item}"
                   }
-                }
-              },
-              {
-                "Id": "SingleQueryDonutBuilderBladeV1",
-                "Type": "Blade",
-                "Version": 0,
-                "Configuration": {
-                  "General": {
-                    "title": "BLOB - SA Request Errors",
-                    "newGroup": false,
-                    "icon": "",
-                    "useIcon": false
-                  },
-                  "Header": {
-                    "Title": "TotalErrorPct by Storage Account",
-                    "Subtitle": ""
-                  },
-                  "Donut": {
-                    "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions StorageService_s=Blob   |EXTEND sum(PercentClientOtherError_d,PercentNetworkError_d,PercentTimeoutError_d,PercentThrottlingError_d,PercentAuthorizationError_d,PercentServerOtherError_d) AS TotalError |measure avg(TotalError) as AvgPctError  by StorageAccount_s",
-                    "CenterLegend": {
-                      "Text": "Total",
-                      "Operation": "Percentage",
-                      "ArcsToSelect": []
-                    },
-                    "Options": {
-                      "colors": [
-                        "#e81123",
-                        "#ff8c00",
-                        "#ffb900"
-                      ],
-                      "valueColorMapping": []
-                    }
-                  },
-                  "List": {
-                    "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions StorageService_s=Blob   |EXTEND sum(PercentClientOtherError_d,PercentNetworkError_d,PercentTimeoutError_d,PercentThrottlingError_d,PercentAuthorizationError_d,PercentServerOtherError_d) AS TotalError |measure avg(TotalError)as AvgPctError  by StorageAccount_s,StorageService_s",
-                    "HideGraph": false,
-                    "enableSparklines": false,
-                    "operation": "Summary",
-                    "ColumnsTitle": {
-                      "Name": "SA",
-                      "Value": "Error %"
-                    },
-                    "Color": "#0072c6",
-                    "thresholds": {
-                      "isEnabled": false,
-                      "values": [
-                        {
-                          "name": "Normal",
-                          "threshold": "Default",
-                          "color": "#009e49",
-                          "isDefault": true
-                        },
-                        {
-                          "name": "Warning",
-                          "threshold": "60",
-                          "color": "#fcd116",
-                          "isDefault": false
-                        },
-                        {
-                          "name": "Error",
-                          "threshold": "90",
-                          "color": "#ba141a",
-                          "isDefault": false
-                        }
-                      ]
-                    },
-                    "NameDSVSeparator": "",
-                    "NavigationQuery": "{selected item}"
-                  }
-                }
-              },
-              {
-                "Id": "LineChartCalloutStackedBuilderBlade",
-                "Type": "Blade",
-                "Version": 0,
-                "Configuration": {
-                  "General": {
-                    "title": "Request ErrorPct Distribution",
-                    "newGroup": false
-                  },
-                  "charts": [
-                    {
-                      "Header": {
-                        "Title": "Client Error Pct Over Time",
-                        "Subtitle": ""
-                      },
-                      "LineChart": {
-                        "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions StorageService_s=Blob    |measure avg(PercentClientOtherError_d) by StorageAccount_s",
-                        "yAxis": {
-                          "isLogarithmic": false,
-                          "units": {
-                            "baseUnitType": "",
-                            "baseUnit": "",
-                            "displayUnit": ""
-                          },
-                          "customLabel": ""
-                        }
-                      }
-                    },
-                    {
-                      "Header": {
-                        "Title": "Network Error Pct Over Time",
-                        "Subtitle": ""
-                      },
-                      "LineChart": {
-                        "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions StorageService_s=Blob    |measure avg(PercentNetworkError_d) by StorageAccount_s",
-                        "yAxis": {
-                          "isLogarithmic": false,
-                          "units": {
-                            "baseUnitType": "",
-                            "baseUnit": "",
-                            "displayUnit": ""
-                          },
-                          "customLabel": ""
-                        }
-                      }
-                    },
-                    {
-                      "Header": {
-                        "Title": "Authorization Error Pct Over Time",
-                        "Subtitle": ""
-                      },
-                      "LineChart": {
-                        "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions StorageService_s=Blob   |measure avg(PercentAuthorizationError_d) by StorageAccount_s",
-                        "yAxis": {
-                          "isLogarithmic": false,
-                          "units": {
-                            "baseUnitType": "",
-                            "baseUnit": "",
-                            "displayUnit": ""
-                          },
-                          "customLabel": ""
-                        }
-                      }
-                    }
-                  ]
-                }
-              },
-              {
-                "Id": "SingleQueryDonutBuilderBladeV1",
-                "Type": "Blade",
-                "Version": 0,
-                "Configuration": {
-                  "General": {
-                    "title": "TABLE - TOTAL REQUESTS ",
-                    "newGroup": false,
-                    "icon": "",
-                    "useIcon": false
-                  },
-                  "Header": {
-                    "Title": "Total Request per Storage Account",
-                    "Subtitle": ""
-                  },
-                  "Donut": {
-                    "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions  StorageService_s=Table  TimeGenerated>NOW-1HOUR |measure sum(TotalRequests_d) by StorageAccount_s",
-                    "CenterLegend": {
-                      "Text": "Total",
-                      "Operation": "Sum",
-                      "ArcsToSelect": []
-                    },
-                    "Options": {
-                      "colors": [
-                        "#00188f",
-                        "#0072c6",
-                        "#00bcf2"
-                      ],
-                      "valueColorMapping": []
-                    }
-                  },
-                  "List": {
-                    "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions  StorageService_s=Table  TimeGenerated>NOW-1HOUR |measure sum(TotalRequests_d) by StorageAccount_s",
-                    "HideGraph": false,
-                    "enableSparklines": false,
-                    "operation": "Summary",
-                    "ColumnsTitle": {
-                      "Name": "Storage Account",
-                      "Value": "RequestCount"
-                    },
-                    "Color": "#0072c6",
-                    "thresholds": {
-                      "isEnabled": false,
-                      "values": [
-                        {
-                          "name": "Normal",
-                          "threshold": "Default",
-                          "color": "#009e49",
-                          "isDefault": true
-                        },
-                        {
-                          "name": "Warning",
-                          "threshold": "60",
-                          "color": "#fcd116",
-                          "isDefault": false
-                        },
-                        {
-                          "name": "Error",
-                          "threshold": "90",
-                          "color": "#ba141a",
-                          "isDefault": false
-                        }
-                      ]
-                    },
-                    "NameDSVSeparator": "",
-                    "NavigationQuery": "{selected item}"
-                  }
-                }
-              },
-              {
-                "Id": "LineChartCalloutStackedBuilderBlade",
-                "Type": "Blade",
-                "Version": 0,
-                "Configuration": {
-                  "General": {
-                    "title": "TABLE STORAGE METRICS",
-                    "newGroup": false
-                  },
-                  "charts": [
-                    {
-                      "Header": {
-                        "Title": "Ingress Traffic KB Over Time",
-                        "Subtitle": ""
-                      },
-                      "LineChart": {
-                        "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions  StorageService_s=Table StorageAccount_s IN {Type=AzureStorage_CL     MetricName_s=MetricsTransactions  StorageService_s=Table | measure sum(TotalIngress_d) by StorageAccount_s |top 10 } | EXTEND div(TotalIngress_d,1024)  as IngressKB | measure sum(IngressKB) by StorageAccount_s  interval 15Minutes",
-                        "yAxis": {
-                          "isLogarithmic": false,
-                          "units": {
-                            "baseUnitType": "",
-                            "baseUnit": "",
-                            "displayUnit": ""
-                          },
-                          "customLabel": ""
-                        }
-                      }
-                    },
-                    {
-                      "Header": {
-                        "Title": "Egress Traffic KB Over time",
-                        "Subtitle": ""
-                      },
-                      "LineChart": {
-                        "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions  StorageService_s=Table StorageAccount_s IN {Type=AzureStorage_CL     MetricName_s=MetricsTransactions  StorageService_s=Table | measure sum(TotalEgress_d) by StorageAccount_s |top 10 }   | EXTEND div(TotalEgress_d,1024)  as EgressKB | measure sum(EgressKB)  by StorageAccount_s  interval 15Minutes",
-                        "yAxis": {
-                          "isLogarithmic": false,
-                          "units": {
-                            "baseUnitType": "",
-                            "baseUnit": "",
-                            "displayUnit": ""
-                          },
-                          "customLabel": ""
-                        }
-                      }
-                    },
-                    {
-                      "Header": {
-                        "Title": "Total Requests Over Time",
-                        "Subtitle": ""
-                      },
-                      "LineChart": {
-                        "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions StorageService_s=Table  StorageAccount_s IN {Type=AzureStorage_CL     MetricName_s=MetricsTransactions  StorageService_s=Table | measure sum(TotalRequests_d) by StorageAccount_s |top 10 }  |measure sum(TotalRequests_d) by StorageAccount_s  Interval 15Minutes",
-                        "yAxis": {
-                          "isLogarithmic": false,
-                          "units": {
-                            "baseUnitType": "",
-                            "baseUnit": "",
-                            "displayUnit": ""
-                          },
-                          "customLabel": ""
-                        }
-                      }
-                    }
-                  ]
-                }
-              },
-              {
-                "Id": "SingleQueryDonutBuilderBladeV1",
-                "Type": "Blade",
-                "Version": 0,
-                "Configuration": {
-                  "General": {
-                    "title": "TABLE - SA Request Errors",
-                    "newGroup": false,
-                    "icon": "",
-                    "useIcon": false
-                  },
-                  "Header": {
-                    "Title": "TotalErrorPct by Storage Account",
-                    "Subtitle": ""
-                  },
-                  "Donut": {
-                    "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions StorageService_s=Table   |EXTEND sum(PercentClientOtherError_d,PercentNetworkError_d,PercentTimeoutError_d,PercentThrottlingError_d,PercentAuthorizationError_d,PercentServerOtherError_d) AS TotalError |measure avg(TotalError) as AvgPctError  by StorageAccount_s",
-                    "CenterLegend": {
-                      "Text": "Total",
-                      "Operation": "Percentage",
-                      "ArcsToSelect": []
-                    },
-                    "Options": {
-                      "colors": [
-                        "#e81123",
-                        "#ff8c00",
-                        "#ffb900"
-                      ],
-                      "valueColorMapping": []
-                    }
-                  },
-                  "List": {
-                    "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions StorageService_s=Table   |EXTEND sum(PercentClientOtherError_d,PercentNetworkError_d,PercentTimeoutError_d,PercentThrottlingError_d,PercentAuthorizationError_d,PercentServerOtherError_d) AS TotalError |measure avg(TotalError)as AvgPctError  by StorageAccount_s,StorageService_s",
-                    "HideGraph": false,
-                    "enableSparklines": false,
-                    "operation": "Summary",
-                    "ColumnsTitle": {
-                      "Name": "SA",
-                      "Value": "Error %"
-                    },
-                    "Color": "#0072c6",
-                    "thresholds": {
-                      "isEnabled": false,
-                      "values": [
-                        {
-                          "name": "Normal",
-                          "threshold": "Default",
-                          "color": "#009e49",
-                          "isDefault": true
-                        },
-                        {
-                          "name": "Warning",
-                          "threshold": "60",
-                          "color": "#fcd116",
-                          "isDefault": false
-                        },
-                        {
-                          "name": "Error",
-                          "threshold": "90",
-                          "color": "#ba141a",
-                          "isDefault": false
-                        }
-                      ]
-                    },
-                    "NameDSVSeparator": "",
-                    "NavigationQuery": "{selected item}"
-                  }
-                }
-              },
-              {
-                "Id": "LineChartCalloutStackedBuilderBlade",
-                "Type": "Blade",
-                "Version": 0,
-                "Configuration": {
-                  "General": {
-                    "title": "Request ErrorPct Distribution",
-                    "newGroup": false
-                  },
-                  "charts": [
-                    {
-                      "Header": {
-                        "Title": "Client Error Pct Over Time",
-                        "Subtitle": ""
-                      },
-                      "LineChart": {
-                        "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions StorageService_s=Table    |measure avg(PercentClientOtherError_d) by StorageAccount_s",
-                        "yAxis": {
-                          "isLogarithmic": false,
-                          "units": {
-                            "baseUnitType": "",
-                            "baseUnit": "",
-                            "displayUnit": ""
-                          },
-                          "customLabel": ""
-                        }
-                      }
-                    },
-                    {
-                      "Header": {
-                        "Title": "Network Error Pct Over Time",
-                        "Subtitle": ""
-                      },
-                      "LineChart": {
-                        "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions StorageService_s=Table   |measure avg(PercentNetworkError_d) by StorageAccount_s",
-                        "yAxis": {
-                          "isLogarithmic": false,
-                          "units": {
-                            "baseUnitType": "",
-                            "baseUnit": "",
-                            "displayUnit": ""
-                          },
-                          "customLabel": ""
-                        }
-                      }
-                    },
-                    {
-                      "Header": {
-                        "Title": "Authorization Error Pct Over Time",
-                        "Subtitle": ""
-                      },
-                      "LineChart": {
-                        "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions StorageService_s=Table   |measure avg(PercentAuthorizationError_d) by StorageAccount_s",
-                        "yAxis": {
-                          "isLogarithmic": false,
-                          "units": {
-                            "baseUnitType": "",
-                            "baseUnit": "",
-                            "displayUnit": ""
-                          },
-                          "customLabel": ""
-                        }
-                      }
-                    }
-                  ]
-                }
-              },
-              {
-                "Id": "LineChartCalloutStackedBuilderBlade",
-                "Type": "Blade",
-                "Version": 0,
-                "Configuration": {
-                  "General": {
-                    "title": "QUEUE STORAGE METRICS",
-                    "newGroup": false
-                  },
-                  "charts": [
-                    {
-                      "Header": {
-                        "Title": "Ingress Traffic KB Over Time",
-                        "Subtitle": ""
-                      },
-                      "LineChart": {
-                        "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions  StorageService_s=Queue StorageAccount_s IN {Type=AzureStorage_CL     MetricName_s=MetricsTransactions  StorageService_s=Queue | measure sum(TotalIngress_d) by StorageAccount_s |top 10 }  | EXTEND div(TotalIngress_d,1024)  as IngressKB | measure sum(IngressKB) by StorageAccount_s  interval 15Minutes",
-                        "yAxis": {
-                          "isLogarithmic": false,
-                          "units": {
-                            "baseUnitType": "",
-                            "baseUnit": "",
-                            "displayUnit": ""
-                          },
-                          "customLabel": ""
-                        }
-                      }
-                    },
-                    {
-                      "Header": {
-                        "Title": "Egress Traffic KB Over time",
-                        "Subtitle": ""
-                      },
-                      "LineChart": {
-                        "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions  StorageService_s=Queue StorageAccount_s IN {Type=AzureStorage_CL     MetricName_s=MetricsTransactions  StorageService_s=Queue | measure sum(TotalEgress_d) by StorageAccount_s |top 10 }  | EXTEND div(TotalEgress_d,1024)  as EgressKB | measure sum(EgressKB) by StorageAccount_s  interval 15Minutes",
-                        "yAxis": {
-                          "isLogarithmic": false,
-                          "units": {
-                            "baseUnitType": "",
-                            "baseUnit": "",
-                            "displayUnit": ""
-                          },
-                          "customLabel": ""
-                        }
-                      }
-                    },
-                    {
-                      "Header": {
-                        "Title": "Total Requests Over Time",
-                        "Subtitle": ""
-                      },
-                      "LineChart": {
-                        "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions StorageService_s=Queue StorageAccount_s IN {Type=AzureStorage_CL     MetricName_s=MetricsTransactions  StorageService_s=Queue | measure sum(TotalRequests_d) by StorageAccount_s |top 10 }   |measure sum(TotalRequests_d) by StorageAccount_s  Interval 15Minutes",
-                        "yAxis": {
-                          "isLogarithmic": false,
-                          "units": {
-                            "baseUnitType": "",
-                            "baseUnit": "",
-                            "displayUnit": ""
-                          },
-                          "customLabel": ""
-                        }
-                      }
-                    }
-                  ]
-                }
-              },
-              {
-                "Id": "SingleQueryDonutBuilderBladeV1",
-                "Type": "Blade",
-                "Version": 0,
-                "Configuration": {
-                  "General": {
-                    "title": "QUEUE - SA Request Errors",
-                    "newGroup": false,
-                    "icon": "",
-                    "useIcon": false
-                  },
-                  "Header": {
-                    "Title": "TotalErrorPct by Storage Account",
-                    "Subtitle": ""
-                  },
-                  "Donut": {
-                    "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions StorageService_s=Queue   |EXTEND sum(PercentClientOtherError_d,PercentNetworkError_d,PercentTimeoutError_d,PercentThrottlingError_d,PercentAuthorizationError_d,PercentServerOtherError_d) AS TotalError |measure avg(TotalError) as AvgPctError  by StorageAccount_s",
-                    "CenterLegend": {
-                      "Text": "Total",
-                      "Operation": "Percentage",
-                      "ArcsToSelect": []
-                    },
-                    "Options": {
-                      "colors": [
-                        "#e81123",
-                        "#ff8c00",
-                        "#ffb900"
-                      ],
-                      "valueColorMapping": []
-                    }
-                  },
-                  "List": {
-                    "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions StorageService_s=Queue  |EXTEND sum(PercentClientOtherError_d,PercentNetworkError_d,PercentTimeoutError_d,PercentThrottlingError_d,PercentAuthorizationError_d,PercentServerOtherError_d) AS TotalError |measure avg(TotalError)as AvgPctError  by StorageAccount_s,StorageService_s",
-                    "HideGraph": false,
-                    "enableSparklines": false,
-                    "operation": "Summary",
-                    "ColumnsTitle": {
-                      "Name": "SA",
-                      "Value": "Error %"
-                    },
-                    "Color": "#0072c6",
-                    "thresholds": {
-                      "isEnabled": false,
-                      "values": [
-                        {
-                          "name": "Normal",
-                          "threshold": "Default",
-                          "color": "#009e49",
-                          "isDefault": true
-                        },
-                        {
-                          "name": "Warning",
-                          "threshold": "60",
-                          "color": "#fcd116",
-                          "isDefault": false
-                        },
-                        {
-                          "name": "Error",
-                          "threshold": "90",
-                          "color": "#ba141a",
-                          "isDefault": false
-                        }
-                      ]
-                    },
-                    "NameDSVSeparator": "",
-                    "NavigationQuery": "{selected item}"
-                  }
-                }
-              },
-              {
-                "Id": "LineChartCalloutStackedBuilderBlade",
-                "Type": "Blade",
-                "Version": 0,
-                "Configuration": {
-                  "General": {
-                    "title": "Request ErrorPct Distribution",
-                    "newGroup": false
-                  },
-                  "charts": [
-                    {
-                      "Header": {
-                        "Title": "Client Error Pct Over Time",
-                        "Subtitle": ""
-                      },
-                      "LineChart": {
-                        "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions StorageService_s=Queue   |measure avg(PercentClientOtherError_d) by StorageAccount_s",
-                        "yAxis": {
-                          "isLogarithmic": false,
-                          "units": {
-                            "baseUnitType": "",
-                            "baseUnit": "",
-                            "displayUnit": ""
-                          },
-                          "customLabel": ""
-                        }
-                      }
-                    },
-                    {
-                      "Header": {
-                        "Title": "Network Error Pct Over Time",
-                        "Subtitle": ""
-                      },
-                      "LineChart": {
-                        "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions StorageService_s=Queue    |measure avg(PercentNetworkError_d) by StorageAccount_s",
-                        "yAxis": {
-                          "isLogarithmic": false,
-                          "units": {
-                            "baseUnitType": "",
-                            "baseUnit": "",
-                            "displayUnit": ""
-                          },
-                          "customLabel": ""
-                        }
-                      }
-                    },
-                    {
-                      "Header": {
-                        "Title": "Authorization Error Pct Over Time",
-                        "Subtitle": ""
-                      },
-                      "LineChart": {
-                        "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions StorageService_s=Queue   |measure avg(PercentAuthorizationError_d) by StorageAccount_s",
-                        "yAxis": {
-                          "isLogarithmic": false,
-                          "units": {
-                            "baseUnitType": "",
-                            "baseUnit": "",
-                            "displayUnit": ""
-                          },
-                          "customLabel": ""
-                        }
-                      }
-                    }
-                  ]
-                }
-              },
-              {
-                "Id": "LineChartCalloutStackedBuilderBlade",
-                "Type": "Blade",
-                "Version": 0,
-                "Configuration": {
-                  "General": {
-                    "title": "FILE STORAGE METRICS",
-                    "newGroup": false
-                  },
-                  "charts": [
-                    {
-                      "Header": {
-                        "Title": "Ingress Traffic KB Over Time",
-                        "Subtitle": ""
-                      },
-                      "LineChart": {
-                        "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions  StorageService_s=File  StorageAccount_s IN {Type=AzureStorage_CL     MetricName_s=MetricsTransactions  StorageService_s=File| measure sum(TotalIngress_d) by StorageAccount_s |top 10 }  | EXTEND div(TotalIngress_d,1024)  as IngressKB | measure sum(IngressKB) by StorageAccount_s  interval 15Minutes",
-                        "yAxis": {
-                          "isLogarithmic": false,
-                          "units": {
-                            "baseUnitType": "",
-                            "baseUnit": "",
-                            "displayUnit": ""
-                          },
-                          "customLabel": ""
-                        }
-                      }
-                    },
-                    {
-                      "Header": {
-                        "Title": "Egress Traffic KB Over time",
-                        "Subtitle": ""
-                      },
-                      "LineChart": {
-                        "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions  StorageService_s=File StorageAccount_s IN {Type=AzureStorage_CL     MetricName_s=MetricsTransactions  StorageService_s=File | measure sum(TotalEgress_d) by StorageAccount_s |top 10 }  | EXTEND div(TotalEgress_d,1024)  as EgressKB | measure sum(EgressKB)  by StorageAccount_s  interval 15Minutes",
-                        "yAxis": {
-                          "isLogarithmic": false,
-                          "units": {
-                            "baseUnitType": "",
-                            "baseUnit": "",
-                            "displayUnit": ""
-                          },
-                          "customLabel": ""
-                        }
-                      }
-                    },
-                    {
-                      "Header": {
-                        "Title": "Total Requests Over Time",
-                        "Subtitle": ""
-                      },
-                      "LineChart": {
-                        "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions StorageService_s=File StorageAccount_s IN {Type=AzureStorage_CL     MetricName_s=MetricsTransactions  StorageService_s=File | measure sum(TotalRequests_d) by StorageAccount_s |top 10 }  |measure sum(TotalRequests_d) by StorageAccount_s  Interval 15Minutes",
-                        "yAxis": {
-                          "isLogarithmic": false,
-                          "units": {
-                            "baseUnitType": "",
-                            "baseUnit": "",
-                            "displayUnit": ""
-                          },
-                          "customLabel": ""
-                        }
-                      }
-                    }
-                  ]
-                }
-              },
-              {
-                "Id": "SingleQueryDonutBuilderBladeV1",
-                "Type": "Blade",
-                "Version": 0,
-                "Configuration": {
-                  "General": {
-                    "title": "FILE - SA Request Errors",
-                    "newGroup": false,
-                    "icon": "",
-                    "useIcon": false
-                  },
-                  "Header": {
-                    "Title": "TotalErrorPct by Storage Account",
-                    "Subtitle": ""
-                  },
-                  "Donut": {
-                    "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions StorageService_s=File   |EXTEND sum(PercentClientOtherError_d,PercentNetworkError_d,PercentTimeoutError_d,PercentThrottlingError_d,PercentAuthorizationError_d,PercentServerOtherError_d) AS TotalError |measure avg(TotalError) as AvgPctError  by StorageAccount_s",
-                    "CenterLegend": {
-                      "Text": "Total",
-                      "Operation": "Percentage",
-                      "ArcsToSelect": []
-                    },
-                    "Options": {
-                      "colors": [
-                        "#e81123",
-                        "#ff8c00",
-                        "#ffb900"
-                      ],
-                      "valueColorMapping": []
-                    }
-                  },
-                  "List": {
-                    "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions StorageService_s=File   |EXTEND sum(PercentClientOtherError_d,PercentNetworkError_d,PercentTimeoutError_d,PercentThrottlingError_d,PercentAuthorizationError_d,PercentServerOtherError_d) AS TotalError |measure avg(TotalError)as AvgPctError  by StorageAccount_s,StorageService_s",
-                    "HideGraph": false,
-                    "enableSparklines": false,
-                    "operation": "Summary",
-                    "ColumnsTitle": {
-                      "Name": "SA",
-                      "Value": "Error %"
-                    },
-                    "Color": "#0072c6",
-                    "thresholds": {
-                      "isEnabled": false,
-                      "values": [
-                        {
-                          "name": "Normal",
-                          "threshold": "Default",
-                          "color": "#009e49",
-                          "isDefault": true
-                        },
-                        {
-                          "name": "Warning",
-                          "threshold": "60",
-                          "color": "#fcd116",
-                          "isDefault": false
-                        },
-                        {
-                          "name": "Error",
-                          "threshold": "90",
-                          "color": "#ba141a",
-                          "isDefault": false
-                        }
-                      ]
-                    },
-                    "NameDSVSeparator": "",
-                    "NavigationQuery": "{selected item}"
-                  }
-                }
-              },
-              {
-                "Id": "LineChartCalloutStackedBuilderBlade",
-                "Type": "Blade",
-                "Version": 0,
-                "Configuration": {
-                  "General": {
-                    "title": "Request ErrorPct Distribution",
-                    "newGroup": false
-                  },
-                  "charts": [
-                    {
-                      "Header": {
-                        "Title": "Client Error Pct Over Time",
-                        "Subtitle": ""
-                      },
-                      "LineChart": {
-                        "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions StorageService_s=File    |measure avg(PercentClientOtherError_d) by StorageAccount_s",
-                        "yAxis": {
-                          "isLogarithmic": false,
-                          "units": {
-                            "baseUnitType": "",
-                            "baseUnit": "",
-                            "displayUnit": ""
-                          },
-                          "customLabel": ""
-                        }
-                      }
-                    },
-                    {
-                      "Header": {
-                        "Title": "Network Error Pct Over Time",
-                        "Subtitle": ""
-                      },
-                      "LineChart": {
-                        "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions StorageService_s=File    |measure avg(PercentNetworkError_d) by StorageAccount_s",
-                        "yAxis": {
-                          "isLogarithmic": false,
-                          "units": {
-                            "baseUnitType": "",
-                            "baseUnit": "",
-                            "displayUnit": ""
-                          },
-                          "customLabel": ""
-                        }
-                      }
-                    },
-                    {
-                      "Header": {
-                        "Title": "Authorization Error Pct Over Time",
-                        "Subtitle": ""
-                      },
-                      "LineChart": {
-                        "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions StorageService_s=File   |measure avg(PercentAuthorizationError_d) by StorageAccount_s",
-                        "yAxis": {
-                          "isLogarithmic": false,
-                          "units": {
-                            "baseUnitType": "",
-                            "baseUnit": "",
-                            "displayUnit": ""
-                          },
-                          "customLabel": ""
-                        }
-                      }
-                    }
-                  ]
                 }
               }
             ],
@@ -1964,11 +1056,11 @@
               "Version": 0,
               "Configuration": {
                 "LineChart": {
-                  "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions |measure sum(TotalRequests_d) by StorageAccount_s  Interval 15Minutes",
+                  "Query": "[concat('Type=AzureVMInventory_CL MetricName_s=VMInventory  | measure countdistinct(VmName_s) by Status_s interval ', parameters('omsDataIngestionFrequency'),'Minutes')]",
                   "Callout": {
-                    "Title": "TOTAL REQUESTS",
-                    "Series": "",
-                    "Operation": "Sum"
+                    "Title": "Running",
+                    "Series": "Running",
+                    "Operation": "Last Sample"
                   },
                   "yAxis": {
                     "isLogarithmic": false,
@@ -1994,7 +1086,7 @@
         }
       ]
     },
-        {
+     {
       "name": "[variables('omsSolutions').customSolution.solutionName]",
       "type": "Microsoft.OperationsManagement/solutions",
       "apiVersion": "2015-11-01-preview",
@@ -2160,10 +1252,5 @@
     }
 
   ],
-  "outputs": {
-     "LogAnalyticsworkspacename": {
-      "value": "[concat('Microsoft.OperationalInsights/workspaces/', parameters('omsLogAnalyticsWorkspaceName'))]",
-      "type": "string"
-    }
-  }
+  "outputs": {}
 }

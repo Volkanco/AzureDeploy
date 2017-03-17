@@ -6,7 +6,6 @@ param (
 )
 
 
-$ErrorActionPreference = "SilentlyContinue"
 
 #region Login to Azure account and select the subscription.
 #Authenticate to Azure with SPN section
@@ -42,72 +41,9 @@ Select-AzureRmSubscription -SubscriptionId $Conn.SubscriptionID -TenantId $Conn.
 $AAResourceGroup = Get-AutomationVariable -Name 'AzureVMInventory-AzureAutomationResourceGroup-MS-Mgmt'
 $AAAccount = Get-AutomationVariable -Name 'AzureVMInventory-AzureAutomationAccount-MS-Mgmt'
 $RunbookName = "AzureVMInventory-MS-Mgmt"
-$ScheduleName = "AzureVMInventory-Schedule"
+$ScheduleName = "AzureVMInventory-Scheduler-Hourly"
 $schedulerrunbookname="AzureVMInventory-Schedules-MS-Mgmt"
 $varVMIopsList="AzureVMInventory-VM-IOPSLimits"
-
-# Remove old solution components
-
-
-<#
-$delTask = "Runbook=AzureVMInventory-MS-Mgmt;Runbook=CreateSchedules-MS-Mgmt;Schedule=AzureVMInventory-HourlySchedule-MS-Mgmt;Variable=AzureVMInventory-OPSINSIGHTS_WS_ID;Variable=AzureVMInventory-OPSINSIGHTS_WS_KEY;Variable=AzureVMInventory-AzureAutomationAccount-MS-Mgmt;Variable=AzureVMInventory-AzureAutomationResourceGroup-MS-Mgmt"
-
-
-$dList = $delTask.split(";")
-foreach ($item in $dList)
-{
-    $actionItem = $item.split("=")
-    if ($actionItem.Count -eq 2)
-    {
-        if ($actionItem[0] -eq "Runbook")
-        {
-            Write-Verbose "CleanUp:  Removing runbook $actionItem[1]"
-            Remove-AzureRmAutomationRunbook -Name $actionItem[1] -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup  -Force 
-        } 
-        elseif ($actionItem[0] -eq "Schedule")
-        {
-            Write-Verbose "CleanUp:  Removing schedule $actionItem[1]"
-            Remove-AzureRmAutomationSchedule -Name $actionItem[1] -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup  -Force
-
-            $RBsch=Get-AzureRmAutomationSchedule -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup |where{$_.name -match 'AzureVMInventory-Schedule-MS-Mgmt'}
-
-                IF($RBsch)
-                {
-                    foreach ($sch in $RBsch)
-                    {
-
-                    Remove-AzureRmAutomationSchedule -AutomationAccountName $AAAccount -Name $sch.Name -ResourceGroupName $AAResourceGroup  -Force
-                               
-                    }
-                }
-
-            
-            
-        }
-        elseif ($actionItem[0] -eq "Lock")
-        {
-            $lockList = Get-AzureRmResourceLock
-            foreach ($l in $lockList) 
-            {
-                $lockNameCompareStr = "*" + $actionItem[1] + "*"
-                if ($l.LockId -Like $lockNameCompareStr)
-                {
-                    Write-Verbose "CleanUp:  Removing lock $actionItem[1]"
-                    Remove-AzureRmResourceLock -LockId $l.LockId -Force
-                }
-            }
-        }
-        elseif ($actionItem[0] -eq "Variable")
-        {
-            Write-Verbose "CleanUp:  Removing variable $actionItem[1]"
-           Remove-AzureRmAutomationVariable -Name  $actionItem[1]  -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup  
-
-        }
-    }
-}
-
-#>
-
 
 #create new variales and schedules
 
@@ -216,16 +152,32 @@ New-AzureRmAutomationVariable -Name $varVMIopsList -Description "Variable to sto
 
 #check and create a  weekly schedule to check  and redeploy scheduler runbook
 "Rescheduling the runbook to check and fix scheules weekly"
-$prevjobs=Get-AzureRmAutomationJob -RunbookName $schedulerrunbookname -ResourceGroupName $AAResourceGroup -AutomationAccountName $AAAccount
+#$prevjobs=Get-AzureRmAutomationJob -RunbookName $schedulerrunbookname -ResourceGroupName $AAResourceGroup -AutomationAccountName $AAAccount
 
-If($prevjobs.count -gt 1)
-{
+#If($prevjobs.count -gt 1)
+#{
 
 $RunbookStartTime = $Date = $([DateTime]::Now.AddMinutes($Frequency))
+    
     $RBsch=$null
-    $RBsch=Get-AzureRmAutomationSchedule  -Name  'AzureVMInventory-Scheduler' -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup
 
-    IF($RBsch.Frequency -eq 'Hour')
+    $RBsch=get-AzureRmAutomationScheduledRunbook -RunbookName $schedulerrunbookname -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup 
+
+    $RBsch|where{$_.ScheduleName -match 'AzureVMInventory-Scheduler-Hourly'}
+
+    #$RBsch=Get-AzureRmAutomationSchedule  -Name  'AzureVMInventory-Scheduler' -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup
+
+    IF([string]::IsNullOrEmpty($RBsch))
+    {
+          "No schedule found, will create a new weekly schedule"
+    $params1 = @{"frequency"=$frequency;"getNICandNSG"=$getNICandNSG;"getDiskInfo" = $getDiskInfo}
+	 $Schedule1 = New-AzureRmAutomationSchedule -Name 'AzureVMInventory-Scheduler' -StartTime $RunbookStartTime -DayInterval 7 -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup
+    $Sch1 = Register-AzureRmAutomationScheduledRunbook -RunbookName $schedulerrunbookname -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup -ScheduleName 'AzureVMInventory-Scheduler' -Parameters $params1
+    
+    $runnow=$true
+
+
+    }Elseif($RBsch.Frequency -eq 'Hour')
     {
     "Initial schedule found. We will replace initital schedule with a weekly one"
         $RunbookStartTime = $RunbookStartTime.Addhours(24)
@@ -243,7 +195,7 @@ $RunbookStartTime = $Date = $([DateTime]::Now.AddMinutes($Frequency))
     }
 
 
- }   
+ #}   
 
 
 
@@ -251,7 +203,7 @@ $NumberofSchedules = 60 / $Frequency
 
 $checkschdl=@(get-AzureRmAutomationScheduledRunbook -RunbookName $RunbookName -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup)
 
-If ($NumberofSchedules -ne  $checkschdl.Count)
+If ([string]::IsNullOrEmpty($checkschdl)  -or  $NumberofSchedules -ne  $checkschdl.Count)
 {
 
 
@@ -261,7 +213,7 @@ If ($NumberofSchedules -ne  $checkschdl.Count)
     {
 	    foreach ($sch in $RBsch)
 	    {
-		    Remove-AzureRmAutomationSchedule -AutomationAccountName $AAAccount -Name $sch.Name -ResourceGroupName $AAResourceGroup -Force
+		    Remove-AzureRmAutomationSchedule -AutomationAccountName $AAAccount -Name $sch.Name -ResourceGroupName $AAResourceGroup -Force -ea 0
 		
 	    }
     }

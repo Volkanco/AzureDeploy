@@ -165,11 +165,16 @@ DiskType (unmanaged/Managed)
 Size
 MaxIO
 
+### Alerts
+
+Solution has 2 alerts defined ;
+VMs in Stopped State  and Azure Subscription Quota Reaching %90  . Additional alerts can be created by using  the inventory collected by the solution.
+
 ### Troubleshooting 
 
 Solution relies on Automation Account with Runas Accounts  configured. Both SPN and Classic Certificate is used by the Storage REST API calls.  
 
-![alt text](images/runasaccounts.png "Azure Automation Runas Accounts")
+![alt text](images/runasaccounts.PNG "Azure Automation Runas Accounts")
 
 General Troubleshooting steps ;
 * Make sure you specify a new Guid each time template is deployed
