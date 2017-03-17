@@ -177,7 +177,7 @@
     "ingestScheduleName": "AzureVMInventory-Scheduler-Hourly",
     "alertArray": [
       {
-        "searchName": "Azure VMs in Stopped State ",
+        "searchName": "Azure VMs in Stopped State",
         "description": "Azure VMs which shutdown from within operating system  will continue incurring charges. Stop the VM from the portal to prevent unnecessary consumption.",
         "severity": "Warning",
         "query": "Type=AzureVMInventory_CL MetricName_s=VMInventory Status_s=Stopped | measure countdistinct(ID_s) by AzureSubscription_s,VmName_s",
@@ -188,7 +188,7 @@
         "searchCategory": "Azure VM Inventory",
         "scheduleIntervalInMinutes": 15,
         "scheduleQueryTimeSpan": 15,
-        "alertName": "Azure VM Stoppped State"
+        "alertName": "Azure VM Found in Stopped State"
       }
     ],
     "alertMetricArray": [
@@ -196,7 +196,7 @@
         "searchName": "Azure Quota Usage",
         "description": "Each Azure Subscription has quotas for VM cores per region. If the quota is reached new VMs annot be created",
         "severity": "Critical",
-        "query": "[concat('Type=AzureVMInventory_CL MetricName_s=ARMVMUsageStats   | EXTEND div(product(currentValue_d,100),limit_d) as UsedPct | Measure Max(UsedPct) by Location_s,Usagemetric_s interval ', parameters('omsDataIngestionFrequency'),'Minutes')]",
+        "query": "[concat('Type=AzureVMInventory_CL MetricName_s=ARMVMUsageStats   | EXTEND div(product(currentValue_d,100),limit_d) as UsedPct | Measure Max(UsedPct) by AzureSubscription_s,Location_s,Usagemetric_s where Aggregatedvalue >90 interval ', parameters('omsDataIngestionFrequency'),'Minutes')]",
         "alertTresholdValue": 90,
         "operator": "gt",
         "alertThrottleInMinutes": 60,
