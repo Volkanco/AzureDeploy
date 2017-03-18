@@ -406,7 +406,7 @@
                     }
                   },
                   "List": {
-                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMInventory | measure countdistinct(ID_s) by   AzureSubscription_s,DeploymentType_s",
+                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMInventory | measure countdistinct(ID_s) by   AzureSubscription_s,DeploymentType_s,OperatingSystem_s",
                     "HideGraph": false,
                     "enableSparklines": false,
                     "operation": "Summary",
