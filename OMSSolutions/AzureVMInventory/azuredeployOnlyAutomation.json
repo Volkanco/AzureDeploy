@@ -287,8 +287,7 @@
           "apiVersion": "2015-10-31",
           "location": "[parameters('omsAutomationRegion')]",
           "dependsOn": [
-            "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'), '/schedules/', variables('ingestscheduleName'))]",
-            "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'), '/schedules/', variables('ingestscheduleName'),'-',parameters('ingestSchedulerGuid'))]",
+                        "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'), '/schedules/', variables('ingestscheduleName'),'-',parameters('ingestSchedulerGuid'))]",
             "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'))]"
           ],
           "tags": {},
