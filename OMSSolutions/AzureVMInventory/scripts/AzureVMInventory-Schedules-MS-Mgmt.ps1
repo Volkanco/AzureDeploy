@@ -47,7 +47,10 @@ $varVMIopsList="AzureVMInventory-VM-IOPSLimits"
 
 #create new variales and schedules
 
-$vmiolimits=@{"Basic_A0"=300;
+$iopslist=Get-AzureRmAutomationVariable -Name $varVMIopsList -ResourceGroupName $AAResourceGroup -AutomationAccountName $AAAccount
+If (!$iopslist)
+{
+    $vmiolimits=@{"Basic_A0"=300;
 "Basic_A1"=300;
 "Basic_A2"=300;
 "Basic_A3"=300;
@@ -145,55 +148,61 @@ $vmiolimits=@{"Basic_A0"=300;
 "Standard_NC12"=500;
 "Standard_NC24"=500;
 "Standard_NC24r"=500}
+    New-AzureRmAutomationVariable -Name $varVMIopsList -Description "Variable to store IOPS limits for Azure VM Sizes." -Value $vmiolimits -Encrypted 0 -ResourceGroupName $AAResourceGroup -AutomationAccountName $AAAccount  -ea 0
 
-New-AzureRmAutomationVariable -Name $varVMIopsList -Description "Variable to store IOPS limits for Azure VM Sizes." -Value $vmiolimits -Encrypted 0 -ResourceGroupName $AAResourceGroup -AutomationAccountName $AAAccount  -ea 0
+}
+
 
 #schedules
 
 #check and create a  weekly schedule to check  and redeploy scheduler runbook
+
 "Rescheduling the runbook to check and fix scheules weekly"
-#$prevjobs=Get-AzureRmAutomationJob -RunbookName $schedulerrunbookname -ResourceGroupName $AAResourceGroup -AutomationAccountName $AAAccount
 
 
-$RunbookStartTime = $Date = $([DateTime]::Now.AddMinutes($Frequency))
-    
+    $RunbookStartTime = $Date = $([DateTime]::Now.AddMinutes(10))
+    $RunbookScheduleTime=$([DateTime]::Now.AddMinutes($Frequency))
+
     $RBsch=$null
 
     $RBsch=get-AzureRmAutomationScheduledRunbook -RunbookName $schedulerrunbookname -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup 
 
-    $RBsch=$RBsch|where{$_.ScheduleName -match 'AzureVMInventory-Scheduler-Hourly'}
+    $RBsch=$RBsch|where{$_.ScheduleName -match 'AzureVMInventory-Scheduler'}
 
-    #$RBsch=Get-AzureRmAutomationSchedule  -Name  'AzureVMInventory-Scheduler' -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup
-
+   
     IF([string]::IsNullOrEmpty($RBsch))
     {
+   
           "No schedule found, will create a new weekly schedule"
-    $params1 = @{"frequency"=$frequency;"getNICandNSG"=$getNICandNSG;"getDiskInfo" = $getDiskInfo}
-	
+    
         if(Get-AzureRmAutomationSchedule -Name 'AzureVMInventory-Scheduler-Weekly' -ResourceGroupName $AAResourceGroup -AutomationAccountName $AAAccount)
         {
             remove-AzureRmAutomationSchedule -Name 'AzureVMInventory-Scheduler-Weekly' -ResourceGroupName $AAResourceGroup -AutomationAccountName $AAAccount  -Force
         }
- $Schedule1 = New-AzureRmAutomationSchedule -Name 'AzureVMInventory-Scheduler-Weekly' -StartTime $RunbookStartTime -DayInterval 7 -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup
+    
+    $params1 = @{"frequency"=$frequency;"getNICandNSG"=$getNICandNSG;"getDiskInfo" = $getDiskInfo}
+	$Schedule1 = New-AzureRmAutomationSchedule -Name 'AzureVMInventory-Scheduler-Weekly' -StartTime $RunbookScheduleTime -DayInterval 7 -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup
     $Sch1 = Register-AzureRmAutomationScheduledRunbook -RunbookName $schedulerrunbookname -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup -ScheduleName 'AzureVMInventory-Scheduler-Weekly' -Parameters $params1
     
     $runnow=$true
 
-
-    }Elseif($RBsch.ScheduleName  -match 'Hourly')
+    
+    }Elseif($RBsch|where{$_.ScheduleName  -match 'Hourly'})
     {
-    "Initial schedule found. We will replace initital schedule with a weekly one"
-        $RunbookStartTime = $RunbookStartTime.Addhours(24)
+    
+        "Initial schedule found. We will replace initital schedule with a weekly one"
+        
 
-	    $params1 = @{"frequency"=$frequency;"getNICandNSG"=$getNICandNSG;"getDiskInfo" = $getDiskInfo}
-
-                if(Get-AzureRmAutomationSchedule -Name 'AzureVMInventory-Scheduler-Weekly' -ResourceGroupName $AAResourceGroup -AutomationAccountName $AAAccount)
+        if(Get-AzureRmAutomationSchedule -Name 'AzureVMInventory-Scheduler-Weekly' -ResourceGroupName $AAResourceGroup -AutomationAccountName $AAAccount)
         {
             remove-AzureRmAutomationSchedule -Name 'AzureVMInventory-Scheduler-Weekly' -ResourceGroupName $AAResourceGroup -AutomationAccountName $AAAccount  -Force
         }
 
+        $hourlysch=$RBsch|where{$_.ScheduleName  -match 'Hourly'}
+                $RunbookStartTime = $RunbookStartTime.Addhours(24)
+        $params1 = @{"frequency"=$frequency;"getNICandNSG"=$getNICandNSG;"getDiskInfo" = $getDiskInfo}
 
-	 Remove-AzureRmAutomationSchedule -AutomationAccountName $AAAccount -Name $RBsch.ScheduleName  -ResourceGroupName $AAResourceGroup -Force
+	 Remove-AzureRmAutomationSchedule -AutomationAccountName $AAAccount -Name $hourlysch.ScheduleName  -ResourceGroupName $AAResourceGroup -Force
      $Schedule1 = New-AzureRmAutomationSchedule -Name 'AzureVMInventory-Scheduler-Weekly' -StartTime $RunbookStartTime -DayInterval 7 -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup 
     $Sch1 = Register-AzureRmAutomationScheduledRunbook -RunbookName $schedulerrunbookname -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup -ScheduleName 'AzureVMInventory-Scheduler-Weekly' -Parameters $params1
     $runnow=$true
@@ -205,8 +214,6 @@ $RunbookStartTime = $Date = $([DateTime]::Now.AddMinutes($Frequency))
     
     }
 
-
- #}   
 
 
 
@@ -233,6 +240,8 @@ If ([string]::IsNullOrEmpty($checkschdl)  -or  $NumberofSchedules -ne  $checksch
 
 
 Write-Verbose "$NumberofSchedules schedules will be created for VM inventory "
+
+$RunbookStartTime = $Date = $([DateTime]::Now.AddMinutes(10))
 
 $params = @{"getNICandNSG"=$getNICandNSG;"getDiskInfo" = $getDiskInfo}
 
