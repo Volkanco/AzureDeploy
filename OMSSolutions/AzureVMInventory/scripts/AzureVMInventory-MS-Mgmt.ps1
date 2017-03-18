@@ -791,7 +791,7 @@ $providers+=$object
 
 
 
-Write-output "$(get-date) - Starting inventory for VHDs "
+Write-output "$(get-date) - Starting inventory for VMs "
 
 
 
@@ -870,6 +870,7 @@ $vm.properties.extensions|?{$extlist+=$_.extension+";"}
                             Location=$vm.location
                             VmName=$vm.Name
                             ID=$vm.id
+                            OperatingSystem=$vm.properties.storageProfile.operatingSystemDisk.operatingSystem
                             privateIpAddress=$vm.properties.instanceView.privateIpAddress
                             SubscriptionId = $subscriptioninfo.subscriptionId
                              AzureSubscription = $subscriptionInfo.displayName
@@ -1095,6 +1096,7 @@ Foreach ($vm in $vmsarm)
                             DeploymentType='ARM'
                             Location=$vm.location
                             VmName=$vm.Name
+                            OperatingSystem=$vm.properties.storageProfile.osDisk.osType
                             ID=$vm.id
                             
                        
