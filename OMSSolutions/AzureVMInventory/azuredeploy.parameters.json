@@ -23,20 +23,11 @@
     "omsDataIngestionFrequency": {
       "value": 30
     },
-    "collectDiskInventory": {
-      "value": 1
-    },
-    "collectNICandNSGInventory": {
-      "value": 1
-    },
     "_artifactsLocation": {
-      "value": "https://raw.githubusercontent.com/volkanco/AzureDeploy/master/OMSSolutions/AzureVMInventory"
+      "value": "https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/oms-azure-vminventory-solution"
     },
     "ingestSchedulerGuid": {
-      "value": "4b253e60-8ada-4a96-9087-a4d011ee4633"
-    },
-    "ingestCleanupGuid": {
-      "value": "6d8c089e-fd9e-40b2-ac22-b11b7a0d5275"
+      "value": "50f712ed-5497-4e09-b314-134833f764ad"
     }
   }
 }                          
