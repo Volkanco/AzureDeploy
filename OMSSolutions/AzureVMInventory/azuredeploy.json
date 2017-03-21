@@ -1291,7 +1291,8 @@
             "parameters": {
               "frequency": "[parameters('omsDataIngestionFrequency')]",
               "getNICandNSG": "[variables('collectNICandNSGInventory')]",
-              "getDiskInfo": "[variables('collectDiskInventory')]"
+              "getDiskInfo": "[variables('collectDiskInventory')]",
+              "clearLocks": "1"
             }
           }
         }
@@ -1315,13 +1316,11 @@
       },
       "properties": {
         "workspaceResourceId": "[resourceId('Microsoft.OperationalInsights/workspaces/', parameters('omsLogAnalyticsWorkspaceName'))]",
-        "referencedResources": [
-          "[resourceId('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'), '/', variables('ingestscheduleName'),'-',parameters('ingestSchedulerGuid'))]"
-        ],
+        "referencedResources": [],
         "containedResources": [
           "[resourceId('Microsoft.OperationalInsights/workspaces/views/', parameters('omsLogAnalyticsWorkspaceName'), variables('omsSolutions').customSolution.name)]",
-          "[resourceId('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'), '/runbooks/', variables('runbooks').ingestSchedulerRunbook.name)]",
-          "[resourceId('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'), '/runbooks/', variables('runbooks').ingestParentRunbook.name)]"
+          "[resourceId('Microsoft.Automation/automationAccounts/runbooks/', parameters('omsAutomationAccountName'), variables('runbooks').ingestSchedulerRunbook.name)]",
+          "[resourceId('Microsoft.Automation/automationAccounts/runbooks/', parameters('omsAutomationAccountName'), variables('runbooks').ingestParentRunbook.name)]"
         ]
       }
     },
