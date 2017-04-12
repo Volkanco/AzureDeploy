@@ -18,7 +18,19 @@
       "value": "eastus2"
     },
     "omsDataIngestionFrequency": {
-      "value": 30
+      "value": "Hourly"
+    },
+    "Currency": {
+      "value": "USD"
+    },
+    "RegionInfo": {
+      "value": "United States"
+    },
+    "Locale": {
+      "value": "en-US"
+    },
+    "OfferDurableId": {
+      "value": "MS-AZR-0003P  :  Pay-As-You-Go"
     },
     "_artifactsLocation": {
       "value": "https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/oms-azure-vminventory-solution"
