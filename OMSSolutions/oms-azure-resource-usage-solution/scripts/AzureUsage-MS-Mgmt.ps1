@@ -22,55 +22,168 @@ $log=@()
 
 
 $ApiVersion = '2015-06-01-preview'
+
+#region Define Ratecard defaults
 IF([String]::IsNullOrEmpty($Currency)){  $Currency = 'USD' }
 IF([String]::IsNullOrEmpty($Locale)){ $Locale = 'en-US'}
-IF([String]::IsNullOrEmpty($RegionInfo)){ $RegionInfo = 'US'}
-IF([String]::IsNullOrEmpty($OfferDurableId)){ $OfferDurableId = 'MS-AZR-0003P' } # MS INT
 
-<#
-MS-AZR-0003P  :  Pay-As-You-Go		 
-MS-AZR-0041P  :  Support Plans	
-MS-AZR-0042P  :  Support Plans
-MS-AZR-0043P  :  Support Plans
-MS-AZR-0044P  :  Free Trial	
-MS-AZR-0059P  :  Visual Studio Professional subscribers		
-MS-AZR-0060P  :  Visual Studio Test Professional subscribers		
-MS-AZR-0062P  :  MSDN Platforms subscribers		
-MS-AZR-0063P  :  Visual Studio Enterprise subscribers		
-MS-AZR-0064P  :  Visual Studio Enterprise (BizSpark) subscribers		
-MS-AZR-0029P  :  Visual Studio Enterprise (MPN) subscribers		
-MS-AZR-0022P  :  Visual Studio Dev Essentials members		
-MS-AZR-0023P  :  Pay-As-You-Go Dev/Test		
-MS-AZR-0148P  :  Enterprise Dev/Test		 
-MS-AZR-0025P  :  Action Pack		
-MS-AZR-0036P  :  Microsoft Azure Sponsored Offer		 
-MS-AZR-0120P  :  Azure Pass	
-MS-AZR-0130P  :  Azure Pass		
-MS-AZR-0111p  :  Azure in Open Licensing		
-MS-AZR-0144P  :  Microsoft Imagine		
-MS-AZR-0149P  :  BizSpark Plus		
-MS-AZR-0145P  :  Azure in CSP		 
-MS-AZR-DE-0145P  :  Azure Germany in CSP for Microsoft Cloud Germany	
-MS-AZR-0044P  :  Azure Germany Free Trial		
-MS-AZR-DE-0003P  :  Azure Germany Pay-As-You-Go	
-MS-AZR-DE-0041P  :  Azure Germany Support Plans	 
-MS-AZR-DE-0042P  :  Azure Germany Support Plans	  
-MS-AZR-DE-0043P  :  Azure Germany Support Plans	 
+$regionlist=@{}
+$regionlist.Add("Australia","AU")
+$regionlist.Add("Afghanistan","AF")
+$regionlist.Add("Albania","AL")
+$regionlist.Add("Algeria","DZ")
+$regionlist.Add("Angola","AO")
+$regionlist.Add("Argentina","AR")
+$regionlist.Add("Armenia","AM")
+$regionlist.Add("Austria","AT")
+$regionlist.Add("Azerbaijan","AZ")
+$regionlist.Add("Bahamas","BS")
+$regionlist.Add("Bahrain","BH")
+$regionlist.Add("Bangladesh","BD")
+$regionlist.Add("Barbados","BB")
+$regionlist.Add("Belarus","BY")
+$regionlist.Add("Belgium","BE")
+$regionlist.Add("Belize","BZ")
+$regionlist.Add("Bermuda","BM")
+$regionlist.Add("Bolivia","BO")
+$regionlist.Add("Bosnia and Herzegovina","BA")
+$regionlist.Add("Botswana","BW")
+$regionlist.Add("Brazil","BR")
+$regionlist.Add("Brunei","BN")
+$regionlist.Add("Bulgaria","BG")
+$regionlist.Add("Cameroon","CM")
+$regionlist.Add("Canada","CA")
+$regionlist.Add("Cape Verde","CV")
+$regionlist.Add("Cayman Islands","KY")
+$regionlist.Add("Chile","CL")
+$regionlist.Add("Colombia","CO")
+$regionlist.Add("Costa Rica","CR")
+$regionlist.Add("Côte d’Ivoire","CI")
+$regionlist.Add("Croatia","HR")
+$regionlist.Add("Curaçao","CW")
+$regionlist.Add("Cyprus","CY")
+$regionlist.Add("Czech Republic","CZ")
+$regionlist.Add("Denmark","DK")
+$regionlist.Add("Dominican Republic","DO")
+$regionlist.Add("Ecuador","EC")
+$regionlist.Add("Egypt","EG")
+$regionlist.Add("El Salvador","SV")
+$regionlist.Add("Estonia","EE")
+$regionlist.Add("Ethiopia","ET")
+$regionlist.Add("Faroe Islands","FO")
+$regionlist.Add("Fiji","FJ")
+$regionlist.Add("Finland","FI")
+$regionlist.Add("France","FR")
+$regionlist.Add("Georgia","GE")
+$regionlist.Add("Germany","DE")
+$regionlist.Add("Ghana","GH")
+$regionlist.Add("Greece","GR")
+$regionlist.Add("Guatemala","GT")
+$regionlist.Add("Honduras","HN")
+$regionlist.Add("Hong Kong SAR","HK")
+$regionlist.Add("Hungary","HU")
+$regionlist.Add("Iceland","IS")
+$regionlist.Add("India","IN")
+$regionlist.Add("Indonesia","ID")
+$regionlist.Add("Iraq","IQ")
+$regionlist.Add("Ireland","IE")
+$regionlist.Add("Israel","IL")
+$regionlist.Add("Italy","IT")
+$regionlist.Add("Jamaica","JM")
+$regionlist.Add("Japan","JP")
+$regionlist.Add("Jordan","JO")
+$regionlist.Add("Kazakhstan","KZ")
+$regionlist.Add("Kenya","KE")
+$regionlist.Add("Korea","KR")
+$regionlist.Add("Kuwait","KW")
+$regionlist.Add("Kyrgyzstan","KG")
+$regionlist.Add("Latvia","LV")
+$regionlist.Add("Lebanon","LB")
+$regionlist.Add("Libya","LY")
+$regionlist.Add("Liechtenstein","LI")
+$regionlist.Add("Lithuania","LT")
+$regionlist.Add("Luxembourg","LU")
+$regionlist.Add("Macao SAR","MO")
+$regionlist.Add("Macedonia, FYRO","MK")
+$regionlist.Add("Malaysia","MY")
+$regionlist.Add("Malta","MT")
+$regionlist.Add("Mauritius","MU")
+$regionlist.Add("Mexico","MX")
+$regionlist.Add("Moldova","MD")
+$regionlist.Add("Monaco","MC")
+$regionlist.Add("Mongolia","MN")
+$regionlist.Add("Montenegro","ME")
+$regionlist.Add("Morocco","MA")
+$regionlist.Add("Namibia","NA")
+$regionlist.Add("Nepal","NP")
+$regionlist.Add("Netherlands","NL")
+$regionlist.Add("New Zealand","NZ")
+$regionlist.Add("Nicaragua","NI")
+$regionlist.Add("Nigeria","NG")
+$regionlist.Add("Norway","NO")
+$regionlist.Add("Oman","OM")
+$regionlist.Add("Pakistan","PK")
+$regionlist.Add("Palestinian Territory, Occupied","PS")
+$regionlist.Add("Panama","PA")
+$regionlist.Add("Paraguay","PY")
+$regionlist.Add("Peru","PE")
+$regionlist.Add("Philippines","PH")
+$regionlist.Add("Poland","PL")
+$regionlist.Add("Portugal","PT")
+$regionlist.Add("Puerto Rico","PR")
+$regionlist.Add("Qatar","QA")
+$regionlist.Add("Romania","RO")
+$regionlist.Add("Russia","RU")
+$regionlist.Add("Rwanda","RW")
+$regionlist.Add("Saint Kitts and Nevis","KN")
+$regionlist.Add("Saudi Arabia","SA")
+$regionlist.Add("Senegal","SN")
+$regionlist.Add("Serbia","RS")
+$regionlist.Add("Singapore","SG")
+$regionlist.Add("Slovakia","SK")
+$regionlist.Add("Slovenia","SI")
+$regionlist.Add("South Africa","ZA")
+$regionlist.Add("Spain","ES")
+$regionlist.Add("Sri Lanka","LK")
+$regionlist.Add("Sweden","SE")
+$regionlist.Add("Switzerland","CH")
+$regionlist.Add("Taiwan","TW")
+$regionlist.Add("Tajikistan","TJ")
+$regionlist.Add("Tanzania","TZ")
+$regionlist.Add("Thailand","TH")
+$regionlist.Add("Trinidad and Tobago","TT")
+$regionlist.Add("Tunisia","TN")
+$regionlist.Add("Turkey","TR")
+$regionlist.Add("Turkmenistan","TM")
+$regionlist.Add("U.S. Virgin Islands","VI")
+$regionlist.Add("Uganda","UG")
+$regionlist.Add("Ukraine","UA")
+$regionlist.Add("United Arab Emirates","AE")
+$regionlist.Add("United Kingdom","GB")
+$regionlist.Add("United States","US")
+$regionlist.Add("Uruguay","UY")
+$regionlist.Add("Uzbekistan","UZ")
+$regionlist.Add("Venezuela","VE")
+$regionlist.Add("Vietnam","VN")
+$regionlist.Add("Yemen","YE")
+$regionlist.Add("Zambia","ZM")
+$regionlist.Add("Zimbabwe","ZW")
 
-$ofr="MS-AZR-0003P  :  Pay-As-You-Go"
-$oft=$ofr.Split(':')[0].trim().length
-
-#>
+$RegionIso=$regionlist.item($regioninfo)
 
 
+IF([String]::IsNullOrEmpty($RegionIso)){ $RegionIso= 'US'}
+IF([String]::IsNullOrEmpty($OfferDurableId)){ $OfferDurableId = 'MS-AZR-0003P' }Else
+{
+$OfferDurableId=$OfferDurableId.Split(':')[0].trim()
+}
 
-#MS-AZR-0121p Az int
 
 #Update customer Id to your Operational Insights workspace ID
-$customerID = Get-AutomationVariable -Name  "AzureBilling-OPSINSIGHTS_WS_ID-MS-Mgmt"
+$customerID = Get-AutomationVariable -Name  "AzureUsage-OPSINSIGHTS_WS_ID-MS-Mgmt"
 
 #For shared key use either the primary or seconday Connected Sources client authentication key   
-$sharedKey = Get-AutomationVariable -Name  "AzureBilling-OPSINSIGHTS_WS_KEY-MS-Mgmt"
+$sharedKey = Get-AutomationVariable -Name  "AzureUsage-OPSINSIGHTS_WS_KEY-MS-Mgmt"
 
 #log analytics custom log name
 $logname='AzureUsage'
@@ -1187,7 +1300,7 @@ Write-Information "$timetaken   seconds ..." -Verbose
 #region Get Meter  data
 
 Write-Output " Getting all available rates... "
-$uri= "https://management.azure.com/subscriptions/{5}/providers/Microsoft.Commerce/RateCard?api-version={0}&`$filter=OfferDurableId eq '{1}' and Currency eq '{2}' and Locale eq '{3}' and RegionInfo eq '{4}'" -f $ApiVersion, $OfferDurableId, $Currency, $Locale, $RegionInfo, $SubscriptionId
+$uri= "https://management.azure.com/subscriptions/{5}/providers/Microsoft.Commerce/RateCard?api-version={0}&`$filter=OfferDurableId eq '{1}' and Currency eq '{2}' and Locale eq '{3}' and RegionInfo eq '{4}'" -f $ApiVersion, $OfferDurableId, $Currency, $Locale, $RegionIso, $SubscriptionId
 
 
 $resp=Invoke-WebRequest -Uri $uri -Method GET  -Headers $headers -UseBasicParsing -Timeout 180
