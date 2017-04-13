@@ -1427,7 +1427,7 @@ $Uri="https://management.azure.com/subscriptions/$subscriptionid/providers/Micro
 
 }
 
-Write-Output "Fetching Usage data for  $start (UTC) and $end (UTC) , Currency :$Currency Locate : $Locale ,Region: $RegionInfo , Azure Subs Type : $OfferDurableId "
+Write-Output "Fetching Usage data for  $start (UTC) and $end (UTC) , Currency :$Currency Locate : $Locale ,Region: $RegionIso , Azure Subs Type : $OfferDurableId "
 
 $resp=Invoke-WebRequest -Uri $uri -Method GET  -Headers $headers -UseBasicParsing  -TimeoutSec 180
    
@@ -1459,7 +1459,7 @@ $resp=Invoke-WebRequest -Uri $uri -Method GET  -Headers $headers -UseBasicParsin
 $spltlist=@()
 If($metrics.count -gt 200)
 {
-$splitSize=
+$splitSize=200
 
    	$spltlist+=for ($Index = 0; $Index -lt  $metrics.Count; $Index += $splitSize)
 	{
@@ -1485,7 +1485,7 @@ $splitSize=100
 
 #main 
 
-$hash = [hashtable]::Synchronized(@{})
+$hash = [hashtable]::New(@{})
 
 ## define  synced variable GetValues
 
