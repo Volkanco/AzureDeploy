@@ -49,23 +49,7 @@ $schedulerrunbookname="AzureUsage-Schedules-MS-Mgmt"
 
 
 
-#clear locks is solution has deployed before and $clearLocks set to true
 
-If ($clearLocks)
-{
-        $lockList = Get-AzureRmResourceLock `
-		-ResourceGroupName $AAResourceGroup
-        "$($locklist|where {$_.Name -match "AzureUsage"}).count) locks found "
-
-            foreach ($l in $lockList|where {$_.Name -match "AzureUsage"}) 
-            {
-
-                    Write-Verbose "CleanUp:  Removing lock $l "
-                    Remove-AzureRmResourceLock -LockId $l.LockId -Force
-
-            }
- }
-   
 #create new variales and schedules
 
 $RunbookStartTime = $Date = $([DateTime]::Now.AddMinutes(10))

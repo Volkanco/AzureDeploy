@@ -4,7 +4,7 @@
          [Parameter(Mandatory=$false)][string]$RegionInfo   ,
          [Parameter(Mandatory=$false)][string]$OfferDurableId ,
          [Parameter(Mandatory=$false)][string]$propagatetags ,
-         [Parameter(Mandatory=$false)][string]$syncInterval                 
+         [Parameter(Mandatory=$false)][string]$syncInterval='Hourly'                
    )
 
 
@@ -1536,7 +1536,7 @@ $i++
  
 
 
-Write-Output "Waiting.." -NoNewline
+Write-Output "Waiting.."
 Do {
   Write-Output " $(@($runspaces | Where {$_.Result.IsCompleted -ne $true}).Count) pending runspace "
    Start-Sleep -Seconds 60
@@ -1556,7 +1556,7 @@ ForEach ($Job in $Jobs)
     }
 }
 
-$Results
+#$Results
  
  $jobs|foreach{$_.Pipe.Dispose()}
 $runspacepool.Close()
