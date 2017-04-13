@@ -3,7 +3,7 @@
          [Parameter(Mandatory=$false)][string]$Locale   ,
          [Parameter(Mandatory=$false)][string]$RegionInfo   ,
          [Parameter(Mandatory=$false)][string]$OfferDurableId ,
-         [Parameter(Mandatory=$false)][string]$propagatetags ,
+         [Parameter(Mandatory=$false)][bool]$propagatetags ,
          [Parameter(Mandatory=$false)][string]$syncInterval='Hourly'                
    )
 
