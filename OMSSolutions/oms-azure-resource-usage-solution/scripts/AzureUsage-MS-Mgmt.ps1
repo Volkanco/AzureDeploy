@@ -180,10 +180,10 @@ $OfferDurableId=$OfferDurableId.Split(':')[0].trim()
 
 
 #Update customer Id to your Operational Insights workspace ID
-$customerID = Get-AutomationVariable -Name  "AzureUsage-OPSINSIGHTS_WS_ID-MS-Mgmt"
+$customerID = Get-AutomationVariable -Name  "AzureUsage-OPSINSIGHTS_WS_ID"
 
 #For shared key use either the primary or seconday Connected Sources client authentication key   
-$sharedKey = Get-AutomationVariable -Name  "AzureUsage-OPSINSIGHTS_WS_KEY-MS-Mgmt"
+$sharedKey = Get-AutomationVariable -Name  "AzureUsage-OPSINSIGHTS_WS_KEY"
 
 #log analytics custom log name
 $logname='AzureUsage'
@@ -1538,7 +1538,6 @@ $i++
 
 Write-Output "Waiting.."
 Do {
-  Write-Output " $(@($runspaces | Where {$_.Result.IsCompleted -ne $true}).Count) pending runspace "
    Start-Sleep -Seconds 60
 } While ( $Jobs.Result.IsCompleted -contains $false)
 Write-Host "All jobs completed!"
