@@ -10,17 +10,9 @@
 
 
 #parameters 
-<#
-$connectionName = "AzureRunAsConnection"
-$ARMUrl = "https://management.azure.com"
-$ARMGraphUrl = "https://graph.windows.net"   
-#>
 
 $Timestampfield = "Timestamp" 
 $log=@()
-
-
-
 $ApiVersion = '2015-06-01-preview'
 
 #region Define Ratecard defaults
@@ -123,7 +115,7 @@ $regionlist.Add("Nigeria","NG")
 $regionlist.Add("Norway","NO")
 $regionlist.Add("Oman","OM")
 $regionlist.Add("Pakistan","PK")
-$regionlist.Add("Palestinian Territory, Occupied","PS")
+$regionlist.Add("Palestinian Territory","PS")
 $regionlist.Add("Panama","PA")
 $regionlist.Add("Paraguay","PY")
 $regionlist.Add("Peru","PE")
@@ -175,7 +167,7 @@ $RegionIso=$regionlist.item($regioninfo)
 IF([String]::IsNullOrEmpty($RegionIso)){ $RegionIso= 'US'}
 IF([String]::IsNullOrEmpty($OfferDurableId)){ $OfferDurableId = 'MS-AZR-0003P' }Else
 {
-$OfferDurableId=$OfferDurableId.Split(':')[0].trim()
+    $OfferDurableId=$OfferDurableId.Split(':')[0].trim()
 }
 
 
@@ -851,10 +843,6 @@ $ratescache=@{}
 
 $count=1
 
-#Write-Output "Starting processing metric set"
-
-#$hash.host.ui.WriteVerboseLine("Starting processing metric set $count")
-
     $metrics|Foreach{
 $metricitem=$null
 $metricitem=$_
@@ -870,56 +858,20 @@ $metricitem=$_
     $rg=$allrg|where {$_.Name -eq $resid.Split('/')[4]}
 
     $tags=$null
-    $tags=(convertfrom-json $metricitem.instanceData).'Microsoft.Resources'.tags
+   # $tags=(convertfrom-json $metricitem.instanceData).'Microsoft.Resources'.tags
+   $tags=@{}
+   $restag=$null
+   $restag=(convertfrom-json $metricitem.instanceData).'Microsoft.Resources'.tags
+   If ($restag)
+   {
+      $tags.add($restag.psobject.properties.Name,$restag.psobject.properties.value)
+    }
 
     $UsageType=$insdata.additionalInfo.UsageType
 
     $Meter=($meters|where {$_.meterid -eq $metricitem.meterId})
 
-      ##
-    ##Check and add if there is a cheaper location for ssame resource and saving
-    ##
-    <#
-    If($meter.MeterRegion)
-    {
 
-    IF ($ratescache.ContainsKey($meter.MeterCategory+"/"+$Meter.MeterName+"/"+$meter.MeterSubCategory+"/"+$meter.MeterRegion+"/"+$meter.MeterId))
-    {
-    # Calculate lowest comparision
-
-
-     $price=$lowestprice=Calculate-rate -meter $meter -quantity $metricitem.quantity
-     $lowcostregions=$meter.MeterRegion
-
-    }
-    Else
-    {
-        #find lowest and compare
-        $lowestrate=$null
-        $lowestrate=find-lowestcost($meter)
-        Foreach($rateobj in  $lowestrate)
-        {
-        $ratescache.Add($($meter.MeterCategory+"/"+$meter.MeterName+"/"+$meter.MeterSubCategory+"/"+$rateobj.Lowcostregion+"/"+$rateobj.Meterid),$rateobj.LowcostregionCost) 
-         
-        } 
-         $price=Calculate-rate -meter $meter -quantity $metricitem.quantity
-    $lowestprice=Calculate-rate -meter ($meters|where {$_.meterid -eq $lowestrate[0].Meterid}) -quantity $metricitem.quantity
-    $lowcostregions=''
-    $lowestrate|?{$lowcostregions+=$_.Lowcostregion+", "   
-
-    }
-
-    
-    }
-   
-   }Else
-   {
-   $price=$lowestprice=Calculate-rate -meter $meter -quantity $metricitem.quantity
-     $lowcostregions=$meter.MeterRegion
-
-   }
-
-   #>
 
    $price=Calculate-rate -meter $meter -quantity $metricitem.quantity
    
@@ -966,8 +918,8 @@ $metricitem=$_
         $rg.tags.PSObject.Properties | foreach-object {
                 
                    # add the tag if not  in the list already 
-
-                $tags|add-member -MemberType NoteProperty -Name $_.Name  -Value $_.value -ea 0
+                   $tags.add($_.Name,$_.value)
+               # $tags|add-member -MemberType NoteProperty -Name -ea 0
                 }        
         }
 
@@ -978,23 +930,14 @@ $metricitem=$_
 
 
 
-            foreach ($tag in $tags)
+            foreach ($tag in $tags.Keys)
             {
-
+            
             ##
             ## consider adding sepeare for tagged resources 
-            ##
-
-                $tag.PSObject.Properties | foreach-object {
+            
                 
-                #exclude devteslabsUID 
-                $name = $_.Name 
-                $value = $_.value
-                
-                IF ($name -match '-LabUId'){Continue}
-                
-           Write-Verbose     "Adding tag $name : $value to $($metricitem.meterCategory)  - $($metricitem.meterName)"
-
+           
      
                
         $cu = New-Object PSObject -Property @{
@@ -1015,15 +958,14 @@ $metricitem=$_
                                     UsageType=$insdata.additionalInfo.UsageType
                                     Resource=$insdata.resourceUri.Split('/')[$insdata.resourceUri.Split('/').count-1]
                                     Aggregation=$syncInterval
-                                    Tag="$name : $value"
+                                    Tag="$tag : $($tags.item($tag))"
                                     OfferDurableId=$OfferDurableId
                                     Currency=$Currency
                                     Locale=$Locale
                                     RegionInfo=$RegionInfo
-                                    #add Cost savings
-
-
                                     }
+
+                                   $cu|add-member -MemberType NoteProperty -Name $tag  -Value $tags.item($tag) -ea 0
 
                                        #adding to array
                                     $colTaggedbilldata+=$cu
@@ -1036,12 +978,6 @@ $metricitem=$_
 
 
         }
-
-
-    }
-
-
-
 
 }
 Else{
@@ -1072,48 +1008,6 @@ $price=$null
 
 $Meter=($meters|where {$_.meterid -eq $metricitem.meterId})
 
-
-# Get lowest cost 
-<#
-    If($meter.MeterRegion)
-    {
-
-    IF ($ratescache.ContainsKey($meter.MeterCategory+"/"+$Meter.MeterName+"/"+$meter.MeterSubCategory+"/"+$meter.MeterRegion+"/"+$meter.MeterId))
-    {
-    # Calculate lowest comparision
-
-
-     $price=$lowestprice=Calculate-rate -meter $meter -quantity $metricitem.quantity
-     $lowcostregions=$meter.MeterRegion
-
-    }
-    Else
-    {
-        #find lowest and compare
-        $lowestrate=$null
-        $lowestrate=find-lowestcost($meter)
-        Foreach($rateobj in  $lowestrate)
-        {
-        $ratescache.Add($($meter.MeterCategory+"/"+$meter.MeterName+"/"+$meter.MeterSubCategory+"/"+$rateobj.Lowcostregion+"/"+$rateobj.Meterid),$rateobj.LowcostregionCost) 
-         
-        } 
-         $price=Calculate-rate -meter $meter -quantity $metricitem.quantity
-    $lowestprice=Calculate-rate -meter ($meters|where {$_.meterid -eq $lowestrate[0].Meterid}) -quantity $metricitem.quantity
-    $lowcostregions=''
-    $lowestrate|?{$lowcostregions+=$_.Lowcostregion+", "   
-
-    }
-
-    
-    }
-   
-   }Else
-   {
-   $price=$lowestprice=Calculate-rate -meter $meter -quantity $metricitem.quantity
-     $lowcostregions=$meter.MeterRegion
-
-   }
-   #>
 
 
    $price=Calculate-rate -meter $meter -quantity $metricitem.quantity
@@ -1166,6 +1060,8 @@ IF($propagatetags -eq $true -and ![string]::IsNullOrEmpty(($allrg|where {$_.Name
                 $tag.PSObject.Properties | foreach-object {
                 
                 #exclude devteslabsUID 
+                $name=$value=$null
+
                 $name = $_.Name 
                 $value = $_.value
                 
@@ -1206,6 +1102,9 @@ IF($propagatetags -eq $true -and ![string]::IsNullOrEmpty(($allrg|where {$_.Name
 
                                     }
 
+               $cu1|add-member -MemberType NoteProperty -Name $name -Value $value -Ea 0
+
+
                                     #adding to array
                                    $colTaggedbilldata+=$cu1  
        
@@ -1240,7 +1139,6 @@ IF($propagatetags -eq $true -and ![string]::IsNullOrEmpty(($allrg|where {$_.Name
 $count++
 }
 
-#Write-Output "$(get-date) :  $($colbilldata.count)  metrics is ready to upload to OMS"
 
   $jsoncolbill = ConvertTo-Json -InputObject $colbilldata
 
@@ -1250,20 +1148,17 @@ If($jsoncolbill){$postres=Post-OMSData -customerId $customerId -sharedKey $share
 	If ($postres -ge 200 -and $postres -lt 300)
 	{
 		#Write-Output " Succesfully uploaded $($colbilldata.count) usage metrics to OMS"
-#$hash.host.ui.WriteVerboseLine(" Succesfully uploaded $($colbilldata.count) usage metrics to OMS")
 
 	}
 	Else
 	{
 		Write-Warning " Failed to upload  $($colbilldata.count)  metrics to OMS"
-#$hash.host.ui.WriteVerboseLine(" Failed to upload  $($colbilldata.count)  metrics to OMS")
-	}
+    }
 
 
 
 IF($colTaggedbilldata)
 {
-
 
   $jsoncolbill = ConvertTo-Json -InputObject $colTaggedbilldata
 
@@ -1272,12 +1167,10 @@ If($jsoncolbill){$postres=Post-OMSData -customerId $customerId -sharedKey $share
 	If ($postres -ge 200 -and $postres -lt 300)
 	{
 		#Write-Output " Succesfully uploaded $($colTaggedbilldata.count) tagged usage metrics to OMS"
-#$hash.host.ui.WriteVerboseLine(" Succesfully uploaded $($colTaggedbilldata.count) tagged usage metrics to OMS")
 	}
 	Else
 	{
 		Write-Warning " Failed to upload  $($colTaggedbilldata.count) tagged usage metrics to OMS"
-#$hash.host.ui.WriteVerboseLine(" Failed to upload  $($colTaggedbilldata.count) tagged usage metrics to OMS")
 	}
 
 
