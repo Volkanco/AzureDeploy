@@ -64,7 +64,7 @@ IF($syncInterval -eq 'Hourly')
     
 }Else
 {
-    $RunbookScheduleTime=(get-date  -Hour 2 -Minute 0 -Second 0).adddays(1)
+    $RunbookScheduleTime=(get-date  -Hour 0 -Minute 0 -Second 0).adddays(1).AddHours(2)
     $interval=24
 }
 
