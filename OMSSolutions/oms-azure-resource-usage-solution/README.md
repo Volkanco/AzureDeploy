@@ -1,23 +1,25 @@
-# Azure Virtual Machine Inventory
+# Azure Resource Usage Solution
 
-[![Deploy to Azure](http://azuredeploy.net/deploybutton.png)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FVolkanco%2FAzureDeploy%2Fmaster%2FOMSSolutions%2Foms-azure-resource-usage-solution%2Fazuredeploy.json) 
-<a href="http://armviz.io/#/?load=https%3A%2F%2raw.githubusercontent.com%2FVolkanco%2FAzureDeploy%2Fmaster%2FOMSSolutions%2Foms-azure-resource-usage-solution%2Fazuredeploy.json" target="_blank">
+[![Deploy to Azure](http://azuredeploy.net/deploybutton.png)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure%2Fazure-quickstart-templates%2Fmaster%2Foms-azure-resource-usage-solution%2Fazuredeploy.json) 
+<a href="http://armviz.io/#/?load=https%3A%2F%2raw.githubusercontent.com%2FAzure%2Fazure-quickstart-templates%2Fmaster%2Foms-azure-resource-usage-solution%2Fazuredeploy.json" target="_blank">
     <img src="http://armviz.io/visualizebutton.png"/>
 </a>
 
->[AZURE.NOTE]This is preliminary documentation for Azure VM Inventory , a management solution you can deploy into OMS that will provide insights of virtual machines across subscriptions. 
+>[AZURE.NOTE]This is preliminary documentation for Azure Resource Usage Solution, a management solution you can deploy into OMS that will provide insights of virtual machines across subscriptions. 
 
 
-Azure VM Inventory  Solution collects and visualizes inventory information of a virtual machine along with ;
-* Data and OS disks
-* input endpoints for Classic VMs
-* NSG Rules for ARM VMs
-* VM Extensions
-* Virtual Network,Subnet, internal and public IP information. 
+Azure Resource Usage   Solution collects and visualizes Azure Usage from Azure Billing  APIs to bring in the cost metric of Azure resources. Solution provides  usage deatils for;
 
-Solution also collects overall core usage and other subscription level limits .. This solution leverages Azure Automation, the Log Analytics Ingestion API, together with Log Analytics views to present data about all your virtual machines from different subscriptions  in a single  workspace. 
+* Category  (Storage)
+* SubCategory (Locally Redundant)
+* MeterType (Standard IO - Page Blob/Disk (GB))
+* Resouce ( VM, Storage Account , Website)
+* Reosuce Group 
+* Resource Tags 
 
-![alt text](images/vminventory_solution.png "Overview")
+
+
+![alt text](images/azureusagetile.png "Overview")
 
 ## Pre-reqs
 
@@ -27,7 +29,7 @@ Before you deploy this template, you must create an Automation Account in the Az
 
 If you **dont** have an existing OMS Log Analytics Workspace, the template will create and deploy this for you.
 
-## Deploying the Azure VM Inventory Solution
+## Deploying the Azure Resource Usage Solution
 
 ### Follow these instructions to deploy the solution into an existing - or new Log Analytics Workspace
 
@@ -52,7 +54,7 @@ Once the deployment has completed, you should see the Automation account and the
 ![alt text](images/omsrgaa.png "Resource Group")
 
 ###You can now deploy the template   
-[![Deploy to Azure](http://azuredeploy.net/deploybutton.png)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FVolkanco%2FAzureDeploy%2Fmaster%2FOMSSolutions%2Foms-azure-resource-usage-solution%2Fazuredeploy.json) 
+[![Deploy to Azure](http://azuredeploy.net/deploybutton.png)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure%2Fazure-quickstart-templates%2Fmaster%2Foms-azure-resource-usage-solution%2Fazuredeploy.json) 
 
 This will send you to the Azure Portal with some default values for the template parameters. 
 Ensure that the parameters reflects your setup so that you are deploying this into the *existing* Resource Group containing the Log Analytics Workspace and the Automation account.
@@ -86,89 +88,27 @@ You should also change the values for the *Ingest Scheduler Guid* and *Ingest Cl
 
 Once you have customized all the parameters, click *Create*
 
-![alt text](images/vminventory_template.png "template")
+![alt text](images/azureusage4.png "template")
 
 The ingestion will start 5-10 minutes post deployment.
 
 ## Exploring the views
 
-Once the template has successfully been deployed, Azure VM  inventory data ingestion should occur within 15 minutes post deployment.  If you are deploying the solution to a new workspace, it can take approximately 30 minutes before the indexing has completed for the workspace in general. 
+Once the template has successfully been deployed, Azure usage  data ingestion should occur within 1 hour  post deployment.  If you are deploying the solution to a new workspace, it can take approximately 30 minutes before the indexing has completed for the workspace in general. IF you have sleected  Daily data ingestion , usage data will be ingested  at 02.00 AM (UTC) every day adn while viewing the views time range should be set at least to 1 day . 
 
 In the Resource Group where you deployed the template, you should see the solution resource.
 
-* AzureVMInventory[workspaceName]
+* AzureUsage[workspaceName]
 
-![alt text](images/vminventory_deployedres.png "Solutions")
+![alt text](images/azureusagedeployedres.png "Solutions")
 
-### Azure VM Inventory
+### Azure Resouce Usage 
 
-The views for Azure VM Inventory   will give you an overview of all the VMs  within your Azure Subscription.  Multiple subscriptions can be added to provide overview for all.
+The views for Azure Resource   will give you an overview of usage and cost of resources in an Azure Subscription.  Multiple subscriptions can be added to provide overview for all.
 
-![alt text](images/vminventory_inv1.png "Azure VM Inventory view")
+![alt text](images/azureusage1.png "Azure Resource Usage view")
 
- Solution collects and visualizes ;
-
-**VM Inventory Data**
-Subnet
-DeploymentName
-DeplymentType
-VM Name
-FQDN
-Location 
-HW Profile (Size)
-Status
-VirtualNetwork
-Subnet
-Subscription
-Resource Group
-
-**NIC Details**
-VirtualNetwork
-IPAllocation (Static/Dynamic)
-Subnet
-NIC
-Private IP
-MAC Address
-IpForwarding
-
-
-**Input Endpointss** 
-Name
-enableDirectServerReturn
-Public Port
-Private Port
-Protocol
-
-
-**NSG Rules** 
-RuleName
-DestinationPortRange
-Source Prefix
-Destination Prefix
-Protocal
-Direction
-Access (Allow/Deny)
-NIC
-
-**Extensions**
-
-Name
-VErsion
-Publisher
-
-
-**Disk**
-StorageAccount
-VHDUri
-IO Type
-DiskType (unmanaged/Managed)
-Size
-MaxIO
-
-### Alerts
-
-Solution has 2 alerts defined ;
-VMs in Stopped State  and Azure Subscription Quota Reaching %90  . Additional alerts can be created by using  the inventory collected by the solution.
+![alt text](images/azureusage2.png "Azure Resource Usage view")
 
 ### Troubleshooting 
 
@@ -181,7 +121,7 @@ General Troubleshooting steps ;
 * Check if automation account can start  the runbooks
 * Check if Runas Accounts configured properly and has permission to query subscription details and can access storage keys  
 * Check if AzureStorageIngestion.......  Automation Schedules are enabled
-* Navigate to Resource group , delete AzureVMInventory[workspaceName] solution and redeploy template with a new Guid
+* Navigate to Resource group , delete AzureUsage[workspaceName] solution and redeploy template with a new Guid
 
 
 ## Adding Additional Subscriptions | Partial Deployment 
@@ -190,7 +130,7 @@ Deploying all resources in a single resource group is the prefferred way for dep
 
 First deploy the OMS Solution Views by following the link below 
 
-[![Deploy OMS Views](http://azuredeploy.net/deploybutton.png)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FVolkanco%2FAzureDeploy%2Fmaster%2FOMSSolutions%2Foms-azure-resource-usage-solution%2Fazuredeployonlyloganalytics.json) 
+[![Deploy OMS Views](http://azuredeploy.net/deploybutton.png)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure%2Fazure-quickstart-templates%2Fmaster%2Foms-azure-resource-usage-solution%2Fazuredeployonlyloganalytics.json) 
 
 
 
@@ -198,7 +138,7 @@ Second use the link below to deploy the automation components to an existing aut
 
 This second template also used to onboard additional subscriptions to the solution !
 
-[![Deploy Automation/ Add Subscriptions](http://azuredeploy.net/deploybutton.png)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FVolkanco%2FAzureDeploy%2Fmaster%2FOMSSolutions%2Foms-azure-resource-usage-solution%2Fazuredeployonlyautomation.json) 
+[![Deploy Automation/ Add Subscriptions](http://azuredeploy.net/deploybutton.png)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure%2Fazure-quickstart-templates%2Fmaster%2Foms-azure-resource-usage-solution%2Fazuredeployonlyautomation.json) 
 
 Template requires OMS Log Analytics workspace ID and Key  from the  workspace where solution is already deployed. Navigate to Log Analytics Portal / Settings / Connected Sources  to get worspace Id and Key.
 This solution will deploy only the automation components used in data collection and push data to existing log analytics workspace. 
