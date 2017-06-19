@@ -69,8 +69,7 @@
         "description": "Specify the Azure Region for your OMS Automation Account"
       }
     },
-	,
-    "omsDataIngestionFrequency": {
+	    "omsDataIngestionFrequency": {
       "type": "int",
       "defaultValue": 30,
       "allowedValues": [
@@ -1477,9 +1476,8 @@
             "apiVersion": "2015-11-01-preview",
             "location": "[parameters('omsLogAnalyticsRegion')]",
             "properties": {
-                "resourceId": "[parameters('accountResourceId')]",
-				"resourceId": [resourceId('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'))]
-            },
+             	"resourceId": "[resourceId('Microsoft.Automation/automationAccounts/',parameters('omsAutomationAccountName'))]"
+             },
             "dependsOn": []
         },	
     {
