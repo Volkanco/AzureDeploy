@@ -1199,13 +1199,14 @@
     },
 
 	{
-     "apiversion": "2015-10-31",
+      "condition": "[equals(parameters('omsWorkspaceType'), 'Linked')]",
+	  "apiversion": "2015-10-31",
       "location": "[parameters('omsAutomationRegion')]",
       "name": "[parameters('omsAutomationAccountName')]",
       "type": "Microsoft.Automation/automationAccounts",
       "properties": {
         "sku": {
-          "name": "Basic"
+          "name": "OMS"
         }
       },
       "resources": [
