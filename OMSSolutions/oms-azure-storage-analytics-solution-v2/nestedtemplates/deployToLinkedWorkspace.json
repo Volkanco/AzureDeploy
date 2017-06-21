@@ -144,7 +144,7 @@
     "azureSubscriptionId": "saAzureSubscriptionId",
     "omsSolutions": {
       "customSolution1": {
-        "name": "Azure Storage Analytics",
+        "name": "Azure Storage Analytics v2",
         "solutionName": "[concat('AzureStorageAnalytics', '[', parameters('omsLogAnalyticsWorkspaceName'), ']')]",
         "publisher": "volkanc@microsoft.com",
         "displayName": "Azure Storage Analytics",
@@ -155,7 +155,7 @@
         "name": "Azure Storage Audit Logs",
         "solutionName": "[concat('AzureStorageAnalytics', '[', parameters('omsLogAnalyticsWorkspaceName'), ']')]",
         "publisher": "volkanc@microsoft.com",
-        "displayName": "Azure Storage Audot Logs",
+        "displayName": "Azure Storage Audit Logs",
         "description": "Monitor and analyze Azure Storage Account Audit Logs",
         "author": "volkanc@microsoft.com"
       }
@@ -4012,7 +4012,7 @@
           }
         },
           {
-          "name": "[concat(parameters('omsAutomationAccountName'), '/', variables('ingestscheduleName'),'-',parameters('ingestSchedulerGuid'))]",
+          "name": "[concat(parameters('omsAutomationAccountName'), '/', variables('ingestscheduleName'),'-',uniqueString(resourceGroup().id, deployment().name))]",
           "type": "microsoft.automation/automationAccounts/schedules",
           "apiVersion": "2015-10-31",
           "location": "[parameters('omsAutomationRegion')]",
@@ -4030,7 +4030,7 @@
           }
         },
         {
-          "name": "[concat(parameters('omsAutomationAccountName'), '/', parameters('ingestSchedulerGuid'))]",
+          "name": "[concat(parameters('omsAutomationAccountName'), '/', uniqueString(resourceGroup().id, deployment().name))]",
           "type": "microsoft.automation/automationAccounts/jobSchedules",
           "apiVersion": "2015-10-31",
           "location": "[parameters('omsAutomationRegion')]",
@@ -4042,7 +4042,7 @@
           "tags": {},
           "properties": {
             "schedule": {
-              "name": "[concat(variables('ingestscheduleName'),'-',parameters('ingestSchedulerGuid'))]"
+              "name": "[concat(variables('ingestscheduleName'),'-',uniqueString(resourceGroup().id, deployment().name))]"
             },
             "runbook": {
               "name": "[variables('Runbooks').ingestSchedulerRunbook.name]"
