@@ -61,7 +61,7 @@
         "description": "Specify the Azure Region for your OMS Automation Account"
       }
     },
-    "linkedAccountSKU": {
+    "linkedWorkspaceSKU": {
             "type": "array",
             "defaultValue": ["pernode", "OMS"],
             "allowedValues": [
@@ -384,7 +384,7 @@
       "location": "[parameters('omsLogAnalyticsRegion')]",
       "properties": {
         "sku": {
-          "name": "[first(parameters('linkedAccountSKU'))]"
+          "name": "[first(parameters('linkedWorkspaceSKU'))]"
         }
       },
       "resources": [
@@ -3838,7 +3838,7 @@
       "type": "Microsoft.Automation/automationAccounts",
       "properties": {
         "sku": {
-          "name": "[last(parameters('linkedAccountSKU'))]"
+          "name": "[last(parameters('linkedWorkspaceSKU'))]"
         }
       },
       "resources": [

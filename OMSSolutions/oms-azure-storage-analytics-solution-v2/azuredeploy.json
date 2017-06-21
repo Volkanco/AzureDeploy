@@ -150,10 +150,7 @@
                     },
                     "omsAutomationRegion": {
                         "value": "[parameters('omsAutomationRegion')]"
-                    },
-                    "omsWorkspaceType": {
-                        "value": "[parameters('omsWorkspaceType')]"
-                    },
+                    },                    
                     "linkedWorkspaceSKU": {
                         "value": "[parameters('linkedWorkspaceSKU')]"
                     },
