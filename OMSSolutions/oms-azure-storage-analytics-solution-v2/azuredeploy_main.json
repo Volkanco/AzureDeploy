@@ -127,7 +127,7 @@
             "condition": "[equals(parameters('omsWorkspaceType'), 'Linked')]",
             "type": "Microsoft.Resources/deployments",
             "apiVersion": "2016-02-01",
-            "name": "omsWorkspace",
+            "name": "omsLinkedWorkspace",
             "dependsOn": [],
             "properties": {
                 "mode": "Incremental",
@@ -167,7 +167,7 @@
             "condition": "[equals(parameters('omsWorkspaceType'), 'Unlinked')]",
             "type": "Microsoft.Resources/deployments",
             "apiVersion": "2016-02-01",
-            "name": "omsRecoveryServices",
+            "name": "omsWorkspace",
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {

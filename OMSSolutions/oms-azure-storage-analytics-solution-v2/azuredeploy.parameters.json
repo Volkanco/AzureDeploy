@@ -16,15 +16,27 @@
     },
     "omsAutomationRegion": {
       "value": "eastus2"
-    },
+    }
+    ,
+                    "omsWorkspaceType": {
+                        "value": "Linked"
+                    },
+                    "linkedWorkspaceSKU": {
+                        "value": [
+                "pernode",
+                "OMS"
+            ]
+                    },
+                    "collectAuditLogs": {
+                        "value": "Enabled"
+                    }  
+    
+    ,
     "_artifactsLocation": {
       "value": "https://raw.githubusercontent.com/volkanco/AzureDeploy/master/OMSSolutions/StorageAnalytics"
     },
     "ingestSchedulerGuid": {
       "value": "fee41d0f-cd9f-4932-8e5e-0d5b1706e02f"
-    },
-    "ingestCleanupGuid": {
-      "value": "103cad88-c4e6-4d77-9d3d-f9c95baa583a"
     }
   }
 }                          
