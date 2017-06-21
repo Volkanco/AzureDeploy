@@ -4031,7 +4031,7 @@
           }
         },
         {
-          "name": "[concat(parameters('omsAutomationAccountName'), '/', uniqueString(resourceGroup().id, deployment().name))]",
+          "name": "[concat(parameters('omsAutomationAccountName'), '/',variables('ingestscheduleName'),'-JobSchedule', uniqueString(resourceGroup().id, deployment().name))]",
           "type": "microsoft.automation/automationAccounts/jobSchedules",
           "apiVersion": "2015-10-31",
           "location": "[parameters('omsAutomationRegion')]",
