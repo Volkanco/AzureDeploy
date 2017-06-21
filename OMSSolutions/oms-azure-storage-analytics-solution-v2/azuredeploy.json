@@ -146,7 +146,7 @@
                         "value": "[parameters('omsLogAnalyticsSku')]"
                     },
                     "omsAutomationAccountName": {
-                        "value": "[parameters('omsLogAnalyticsSku')]"
+                        "value": "[parameters('omsAutomationAccountName')]"
                     },
                     "omsAutomationRegion": {
                         "value": "[parameters('omsAutomationRegion')]"
@@ -182,7 +182,7 @@
                         "value": "[parameters('omsLogAnalyticsSku')]"
                     },
                     "omsAutomationAccountName": {
-                        "value": "[parameters('omsLogAnalyticsSku')]"
+                        "value": "[parameters('omsAutomationAccountName')]"
                     },
                     "omsAutomationRegion": {
                         "value": "[parameters('omsAutomationRegion')]"
