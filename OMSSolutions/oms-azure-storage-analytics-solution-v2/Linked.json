@@ -1,0 +1,53 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "2.0.0.0",
+    "parameters": {
+        "accountName": {
+            "type": "String"
+        },
+        "location": {
+            "type": "String"
+        },
+        "workspaceLocationDisplayName": {
+            "defaultValue": "",
+            "type": "String"
+        },
+        "workspaceName": {
+            "defaultValue": "",
+            "type": "String"
+        },
+        "accountName": {
+            "defaultValue": "",
+            "type": "String"
+        },
+        "accountResourceId": {
+            "defaultValue": "",
+            "type": "String"
+        }
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Automation/automationAccounts",
+            "name": "[parameters('accountName')]",
+            "apiVersion": "2015-01-01-preview",
+            "location": "[parameters('location')]",
+            "tags": {},
+            "properties": {
+                "sku": {
+                    "name": "Free"
+                }
+            },
+            "dependsOn": []
+        },
+          {
+            "type": "Microsoft.OperationalInsights/workspaces/linkedServices",
+            "name": "[concat(parameters('workspaceName'), '/' , 'Automation')]",
+            "apiVersion": "2015-11-01-preview",
+            "location": "[parameters('workspaceLocationDisplayName')]",
+            "properties": {
+                "resourceId": "[parameters('accountResourceId')]"
+            },
+            "dependsOn": []
+        }
+    ]
+}
