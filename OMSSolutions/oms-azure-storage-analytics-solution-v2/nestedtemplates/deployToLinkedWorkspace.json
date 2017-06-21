@@ -4147,7 +4147,7 @@
         "etag": "*",
         "Interval": "[variables('alertArray')[copyIndex()].scheduleIntervalInMinutes]",
         "QueryTimeSpan": "[variables('alertArray')[copyIndex()].scheduleQueryTimeSpan]",
-        "enabled": true
+        "enabled": false
       }
     },
     {
@@ -4167,7 +4167,7 @@
         "etag": "*",
         "Interval": "[variables('alertMetricArray')[copyIndex()].scheduleIntervalInMinutes]",
         "QueryTimeSpan": "[variables('alertMetricArray')[copyIndex()].scheduleQueryTimeSpan]",
-        "enabled": true
+        "enabled": false
       }
     },
     {

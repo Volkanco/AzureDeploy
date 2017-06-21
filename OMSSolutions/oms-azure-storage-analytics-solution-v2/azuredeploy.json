@@ -190,10 +190,7 @@
                     "omsAutomationRegion": {
                         "value": "[parameters('omsAutomationRegion')]"
                     },
-                    "omsWorkspaceType": {
-                        "value": "[parameters('omsWorkspaceType')]"
-                    },
-                    "linkedWorkspaceSKU": {
+                      "linkedWorkspaceSKU": {
                         "value": "[parameters('linkedWorkspaceSKU')]"
                     },
                     "collectAuditLogs": {
