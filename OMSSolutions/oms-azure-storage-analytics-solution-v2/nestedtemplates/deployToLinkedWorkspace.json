@@ -4053,7 +4053,7 @@
       ]
     },
     {
-			"condition": "[equals(parameters('omsWorkspaceType'), 'Linked')]",
+			
 		   "type": "Microsoft.OperationalInsights/workspaces/linkedServices",
             "name": "[concat(parameters('omsLogAnalyticsWorkspaceName'), '/' , 'Automation')]",
             "apiVersion": "2015-11-01-preview",
