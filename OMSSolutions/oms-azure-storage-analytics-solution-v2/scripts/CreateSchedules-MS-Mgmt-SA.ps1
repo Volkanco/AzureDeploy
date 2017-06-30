@@ -36,7 +36,7 @@ $MetricsScheduleName = "AzureStorageMetrics-Schedule"
 $LogsRunbookName="AzureSAIngestionLogs-MS-Mgmt-SA"
 $LogsScheduleName = "AzureStorageLogs-HourlySchedule"
 $MetricsEnablerRunbookName = "AzureStorageMetricsEnabler-MS-Mgmt-SA"
-$MetricsScheduleName = "AzureStorageMetricsEnabler-DailySchedule"
+$MetricsEnablerScheduleName = "AzureStorageMetricsEnabler-DailySchedule"
 
 #Inventory variables
 $varVMIopsList="AzureSAIngestion-VM-IOPSLimits"
@@ -174,6 +174,7 @@ $RBStart4=$RBStart3.AddMinutes(15)
 
     Write-output  "Creating schedule $MetricsScheduleName for runbook $MetricsRunbookName"
 
+<#
     $Schedule = New-AzureRmAutomationSchedule -Name $MetricsScheduleName+"-1" -StartTime $RBStart1  -HourInterval 1 -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup
     $Sch = Register-AzureRmAutomationScheduledRunbook -RunbookName $MetricsRunbookName -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup -ScheduleName $MetricsScheduleName+"-1"
 
@@ -185,6 +186,16 @@ $Schedule = New-AzureRmAutomationSchedule -Name $MetricsScheduleName+"-3" -Start
 
 $Schedule = New-AzureRmAutomationSchedule -Name $MetricsScheduleName+"-4" -StartTime $RBStart4  -HourInterval 1 -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup
     $Sch = Register-AzureRmAutomationScheduledRunbook -RunbookName $MetricsRunbookName -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup -ScheduleName $MetricsScheduleName+"-4"
+
+    #>
+    
+New-AzureRmAutomationSchedule  -AutomationAccountName  $AAAccount  -HourInterval 1 	-Name $MetricsScheduleName+"-1"  -ResourceGroupName $AAResourceGroup  -StartTime $RBStart1
+
+Register-AzureRmAutomationScheduledRunbook `
+		-AutomationAccountName $AAAccount `
+		-ResourceGroupName  $AAResourceGroup `
+		-RunbookName $MetricsRunbookName `
+		-ScheduleName $MetricsScheduleName+"-1"
 
 
 #Create Schedule for collecting Logs

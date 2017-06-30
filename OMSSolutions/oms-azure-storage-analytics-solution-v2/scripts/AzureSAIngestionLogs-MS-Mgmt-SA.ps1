@@ -15,11 +15,10 @@ $timestamp=$StartTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:45:00.000Z")
 
 
 #Update customer Id to your Operational Insights workspace ID
-$customerID = Get-AutomationVariable -Name 'OMS_DevWs1_ID'
+$customerID = Get-AutomationVariable -Name 'AzureSAIngestion-OPSINSIGHTS_WS_ID-MS-Mgmt-SA'
 
 #For shared key use either the primary or seconday Connected Sources client authentication key   
-$sharedKey = Get-AutomationVariable -Name 'OMS_DevWs1_Key'
-
+$sharedKey = Get-AutomationVariable -Name 'AzureSAIngestion-OPSINSIGHTS_WS_KEY-MS-Mgmt-SA'
 #define API Versions for REST API  Calls
 
 
