@@ -406,7 +406,7 @@
                 "Version": 0,
                 "Configuration": {
                   "General": {
-                    "Title": "Azure  Storage Analytics (Preview)",
+                    "Title": "Azure Storage Analytics",
                     "NewGroup": false,
                     "Color": "#0072c6"
                   },
@@ -2120,1709 +2120,518 @@
             "Description": "[variables('omsSolutions').customSolution2.description]",
             "Author": "[variables('omsSolutions').customSolution2.author]",
             "Source": "Local",
-            "Dashboard": [
-              {
-                "Id": "InformationBlade",
-                "Type": "Blade",
-                "Version": 0,
-                "Configuration": {
-                  "General": {
-                    "Title": "Azure  Storage Analytics (Preview)",
-                    "NewGroup": false,
-                    "Color": "#0072c6"
-                  },
-                  "Header": {
-                    "Image": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAztJREFUeNrUmktoE1EUhqexKj4zJWoaqIpVaVGxKr6ogsaNbhS0YKkKFeKmriwFEaXYnY+FYjeCbmtRRBeuXIlLMe1CXGlduBOt0rS1FaF2/A+ciWMy0yT3njvN/PBtMuHc8899zJ1zp8ZxHEtAKXAE7AdNYBOwGVKO+QQ+gDfgFfii23CNhoHV4CyzWzHGEBgEA2BUKQIZqJAG0A+mHTn9AvfB2krzqeTPi8AVMOWYE92UPrBY2kAzeOeEp/fcZsncYmWMsjaQBdut8LSN22zTnQMXwYwzf5rhHJSGUJdTPeoKyjNoGT0JnoIFCt1/GXwOuNYIbirE/APawbNyhlATmNS4W4fm6NW0Rlxa/baWmsQLwROwXGMC2orXSmkpeMw55lVooAe0aK4gcUMG3NWpJ8hAA+gVWAJtRXPlqpdzLTJwlbvJpAFbID7leK3QwCpwXughFDdsgNTJOecN0A9LhIKbHkIW59rpNdAhuA2wQ+gB0hnXQBLsiqCBnaCeDKTpxUYwcDwkA5TzYTLQKryTDGMOuDoQ44eDFcEhRNpCBtYJB42HaGC9O4klVRuwl1opPNdIa2KaG7dK7nSdgXZWxCwzskOYwPmtxISBuPEQxj9pnAx8NRC4LiQDo2RgJMI98DHGtUpppbgXvNSbMEAv9af5NTKKaicDtK/+ZmCNNi0qpyRpCH3nKnHUNOROYtIj4eDTXP9JMzfAlHAbg966UEKwXE71m70+NSH67bdgFTvhrQv9AA+E7sw98Nbnd/rtjlAbDznn/ypzKc2KnKuDc1TmWgXiT3KuRZU5Oq+6LrQ6BGlWIH6f5TlbK9zM9YNhzQaOKV4rR8M8RD23q7ibG0FOo4snwA6fuC18TVWU08Zyy+snwHNLrbxu8ZJ5F7zkIXUUdNP+XTEelddPgRfFAzZ4wmXAbBUcblAOF1QP+TJVcMSU0T2lPA7G5iH5HLctcsy6AWRDTD7LbYoedNeCS2DcYOK0SnVzW+In9S5JcEtzSfRL/DbHrigfnY896C2LPvQ4B/b4PBRLiZ7KdJg9wLvhMaUCqdDnNgkqtIJ9oBlspqITWMYvSj/5pWnE+ve5zev8hkxDfwUYAP0NkvYTPlJVAAAAAElFTkSuQmCC",
-                    "Label": "Azure Storage Account Monitoring",
-                    "Link": {
-                      "Label": "More info ",
-                      "Url": "https://github.com/Azure/azure-quickstart-templates/blob/master/oms-azure-storage-analytics-solution/README.md"
-                    }
-                  },
-                  "List": [
-                    {
-                      "Title": "Solution Overview",
-                      "Content": "\nAzure Storage Analytics Solution utilizes  native **Storage REST API** capabilities and **Storage Analytics**  to enable inventory and monitoring of storage accounts.\n\n![MS Logo](https://assets.onestore.ms/cdnfiles/onestorerolling-1607-15000/shell/v3/images/logo/microsoft.png \"Microsoft\")"
-                    }
-                  ]
-                }
-              },
-              {
-                "Id": "SingleQueryDonutBuilderBladeV1",
-                "Type": "Blade",
-                "Version": 0,
-                "Configuration": {
-                  "General": {
-                    "title": "Storage Account Usage  for Subscription",
-                    "newGroup": false,
-                    "icon": "",
-                    "useIcon": false
-                  },
-                  "Header": {
-                    "Title": "Storage Accounts by Deployment type",
-                    "Subtitle": ""
-                  },
-                  "Donut": {
-                    "Query": "Type=AzureStorage_CL    MetricName_s=StorageQuotas TimeGenerated >NOW-60MINUTES |measure avg(SACurrent_d) by QuotaType_s",
-                    "CenterLegend": {
-                      "Text": "Total",
-                      "Operation": "Sum",
-                      "ArcsToSelect": []
-                    },
-                    "Options": {
-                      "colors": [
-                        "#00188f",
-                        "#55d455",
-                        "#ffb900"
-                      ],
-                      "valueColorMapping": []
-                    }
-                  },
-                  "List": {
-                    "Query": "Type=AzureStorage_CL  MetricName_s=StorageQuotas TimeGenerated >NOW-60MINUTES |measure avg(Quotapct_d) by AzureSubscription_s,QuotaType_s",
-                    "HideGraph": false,
-                    "enableSparklines": false,
-                    "operation": "Summary",
-                    "ColumnsTitle": {
-                      "Name": "Storage Account Quota",
-                      "Value": "% Utilized"
-                    },
-                    "Color": "#0072c6",
-                    "thresholds": {
-                      "isEnabled": true,
-                      "values": [
-                        {
-                          "name": "Normal",
-                          "threshold": "Default",
-                          "color": "#009e49",
-                          "isDefault": true
-                        },
-                        {
-                          "name": "Warning",
-                          "threshold": "80",
-                          "color": "#fcd116",
-                          "isDefault": false
-                        },
-                        {
-                          "name": "Error",
-                          "threshold": "90",
-                          "color": "#ba141a",
-                          "isDefault": false
+                         "Dashboard": [
+                            {
+                                "Id": "LineChartBuilderBlade",
+                                "Type": "Blade",
+                                "Version": 0,
+                                "Configuration": {
+                                    "General": {
+                                        "title": "Logs By Subscription and UserAgent",
+                                        "newGroup": false,
+                                        "icon": "",
+                                        "useIcon": false
+                                    },
+                                    "Header": {
+                                        "Title": "Operations Over Time",
+                                        "Subtitle": ""
+                                    },
+                                    "LineChart": {
+                                        "Query": "* Type=AzureStorage_CL  MetricName_s=AuditLogs | measure count() by AzureSubscription_s",
+                                        "yAxis": {
+                                            "isLogarithmic": false,
+                                            "units": {
+                                                "baseUnitType": "",
+                                                "baseUnit": "",
+                                                "displayUnit": ""
+                                            },
+                                            "customLabel": ""
+                                        }
+                                    },
+                                    "List": {
+                                        "Query": "* Type=AzureStorage_CL  MetricName_s=AuditLogs | measure count() by AzureSubscription_s,UserAgent_s",
+                                        "HideGraph": false,
+                                        "enableSparklines": false,
+                                        "operation": "Summary",
+                                        "ColumnsTitle": {
+                                            "Name": "Subscription",
+                                            "Value": "Count"
+                                        },
+                                        "Color": "#0072c6",
+                                        "thresholds": {
+                                            "isEnabled": false,
+                                            "values": [
+                                                {
+                                                    "name": "Normal",
+                                                    "threshold": "Default",
+                                                    "color": "#009e49",
+                                                    "isDefault": true
+                                                },
+                                                {
+                                                    "name": "Warning",
+                                                    "threshold": "60",
+                                                    "color": "#fcd116",
+                                                    "isDefault": false
+                                                },
+                                                {
+                                                    "name": "Error",
+                                                    "threshold": "90",
+                                                    "color": "#ba141a",
+                                                    "isDefault": false
+                                                }
+                                            ]
+                                        },
+                                        "NameDSVSeparator": "",
+                                        "NavigationQuery": "{selected item}"
+                                    }
+                                }
+                            },
+                            {
+                                "Id": "SingleQueryDonutBuilderBladeV1",
+                                "Type": "Blade",
+                                "Version": 0,
+                                "Configuration": {
+                                    "General": {
+                                        "title": "Logs by Subscription and Operation",
+                                        "newGroup": false,
+                                        "icon": "",
+                                        "useIcon": false
+                                    },
+                                    "Header": {
+                                        "Title": "Subscriptions",
+                                        "Subtitle": ""
+                                    },
+                                    "Donut": {
+                                        "Query": "* Type=AzureStorage_CL Type=AzureStorage_CL MetricName_s=AuditLogs | measure count() by AzureSubscription_s",
+                                        "CenterLegend": {
+                                            "Text": "Total",
+                                            "Operation": "Sum",
+                                            "ArcsToSelect": []
+                                        },
+                                        "Options": {
+                                            "colors": [
+                                                "#0072c6",
+                                                "#fcd116",
+                                                "#009e49"
+                                            ],
+                                            "valueColorMapping": []
+                                        }
+                                    },
+                                    "List": {
+                                        "Query": "* Type=AzureStorage_CL Type=AzureStorage_CL MetricName_s=AuditLogs | measure count() by AzureSubscription_s,Operation_s",
+                                        "HideGraph": false,
+                                        "enableSparklines": false,
+                                        "operation": "Summary",
+                                        "ColumnsTitle": {
+                                            "Name": "Subscription",
+                                            "Value": "Count"
+                                        },
+                                        "Color": "#0072c6",
+                                        "thresholds": {
+                                            "isEnabled": false,
+                                            "values": [
+                                                {
+                                                    "name": "Normal",
+                                                    "threshold": "Default",
+                                                    "color": "#009e49",
+                                                    "isDefault": true
+                                                },
+                                                {
+                                                    "name": "Warning",
+                                                    "threshold": "60",
+                                                    "color": "#fcd116",
+                                                    "isDefault": false
+                                                },
+                                                {
+                                                    "name": "Error",
+                                                    "threshold": "90",
+                                                    "color": "#ba141a",
+                                                    "isDefault": false
+                                                }
+                                            ]
+                                        },
+                                        "NameDSVSeparator": "",
+                                        "NavigationQuery": "{selected item}"
+                                    }
+                                }
+                            },
+                            {
+                                "Id": "SingleQueryDonutBuilderBladeV1",
+                                "Type": "Blade",
+                                "Version": 0,
+                                "Configuration": {
+                                    "General": {
+                                        "title": "Requester Tracking ",
+                                        "newGroup": false,
+                                        "icon": "",
+                                        "useIcon": false
+                                    },
+                                    "Header": {
+                                        "Title": "IPs",
+                                        "Subtitle": ""
+                                    },
+                                    "Donut": {
+                                        "Query": "* Type=AzureStorage_CL Type=AzureStorage_CL MetricName_s=AuditLogs | measure count() by RequesterIP_s",
+                                        "CenterLegend": {
+                                            "Text": "Total",
+                                            "Operation": "Sum",
+                                            "ArcsToSelect": []
+                                        },
+                                        "Options": {
+                                            "colors": [
+                                                "#00bcf2",
+                                                "#ff8c00",
+                                                "#55d455"
+                                            ],
+                                            "valueColorMapping": []
+                                        }
+                                    },
+                                    "List": {
+                                        "Query": "* Type=AzureStorage_CL Type=AzureStorage_CL MetricName_s=AuditLogs | measure count() by RequesterIP_s",
+                                        "HideGraph": false,
+                                        "enableSparklines": false,
+                                        "operation": "Summary",
+                                        "ColumnsTitle": {
+                                            "Name": "Computer",
+                                            "Value": "Count"
+                                        },
+                                        "Color": "#0072c6",
+                                        "thresholds": {
+                                            "isEnabled": false,
+                                            "values": [
+                                                {
+                                                    "name": "Normal",
+                                                    "threshold": "Default",
+                                                    "color": "#009e49",
+                                                    "isDefault": true
+                                                },
+                                                {
+                                                    "name": "Warning",
+                                                    "threshold": "60",
+                                                    "color": "#fcd116",
+                                                    "isDefault": false
+                                                },
+                                                {
+                                                    "name": "Error",
+                                                    "threshold": "90",
+                                                    "color": "#ba141a",
+                                                    "isDefault": false
+                                                }
+                                            ]
+                                        },
+                                        "NameDSVSeparator": "",
+                                        "NavigationQuery": "{selected item}"
+                                    }
+                                }
+                            },
+                            {
+                                "Id": "SingleQueryDonutBuilderBladeV1",
+                                "Type": "Blade",
+                                "Version": 0,
+                                "Configuration": {
+                                    "General": {
+                                        "title": "Storage Operations",
+                                        "newGroup": false,
+                                        "icon": "",
+                                        "useIcon": false
+                                    },
+                                    "Header": {
+                                        "Title": "Top Operations",
+                                        "Subtitle": ""
+                                    },
+                                    "Donut": {
+                                        "Query": "* Type=AzureStorage_CL Type=AzureStorage_CL MetricName_s=AuditLogs | measure count() by Operation_s",
+                                        "CenterLegend": {
+                                            "Text": "Total",
+                                            "Operation": "Sum",
+                                            "ArcsToSelect": []
+                                        },
+                                        "Options": {
+                                            "colors": [
+                                                "#00188f",
+                                                "#0072c6",
+                                                "#00bcf2"
+                                            ],
+                                            "valueColorMapping": []
+                                        }
+                                    },
+                                    "List": {
+                                        "Query": "* Type=AzureStorage_CL Type=AzureStorage_CL MetricName_s=AuditLogs | measure count() by StorageService_s,Operation_s",
+                                        "HideGraph": false,
+                                        "enableSparklines": false,
+                                        "operation": "Summary",
+                                        "ColumnsTitle": {
+                                            "Name": "Service",
+                                            "Value": "Count"
+                                        },
+                                        "Color": "#0072c6",
+                                        "thresholds": {
+                                            "isEnabled": false,
+                                            "values": [
+                                                {
+                                                    "name": "Normal",
+                                                    "threshold": "Default",
+                                                    "color": "#009e49",
+                                                    "isDefault": true
+                                                },
+                                                {
+                                                    "name": "Warning",
+                                                    "threshold": "60",
+                                                    "color": "#fcd116",
+                                                    "isDefault": false
+                                                },
+                                                {
+                                                    "name": "Error",
+                                                    "threshold": "90",
+                                                    "color": "#ba141a",
+                                                    "isDefault": false
+                                                }
+                                            ]
+                                        },
+                                        "NameDSVSeparator": "",
+                                        "NavigationQuery": "{selected item}"
+                                    }
+                                }
+                            },
+                            {
+                                "Id": "SingleQueryDonutBuilderBladeV1",
+                                "Type": "Blade",
+                                "Version": 0,
+                                "Configuration": {
+                                    "General": {
+                                        "title": "Authentication Methods",
+                                        "newGroup": false,
+                                        "icon": "",
+                                        "useIcon": false
+                                    },
+                                    "Header": {
+                                        "Title": "--",
+                                        "Subtitle": ""
+                                    },
+                                    "Donut": {
+                                        "Query": "* Type=AzureStorage_CL  MetricName_s=AuditLogs | measure count() by AuthenticationType_s",
+                                        "CenterLegend": {
+                                            "Text": "Total",
+                                            "Operation": "Sum",
+                                            "ArcsToSelect": []
+                                        },
+                                        "Options": {
+                                            "colors": [
+                                                "#ff8c00",
+                                                "#00d8cc",
+                                                "#00bcf2"
+                                            ],
+                                            "valueColorMapping": []
+                                        }
+                                    },
+                                    "List": {
+                                        "Query": "* Type=AzureStorage_CL  MetricName_s=AuditLogs | measure count() by AuthenticationType_s,Status_s",
+                                        "HideGraph": false,
+                                        "enableSparklines": false,
+                                        "operation": "Summary",
+                                        "ColumnsTitle": {
+                                            "Name": "Authentication",
+                                            "Value": "Count"
+                                        },
+                                        "Color": "#0072c6",
+                                        "thresholds": {
+                                            "isEnabled": false,
+                                            "values": [
+                                                {
+                                                    "name": "Normal",
+                                                    "threshold": "Default",
+                                                    "color": "#009e49",
+                                                    "isDefault": true
+                                                },
+                                                {
+                                                    "name": "Warning",
+                                                    "threshold": "60",
+                                                    "color": "#fcd116",
+                                                    "isDefault": false
+                                                },
+                                                {
+                                                    "name": "Error",
+                                                    "threshold": "90",
+                                                    "color": "#ba141a",
+                                                    "isDefault": false
+                                                }
+                                            ]
+                                        },
+                                        "NameDSVSeparator": "",
+                                        "NavigationQuery": "{selected item}"
+                                    }
+                                }
+                            },
+                            {
+                                "Id": "SingleQueryDonutBuilderBladeV1",
+                                "Type": "Blade",
+                                "Version": 0,
+                                "Configuration": {
+                                    "General": {
+                                        "title": "Error Logs",
+                                        "newGroup": false,
+                                        "icon": "",
+                                        "useIcon": false
+                                    },
+                                    "Header": {
+                                        "Title": "Operation",
+                                        "Subtitle": ""
+                                    },
+                                    "Donut": {
+                                        "Query": "* Type=AzureStorage_CL Type=AzureStorage_CL MetricName_s=AuditLogs AND NOT (Status_s:Success OR Status_s:SASSuccess)|measure count() by Operation_s",
+                                        "CenterLegend": {
+                                            "Text": "Total",
+                                            "Operation": "Sum",
+                                            "ArcsToSelect": []
+                                        },
+                                        "Options": {
+                                            "colors": [
+                                                "#e81123",
+                                                "#dd5900",
+                                                "#fcd116"
+                                            ],
+                                            "valueColorMapping": []
+                                        }
+                                    },
+                                    "List": {
+                                        "Query": "Type=AzureStorage_CL MetricName_s=AuditLogs AND NOT (Status_s:Success OR Status_s:SASSuccess)|measure count() by StorageAccount_s,StorageService_s,Operation_s",
+                                        "HideGraph": false,
+                                        "enableSparklines": false,
+                                        "operation": "Summary",
+                                        "ColumnsTitle": {
+                                            "Name": "StorageAccount",
+                                            "Value": "Count"
+                                        },
+                                        "Color": "#0072c6",
+                                        "thresholds": {
+                                            "isEnabled": false,
+                                            "values": [
+                                                {
+                                                    "name": "Normal",
+                                                    "threshold": "Default",
+                                                    "color": "#009e49",
+                                                    "isDefault": true
+                                                },
+                                                {
+                                                    "name": "Warning",
+                                                    "threshold": "60",
+                                                    "color": "#fcd116",
+                                                    "isDefault": false
+                                                },
+                                                {
+                                                    "name": "Error",
+                                                    "threshold": "90",
+                                                    "color": "#ba141a",
+                                                    "isDefault": false
+                                                }
+                                            ]
+                                        },
+                                        "NameDSVSeparator": "",
+                                        "NavigationQuery": "{selected item}"
+                                    }
+                                }
+                            },
+                            {
+                                "Id": "SingleQueryDonutBuilderBladeV1",
+                                "Type": "Blade",
+                                "Version": 0,
+                                "Configuration": {
+                                    "General": {
+                                        "title": "Requester IPs Excluding Azure Native Calls",
+                                        "newGroup": false,
+                                        "icon": "",
+                                        "useIcon": false
+                                    },
+                                    "Header": {
+                                        "Title": "IPs",
+                                        "Subtitle": ""
+                                    },
+                                    "Donut": {
+                                        "Query": "* Type=AzureStorage_CL Type=AzureStorage_CL MetricName_s=AuditLogs AND NOT (USerAgent_s=\"\\\"Azure-Storage/0.5.0 (Native; Windows)\\\"\")|measure count() by RequesterIP_s",
+                                        "CenterLegend": {
+                                            "Text": "Total",
+                                            "Operation": "Sum",
+                                            "ArcsToSelect": []
+                                        },
+                                        "Options": {
+                                            "colors": [
+                                                "#0072c6",
+                                                "#ffb900",
+                                                "#55d455"
+                                            ],
+                                            "valueColorMapping": []
+                                        }
+                                    },
+                                    "List": {
+                                        "Query": "* Type=AzureStorage_CL Type=AzureStorage_CL MetricName_s=AuditLogs AND NOT (USerAgent_s=\"\\\"Azure-Storage/0.5.0 (Native; Windows)\\\"\")|measure count() by RequesterIP_s",
+                                        "HideGraph": false,
+                                        "enableSparklines": false,
+                                        "operation": "Summary",
+                                        "ColumnsTitle": {
+                                            "Name": "Requester IP",
+                                            "Value": "Count"
+                                        },
+                                        "Color": "#0072c6",
+                                        "thresholds": {
+                                            "isEnabled": false,
+                                            "values": [
+                                                {
+                                                    "name": "Normal",
+                                                    "threshold": "Default",
+                                                    "color": "#009e49",
+                                                    "isDefault": true
+                                                },
+                                                {
+                                                    "name": "Warning",
+                                                    "threshold": "60",
+                                                    "color": "#fcd116",
+                                                    "isDefault": false
+                                                },
+                                                {
+                                                    "name": "Error",
+                                                    "threshold": "90",
+                                                    "color": "#ba141a",
+                                                    "isDefault": false
+                                                }
+                                            ]
+                                        },
+                                        "NameDSVSeparator": "",
+                                        "NavigationQuery": "{selected item}"
+                                    }
+                                }
+                            }
+                        ],
+                        "OverviewTile": {
+                            "Id": "LineChartCalloutBuilderTile",
+                            "Type": "OverviewTile",
+                            "Version": 0,
+                            "Configuration": {
+                                "LineChart": {
+                                    "Query": "* Type=AzureStorage_CL Type=AzureStorage_CL MetricName_s=AuditLogs | measure count() by AzureSubscription_s ",
+                                    "Callout": {
+                                        "Title": "Total Logs",
+                                        "Series": "",
+                                        "Operation": "Sum"
+                                    },
+                                    "yAxis": {
+                                        "isLogarithmic": false,
+                                        "units": {
+                                            "baseUnitType": "",
+                                            "baseUnit": "",
+                                            "displayUnit": ""
+                                        },
+                                        "customLabel": ""
+                                    }
+                                },
+                                "Advanced": {
+                                    "DataFlowVerification": {
+                                        "Enabled": false,
+                                        "Query": "*",
+                                        "Message": ""
+                                    }
+                                }
+                            }
                         }
-                      ]
-                    },
-                    "NameDSVSeparator": "",
-                    "NavigationQuery": "{selected item}"
-                  }
-                }
-              },
-              {
-                "Id": "SingleQueryDonutBuilderBladeV1",
-                "Type": "Blade",
-                "Version": 0,
-                "Configuration": {
-                  "General": {
-                    "title": "Azure Storage Inventory",
-                    "newGroup": false,
-                    "icon": "",
-                    "useIcon": false
-                  },
-                  "Header": {
-                    "Title": "Storage Inventory",
-                    "Subtitle": ""
-                  },
-                  "Donut": {
-                    "Query": "Type=AzureStorage_CL    MetricName_s=Inventory AND NOT  InventoryType_s=VHDIOPs | measure countdistinct(Uri_s) by InventoryType_s",
-                    "CenterLegend": {
-                      "Text": "Total",
-                      "Operation": "Sum",
-                      "ArcsToSelect": [
-                        "StorageAccount"
-                      ]
-                    },
-                    "Options": {
-                      "colors": [
-                        "#0072c6",
-                        "#ffb900",
-                        "#009e49"
-                      ],
-                      "valueColorMapping": []
-                    }
-                  },
-                  "List": {
-                    "Query": "Type=AzureStorage_CL    MetricName_s=Inventory AND NOT  InventoryType_s=VHDIOPs | measure countdistinct(Uri_s) by InventoryType_s",
-                    "HideGraph": false,
-                    "enableSparklines": false,
-                    "operation": "Summary",
-                    "ColumnsTitle": {
-                      "Name": "Inventory",
-                      "Value": "Count"
-                    },
-                    "Color": "#0072c6",
-                    "thresholds": {
-                      "isEnabled": false,
-                      "values": [
-                        {
-                          "name": "Normal",
-                          "threshold": "Default",
-                          "color": "#009e49",
-                          "isDefault": true
-                        },
-                        {
-                          "name": "Warning",
-                          "threshold": "60",
-                          "color": "#fcd116",
-                          "isDefault": false
-                        },
-                        {
-                          "name": "Error",
-                          "threshold": "90",
-                          "color": "#ba141a",
-                          "isDefault": false
-                        }
-                      ]
-                    },
-                    "NameDSVSeparator": "",
-                    "NavigationQuery": "{selected item}"
-                  }
-                }
-              },
-              {
-                "Id": "SingleQueryDonutBuilderBladeV1",
-                "Type": "Blade",
-                "Version": 0,
-                "Configuration": {
-                  "General": {
-                    "title": "Storage Account Capacity Usage",
-                    "newGroup": false,
-                    "icon": "",
-                    "useIcon": false
-                  },
-                  "Header": {
-                    "Title": "Utilized (GB)",
-                    "Subtitle": ""
-                  },
-                  "Donut": {
-                    "Query": "Type=AzureStorage_CL    MetricName_s=MetricsCapacity TimeGenerated>NOW-1HOUR |measure avg(Capacity_d) as UsedGB by StorageAccount_s",
-                    "CenterLegend": {
-                      "Text": "Total",
-                      "Operation": "Sum",
-                      "ArcsToSelect": []
-                    },
-                    "Options": {
-                      "colors": [
-                        "#fcd116",
-                        "#0072c6",
-                        "#55d455"
-                      ],
-                      "valueColorMapping": []
-                    }
-                  },
-                  "List": {
-                    "Query": "Type=AzureStorage_CL    MetricName_s=MetricsCapacity TimeGenerated>NOW-1HOUR |measure avg(Capacity_d) as UsedGB by StorageAccount_s",
-                    "HideGraph": false,
-                    "enableSparklines": false,
-                    "operation": "Summary",
-                    "ColumnsTitle": {
-                      "Name": "STORAGE Account",
-                      "Value": "UsedinGB"
-                    },
-                    "Color": "#0072c6",
-                    "thresholds": {
-                      "isEnabled": true,
-                      "values": [
-                        {
-                          "name": "Normal",
-                          "threshold": "Default",
-                          "color": "#009e49",
-                          "isDefault": true
-                        },
-                        {
-                          "name": "Warning",
-                          "threshold": "400000",
-                          "color": "#fcd116",
-                          "isDefault": false
-                        },
-                        {
-                          "name": "Error",
-                          "threshold": "450000",
-                          "color": "#ba141a",
-                          "isDefault": false
-                        }
-                      ]
-                    },
-                    "NameDSVSeparator": "",
-                    "NavigationQuery": "{selected item}"
-                  }
-                }
-              },
-              {
-                "Id": "SingleQueryDonutBuilderBladeV1",
-                "Type": "Blade",
-                "Version": 0,
-                "Configuration": {
-                  "General": {
-                    "title": "STORAGE ACCOUNT INVENTORY",
-                    "newGroup": false,
-                    "icon": "",
-                    "useIcon": false
-                  },
-                  "Header": {
-                    "Title": "SA by Tier",
-                    "Subtitle": ""
-                  },
-                  "Donut": {
-                    "Query": "Type=AzureStorage_CL      MetricName_s=Inventory  InventoryType_s=StorageAccount  |measure countdistinct(StorageAccount_s) by Sku_s",
-                    "CenterLegend": {
-                      "Text": "Total",
-                      "Operation": "Sum",
-                      "ArcsToSelect": []
-                    },
-                    "Options": {
-                      "colors": [
-                        "#00188f",
-                        "#0072c6",
-                        "#00bcf2"
-                      ],
-                      "valueColorMapping": []
-                    }
-                  },
-                  "List": {
-                    "Query": "Type=AzureStorage_CL      MetricName_s=Inventory  InventoryType_s=StorageAccount  |measure countdistinct(StorageAccount_s) by Location_s",
-                    "HideGraph": false,
-                    "enableSparklines": false,
-                    "operation": "Summary",
-                    "ColumnsTitle": {
-                      "Name": "SA by Location",
-                      "Value": "Count"
-                    },
-                    "Color": "#0072c6",
-                    "thresholds": {
-                      "isEnabled": false,
-                      "values": [
-                        {
-                          "name": "Normal",
-                          "threshold": "Default",
-                          "color": "#009e49",
-                          "isDefault": true
-                        },
-                        {
-                          "name": "Warning",
-                          "threshold": "200",
-                          "color": "#fcd116",
-                          "isDefault": false
-                        },
-                        {
-                          "name": "Error",
-                          "threshold": "250",
-                          "color": "#ba141a",
-                          "isDefault": false
-                        }
-                      ]
-                    },
-                    "NameDSVSeparator": "",
-                    "NavigationQuery": "{selected item}"
-                  }
-                }
-              },
-              {
-                "Id": "SingleQueryDonutBuilderBladeV1",
-                "Type": "Blade",
-                "Version": 0,
-                "Configuration": {
-                  "General": {
-                    "title": "BLOB - Total Requests",
-                    "newGroup": false,
-                    "icon": "",
-                    "useIcon": false
-                  },
-                  "Header": {
-                    "Title": "TotalRequests per Storage Acc",
-                    "Subtitle": ""
-                  },
-                  "Donut": {
-                    "Query": "Type=AzureStorage_CL    MetricName_s=MetricsTransactions StorageService_s=Blob  TimeGenerated>NOW-1HOUR |measure sum(TotalRequests_d) by StorageAccount_s",
-                    "CenterLegend": {
-                      "Text": "Total",
-                      "Operation": "Sum",
-                      "ArcsToSelect": []
-                    },
-                    "Options": {
-                      "colors": [
-                        "#0072c6",
-                        "#55d455",
-                        "#fcd116"
-                      ],
-                      "valueColorMapping": []
-                    }
-                  },
-                  "List": {
-                    "Query": "Type=AzureStorage_CL    MetricName_s=MetricsTransactions     StorageService_s=Blob | measure sum(TotalRequests_d) by StorageAccount_s",
-                    "HideGraph": false,
-                    "enableSparklines": false,
-                    "operation": "Summary",
-                    "ColumnsTitle": {
-                      "Name": "Storage Account",
-                      "Value": "RequestCount"
-                    },
-                    "Color": "#0072c6",
-                    "thresholds": {
-                      "isEnabled": false,
-                      "values": [
-                        {
-                          "name": "Normal",
-                          "threshold": "Default",
-                          "color": "#009e49",
-                          "isDefault": true
-                        },
-                        {
-                          "name": "Warning",
-                          "threshold": "60",
-                          "color": "#fcd116",
-                          "isDefault": false
-                        },
-                        {
-                          "name": "Error",
-                          "threshold": "90",
-                          "color": "#ba141a",
-                          "isDefault": false
-                        }
-                      ]
-                    },
-                    "NameDSVSeparator": "",
-                    "NavigationQuery": "{selected item}"
-                  }
-                }
-              },
-              {
-                "Id": "SingleQueryDonutBuilderBladeV1",
-                "Type": "Blade",
-                "Version": 0,
-                "Configuration": {
-                  "General": {
-                    "title": "BLOB - E2E Latency (ms)",
-                    "newGroup": false,
-                    "icon": "",
-                    "useIcon": false
-                  },
-                  "Header": {
-                    "Title": "",
-                    "Subtitle": ""
-                  },
-                  "Donut": {
-                    "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions  StorageService_s=Blob  |measure avg(AverageE2ELatency_d) by StorageAccount_s",
-                    "CenterLegend": {
-                      "Text": "Total",
-                      "Operation": "Sum",
-                      "ArcsToSelect": []
-                    },
-                    "Options": {
-                      "colors": [
-                        "#00188f",
-                        "#0072c6",
-                        "#00bcf2"
-                      ],
-                      "valueColorMapping": []
-                    }
-                  },
-                  "List": {
-                    "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions  StorageService_s=Blob   |measure avg(AverageE2ELatency_d) by StorageAccount_s",
-                    "HideGraph": false,
-                    "enableSparklines": false,
-                    "operation": "Summary",
-                    "ColumnsTitle": {
-                      "Name": "Storage Account",
-                      "Value": "Latency"
-                    },
-                    "Color": "#0072c6",
-                    "thresholds": {
-                      "isEnabled": true,
-                      "values": [
-                        {
-                          "name": "Normal",
-                          "threshold": "Default",
-                          "color": "#009e49",
-                          "isDefault": true
-                        },
-                        {
-                          "name": "Warning",
-                          "threshold": "50",
-                          "color": "#fcd116",
-                          "isDefault": false
-                        },
-                        {
-                          "name": "Error",
-                          "threshold": "100",
-                          "color": "#ba141a",
-                          "isDefault": false
-                        }
-                      ]
-                    },
-                    "NameDSVSeparator": "",
-                    "NavigationQuery": "{selected item}"
-                  }
-                }
-              },
-              {
-                "Id": "SingleQueryDonutBuilderBladeV1",
-                "Type": "Blade",
-                "Version": 0,
-                "Configuration": {
-                  "General": {
-                    "title": "IAAS - Disks by SA",
-                    "newGroup": false,
-                    "icon": "",
-                    "useIcon": false
-                  },
-                  "Header": {
-                    "Title": "VHDs  Attached to VMs",
-                    "Subtitle": "VHD Count"
-                  },
-                  "Donut": {
-                    "Query": "Type=AzureStorage_CL      MetricName_s=Inventory  InventoryType_s=VHDIOPs   | measure countdistinct(VHDUri_s) by StorageAccount_s",
-                    "CenterLegend": {
-                      "Text": "Total",
-                      "Operation": "Sum",
-                      "ArcsToSelect": []
-                    },
-                    "Options": {
-                      "colors": [
-                        "#00188f",
-                        "#0072c6",
-                        "#00bcf2"
-                      ],
-                      "valueColorMapping": []
-                    }
-                  },
-                  "List": {
-                    "Query": "Type=AzureStorage_CL      MetricName_s=Inventory  InventoryType_s=VHDIOPs   | measure countdistinct(VHDUri_s) by StorageAccount_s",
-                    "HideGraph": false,
-                    "enableSparklines": false,
-                    "operation": "Summary",
-                    "ColumnsTitle": {
-                      "Name": "STORAGEACCOUNT",
-                      "Value": "VHD COUNT"
-                    },
-                    "Color": "#0072c6",
-                    "thresholds": {
-                      "isEnabled": true,
-                      "values": [
-                        {
-                          "name": "Normal",
-                          "threshold": "Default",
-                          "color": "#009e49",
-                          "isDefault": true
-                        },
-                        {
-                          "name": "Warning",
-                          "threshold": "35",
-                          "color": "#fcd116",
-                          "isDefault": false
-                        },
-                        {
-                          "name": "Error",
-                          "threshold": "40",
-                          "color": "#ba141a",
-                          "isDefault": false
-                        }
-                      ]
-                    },
-                    "NameDSVSeparator": "",
-                    "NavigationQuery": "{selected item}"
-                  }
-                }
-              },
-              {
-                "Id": "SingleQueryDonutBuilderBladeV1",
-                "Type": "Blade",
-                "Version": 0,
-                "Configuration": {
-                  "General": {
-                    "title": "IAAS - IO PRESSURE FOR STORAGE ACCOUNTS",
-                    "newGroup": false,
-                    "icon": "",
-                    "useIcon": false
-                  },
-                  "Header": {
-                    "Title": "MAX Estimated IO ",
-                    "Subtitle": "Limit 20.000 IOPS Per SA"
-                  },
-                  "Donut": {
-                    "Query": "Type=AzureStorage_CL     MetricName_s=Inventory  InventoryType_s=VHDIOPs TimeGenerated>NOW-1HOUR StorageAccount_s in   {Type=AzureStorage_CL MetricName_s=Inventory InventoryType_s=StorageAccount Tier_s=Standard|measure count() by StorageAccount_s} | measure sum(MaxDiskIO_d) by StorageAccount_s",
-                    "CenterLegend": {
-                      "Text": "Total",
-                      "Operation": "Sum",
-                      "ArcsToSelect": []
-                    },
-                    "Options": {
-                      "colors": [
-                        "#00188f",
-                        "#0072c6",
-                        "#00bcf2"
-                      ],
-                      "valueColorMapping": []
-                    }
-                  },
-                  "List": {
-                    "Query": "Type=AzureStorage_CL     MetricName_s=Inventory  InventoryType_s=VHDIOPs TimeGenerated>NOW-1HOUR StorageAccount_s in   {Type=AzureStorage_CL MetricName_s=Inventory InventoryType_s=StorageAccount Tier_s=Standard|measure count() by StorageAccount_s}| measure sum(MaxDiskIO_d) by StorageAccount_s",
-                    "HideGraph": false,
-                    "enableSparklines": false,
-                    "operation": "Summary",
-                    "ColumnsTitle": {
-                      "Name": "Storage Account",
-                      "Value": "MaxPossibleIO"
-                    },
-                    "Color": "#0072c6",
-                    "thresholds": {
-                      "isEnabled": true,
-                      "values": [
-                        {
-                          "name": "Normal",
-                          "threshold": "Default",
-                          "color": "#009e49",
-                          "isDefault": true
-                        },
-                        {
-                          "name": "Warning",
-                          "threshold": "18000",
-                          "color": "#fcd116",
-                          "isDefault": false
-                        },
-                        {
-                          "name": "Error",
-                          "threshold": "19500",
-                          "color": "#ba141a",
-                          "isDefault": false
-                        }
-                      ]
-                    },
-                    "NameDSVSeparator": "",
-                    "NavigationQuery": "{selected item}"
-                  }
-                }
-              },
-              {
-                "Id": "LineChartCalloutBuilderBlade",
-                "Type": "Blade",
-                "Version": 0,
-                "Configuration": {
-                  "General": {
-                    "title": "Storage Account Throttling Errors",
-                    "newGroup": false,
-                    "icon": "",
-                    "useIcon": false
-                  },
-                  "Header": {
-                    "Title": "Throttling ErrorPct by Storage Service",
-                    "Subtitle": ""
-                  },
-                  "LineChart": {
-                    "Query": "Type=AzureStorage_CL     |measure avg(PercentThrottlingError_d) by StorageService_s",
-                    "Callout": {
-                      "Title": "Avg per hour",
-                      "Series": "",
-                      "Operation": "Average"
-                    },
-                    "yAxis": {
-                      "isLogarithmic": false,
-                      "units": {
-                        "baseUnitType": "",
-                        "baseUnit": "",
-                        "displayUnit": ""
-                      },
-                      "customLabel": ""
-                    }
-                  },
-                  "List": {
-                    "Query": "Type=AzureStorage_CL     |measure avg(PercentThrottlingError_d) by StorageAccount_s",
-                    "HideGraph": false,
-                    "enableSparklines": false,
-                    "operation": "Summary",
-                    "ColumnsTitle": {
-                      "Name": "STORAGEACCOUNT",
-                      "Value": "Error %"
-                    },
-                    "Color": "#0072c6",
-                    "thresholds": {
-                      "isEnabled": false,
-                      "values": [
-                        {
-                          "name": "Normal",
-                          "threshold": "Default",
-                          "color": "#009e49",
-                          "isDefault": true
-                        },
-                        {
-                          "name": "Warning",
-                          "threshold": "60",
-                          "color": "#fcd116",
-                          "isDefault": false
-                        },
-                        {
-                          "name": "Error",
-                          "threshold": "90",
-                          "color": "#ba141a",
-                          "isDefault": false
-                        }
-                      ]
-                    },
-                    "NameDSVSeparator": "",
-                    "NavigationQuery": "{selected item}"
-                  }
-                }
-              },
-              {
-                "Id": "LineChartCalloutStackedBuilderBlade",
-                "Type": "Blade",
-                "Version": 0,
-                "Configuration": {
-                  "General": {
-                    "title": "BLOB STORAGE METRICS",
-                    "newGroup": false
-                  },
-                  "charts": [
-                    {
-                      "Header": {
-                        "Title": "Ingress Traffic KB Over Time",
-                        "Subtitle": " Top 10 "
-                      },
-                      "LineChart": {
-                        "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions  StorageService_s=Blob  StorageAccount_s IN {Type=AzureStorage_CL     MetricName_s=MetricsTransactions  StorageService_s=Blob | measure sum(TotalIngress_d) by StorageAccount_s |top 10 } | EXTEND div(TotalIngress_d,1024)  as IngressKB | measure sum(IngressKB) by StorageAccount_s  interval 15Minutes",
-                        "yAxis": {
-                          "isLogarithmic": false,
-                          "units": {
-                            "baseUnitType": "Count",
-                            "baseUnit": "Ones",
-                            "displayUnit": "AUTO"
-                          },
-                          "customLabel": ""
-                        }
-                      }
-                    },
-                    {
-                      "Header": {
-                        "Title": "Egress Traffic KB Over Time",
-                        "Subtitle": "TOP 10"
-                      },
-                      "LineChart": {
-                        "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions StorageService_s=Blob StorageAccount_s IN {Type=AzureStorage_CL     MetricName_s=MetricsTransactions  StorageService_s=Blob | measure sum(TotalEgress_d) by StorageAccount_s |top 10 } | EXTEND div(TotalEgress_d,1024)  as EgressKB | measure sum(EgressKB)  by StorageAccount_s  interval 15Minutes",
-                        "yAxis": {
-                          "isLogarithmic": false,
-                          "units": {
-                            "baseUnitType": "",
-                            "baseUnit": "",
-                            "displayUnit": ""
-                          },
-                          "customLabel": ""
-                        }
-                      }
-                    },
-                    {
-                      "Header": {
-                        "Title": "Total Requests Over Time",
-                        "Subtitle": ""
-                      },
-                      "LineChart": {
-                        "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions StorageService_s=Blob StorageAccount_s IN {Type=AzureStorage_CL     MetricName_s=MetricsTransactions  StorageService_s=Blob | measure sum(TotalRequests_d) by StorageAccount_s |top 10 }  |measure sum(TotalRequests_d) by StorageAccount_s  Interval 15Minutes",
-                        "yAxis": {
-                          "isLogarithmic": false,
-                          "units": {
-                            "baseUnitType": "",
-                            "baseUnit": "",
-                            "displayUnit": ""
-                          },
-                          "customLabel": ""
-                        }
-                      }
-                    }
-                  ]
-
-                }
-              },
-              {
-                "Id": "SingleQueryDonutBuilderBladeV1",
-                "Type": "Blade",
-                "Version": 0,
-                "Configuration": {
-                  "General": {
-                    "title": "BLOB - Ingres Traffic",
-                    "newGroup": false,
-                    "icon": "",
-                    "useIcon": false
-                  },
-                  "Header": {
-                    "Title": "",
-                    "Subtitle": ""
-                  },
-                  "Donut": {
-                    "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions  StorageService_s=Blob   | EXTEND div(TotalIngress_d,1024)  as IngressKB | measure sum(IngressKB)  by StorageAccount_s",
-                    "CenterLegend": {
-                      "Text": "Total",
-                      "Operation": "Sum",
-                      "ArcsToSelect": []
-                    },
-                    "Options": {
-                      "colors": [
-                        "#00188f",
-                        "#0072c6",
-                        "#00bcf2"
-                      ],
-                      "valueColorMapping": []
-                    }
-                  },
-                  "List": {
-                    "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions  StorageService_s=Blob  | EXTEND div(TotalIngress_d,1024)  as IngressKB | measure sum(IngressKB) by StorageAccount_s",
-                    "HideGraph": false,
-                    "enableSparklines": false,
-                    "operation": "Summary",
-                    "ColumnsTitle": {
-                      "Name": "STORAGE ACCOUNT",
-                      "Value": "Ingress Traffic"
-                    },
-                    "Color": "#0072c6",
-                    "thresholds": {
-                      "isEnabled": false,
-                      "values": [
-                        {
-                          "name": "Normal",
-                          "threshold": "Default",
-                          "color": "#009e49",
-                          "isDefault": true
-                        },
-                        {
-                          "name": "Warning",
-                          "threshold": "60",
-                          "color": "#fcd116",
-                          "isDefault": false
-                        },
-                        {
-                          "name": "Error",
-                          "threshold": "90",
-                          "color": "#ba141a",
-                          "isDefault": false
-                        }
-                      ]
-                    },
-                    "NameDSVSeparator": "",
-                    "NavigationQuery": "{selected item}"
-                  }
-                }
-              },
-              {
-                "Id": "SingleQueryDonutBuilderBladeV1",
-                "Type": "Blade",
-                "Version": 0,
-                "Configuration": {
-                  "General": {
-                    "title": "BLOB - Egress Traffic KB",
-                    "newGroup": false,
-                    "icon": "",
-                    "useIcon": false
-                  },
-                  "Header": {
-                    "Title": "",
-                    "Subtitle": ""
-                  },
-                  "Donut": {
-                    "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions StorageService_s=Blob  | EXTEND div(TotalEgress_d,1024)  as EgressKB | measure sum(EgressKB)  by StorageAccount_s",
-                    "CenterLegend": {
-                      "Text": "Total",
-                      "Operation": "Sum",
-                      "ArcsToSelect": []
-                    },
-                    "Options": {
-                      "colors": [
-                        "#00188f",
-                        "#0072c6",
-                        "#00bcf2"
-                      ],
-                      "valueColorMapping": []
-                    }
-                  },
-                  "List": {
-                    "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions  StorageService_s=Blob  | EXTEND div(TotalEgress_d,1024)  as EgressKB | measure sum(EgressKB)  by StorageAccount_s",
-                    "HideGraph": false,
-                    "enableSparklines": false,
-                    "operation": "Summary",
-                    "ColumnsTitle": {
-                      "Name": "STORAGE ACCOUNT",
-                      "Value": "Egress Traffic KB"
-                    },
-                    "Color": "#0072c6",
-                    "thresholds": {
-                      "isEnabled": false,
-                      "values": [
-                        {
-                          "name": "Normal",
-                          "threshold": "Default",
-                          "color": "#009e49",
-                          "isDefault": true
-                        },
-                        {
-                          "name": "Warning",
-                          "threshold": "60",
-                          "color": "#fcd116",
-                          "isDefault": false
-                        },
-                        {
-                          "name": "Error",
-                          "threshold": "90",
-                          "color": "#ba141a",
-                          "isDefault": false
-                        }
-                      ]
-                    },
-                    "NameDSVSeparator": "",
-                    "NavigationQuery": "{selected item}"
-                  }
-                }
-              },
-              {
-                "Id": "SingleQueryDonutBuilderBladeV1",
-                "Type": "Blade",
-                "Version": 0,
-                "Configuration": {
-                  "General": {
-                    "title": "BLOB - SA Request Errors",
-                    "newGroup": false,
-                    "icon": "",
-                    "useIcon": false
-                  },
-                  "Header": {
-                    "Title": "TotalErrorPct by Storage Account",
-                    "Subtitle": ""
-                  },
-                  "Donut": {
-                    "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions StorageService_s=Blob   |EXTEND sum(PercentClientOtherError_d,PercentNetworkError_d,PercentTimeoutError_d,PercentThrottlingError_d,PercentAuthorizationError_d,PercentServerOtherError_d) AS TotalError |measure avg(TotalError) as AvgPctError  by StorageAccount_s",
-                    "CenterLegend": {
-                      "Text": "Total",
-                      "Operation": "Percentage",
-                      "ArcsToSelect": []
-                    },
-                    "Options": {
-                      "colors": [
-                        "#e81123",
-                        "#ff8c00",
-                        "#ffb900"
-                      ],
-                      "valueColorMapping": []
-                    }
-                  },
-                  "List": {
-                    "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions StorageService_s=Blob   |EXTEND sum(PercentClientOtherError_d,PercentNetworkError_d,PercentTimeoutError_d,PercentThrottlingError_d,PercentAuthorizationError_d,PercentServerOtherError_d) AS TotalError |measure avg(TotalError)as AvgPctError  by StorageAccount_s,StorageService_s",
-                    "HideGraph": false,
-                    "enableSparklines": false,
-                    "operation": "Summary",
-                    "ColumnsTitle": {
-                      "Name": "SA",
-                      "Value": "Error %"
-                    },
-                    "Color": "#0072c6",
-                    "thresholds": {
-                      "isEnabled": false,
-                      "values": [
-                        {
-                          "name": "Normal",
-                          "threshold": "Default",
-                          "color": "#009e49",
-                          "isDefault": true
-                        },
-                        {
-                          "name": "Warning",
-                          "threshold": "60",
-                          "color": "#fcd116",
-                          "isDefault": false
-                        },
-                        {
-                          "name": "Error",
-                          "threshold": "90",
-                          "color": "#ba141a",
-                          "isDefault": false
-                        }
-                      ]
-                    },
-                    "NameDSVSeparator": "",
-                    "NavigationQuery": "{selected item}"
-                  }
-                }
-              },
-              {
-                "Id": "LineChartCalloutStackedBuilderBlade",
-                "Type": "Blade",
-                "Version": 0,
-                "Configuration": {
-                  "General": {
-                    "title": "Request ErrorPct Distribution",
-                    "newGroup": false
-                  },
-                  "charts": [
-                    {
-                      "Header": {
-                        "Title": "Client Error Pct Over Time",
-                        "Subtitle": ""
-                      },
-                      "LineChart": {
-                        "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions StorageService_s=Blob    |measure avg(PercentClientOtherError_d) by StorageAccount_s",
-                        "yAxis": {
-                          "isLogarithmic": false,
-                          "units": {
-                            "baseUnitType": "",
-                            "baseUnit": "",
-                            "displayUnit": ""
-                          },
-                          "customLabel": ""
-                        }
-                      }
-                    },
-                    {
-                      "Header": {
-                        "Title": "Network Error Pct Over Time",
-                        "Subtitle": ""
-                      },
-                      "LineChart": {
-                        "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions StorageService_s=Blob    |measure avg(PercentNetworkError_d) by StorageAccount_s",
-                        "yAxis": {
-                          "isLogarithmic": false,
-                          "units": {
-                            "baseUnitType": "",
-                            "baseUnit": "",
-                            "displayUnit": ""
-                          },
-                          "customLabel": ""
-                        }
-                      }
-                    },
-                    {
-                      "Header": {
-                        "Title": "Authorization Error Pct Over Time",
-                        "Subtitle": ""
-                      },
-                      "LineChart": {
-                        "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions StorageService_s=Blob   |measure avg(PercentAuthorizationError_d) by StorageAccount_s",
-                        "yAxis": {
-                          "isLogarithmic": false,
-                          "units": {
-                            "baseUnitType": "",
-                            "baseUnit": "",
-                            "displayUnit": ""
-                          },
-                          "customLabel": ""
-                        }
-                      }
-                    }
-                  ]
-                }
-              },
-              {
-                "Id": "SingleQueryDonutBuilderBladeV1",
-                "Type": "Blade",
-                "Version": 0,
-                "Configuration": {
-                  "General": {
-                    "title": "TABLE - TOTAL REQUESTS ",
-                    "newGroup": false,
-                    "icon": "",
-                    "useIcon": false
-                  },
-                  "Header": {
-                    "Title": "Total Request per Storage Account",
-                    "Subtitle": ""
-                  },
-                  "Donut": {
-                    "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions  StorageService_s=Table  TimeGenerated>NOW-1HOUR |measure sum(TotalRequests_d) by StorageAccount_s",
-                    "CenterLegend": {
-                      "Text": "Total",
-                      "Operation": "Sum",
-                      "ArcsToSelect": []
-                    },
-                    "Options": {
-                      "colors": [
-                        "#00188f",
-                        "#0072c6",
-                        "#00bcf2"
-                      ],
-                      "valueColorMapping": []
-                    }
-                  },
-                  "List": {
-                    "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions  StorageService_s=Table  TimeGenerated>NOW-1HOUR |measure sum(TotalRequests_d) by StorageAccount_s",
-                    "HideGraph": false,
-                    "enableSparklines": false,
-                    "operation": "Summary",
-                    "ColumnsTitle": {
-                      "Name": "Storage Account",
-                      "Value": "RequestCount"
-                    },
-                    "Color": "#0072c6",
-                    "thresholds": {
-                      "isEnabled": false,
-                      "values": [
-                        {
-                          "name": "Normal",
-                          "threshold": "Default",
-                          "color": "#009e49",
-                          "isDefault": true
-                        },
-                        {
-                          "name": "Warning",
-                          "threshold": "60",
-                          "color": "#fcd116",
-                          "isDefault": false
-                        },
-                        {
-                          "name": "Error",
-                          "threshold": "90",
-                          "color": "#ba141a",
-                          "isDefault": false
-                        }
-                      ]
-                    },
-                    "NameDSVSeparator": "",
-                    "NavigationQuery": "{selected item}"
-                  }
-                }
-              },
-              {
-                "Id": "LineChartCalloutStackedBuilderBlade",
-                "Type": "Blade",
-                "Version": 0,
-                "Configuration": {
-                  "General": {
-                    "title": "TABLE STORAGE METRICS",
-                    "newGroup": false
-                  },
-                  "charts": [
-                    {
-                      "Header": {
-                        "Title": "Ingress Traffic KB Over Time",
-                        "Subtitle": ""
-                      },
-                      "LineChart": {
-                        "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions  StorageService_s=Table StorageAccount_s IN {Type=AzureStorage_CL     MetricName_s=MetricsTransactions  StorageService_s=Table | measure sum(TotalIngress_d) by StorageAccount_s |top 10 } | EXTEND div(TotalIngress_d,1024)  as IngressKB | measure sum(IngressKB) by StorageAccount_s  interval 15Minutes",
-                        "yAxis": {
-                          "isLogarithmic": false,
-                          "units": {
-                            "baseUnitType": "",
-                            "baseUnit": "",
-                            "displayUnit": ""
-                          },
-                          "customLabel": ""
-                        }
-                      }
-                    },
-                    {
-                      "Header": {
-                        "Title": "Egress Traffic KB Over time",
-                        "Subtitle": ""
-                      },
-                      "LineChart": {
-                        "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions  StorageService_s=Table StorageAccount_s IN {Type=AzureStorage_CL     MetricName_s=MetricsTransactions  StorageService_s=Table | measure sum(TotalEgress_d) by StorageAccount_s |top 10 }   | EXTEND div(TotalEgress_d,1024)  as EgressKB | measure sum(EgressKB)  by StorageAccount_s  interval 15Minutes",
-                        "yAxis": {
-                          "isLogarithmic": false,
-                          "units": {
-                            "baseUnitType": "",
-                            "baseUnit": "",
-                            "displayUnit": ""
-                          },
-                          "customLabel": ""
-                        }
-                      }
-                    },
-                    {
-                      "Header": {
-                        "Title": "Total Requests Over Time",
-                        "Subtitle": ""
-                      },
-                      "LineChart": {
-                        "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions StorageService_s=Table  StorageAccount_s IN {Type=AzureStorage_CL     MetricName_s=MetricsTransactions  StorageService_s=Table | measure sum(TotalRequests_d) by StorageAccount_s |top 10 }  |measure sum(TotalRequests_d) by StorageAccount_s  Interval 15Minutes",
-                        "yAxis": {
-                          "isLogarithmic": false,
-                          "units": {
-                            "baseUnitType": "",
-                            "baseUnit": "",
-                            "displayUnit": ""
-                          },
-                          "customLabel": ""
-                        }
-                      }
-                    }
-                  ]
-                }
-              },
-              {
-                "Id": "SingleQueryDonutBuilderBladeV1",
-                "Type": "Blade",
-                "Version": 0,
-                "Configuration": {
-                  "General": {
-                    "title": "TABLE - SA Request Errors",
-                    "newGroup": false,
-                    "icon": "",
-                    "useIcon": false
-                  },
-                  "Header": {
-                    "Title": "TotalErrorPct by Storage Account",
-                    "Subtitle": ""
-                  },
-                  "Donut": {
-                    "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions StorageService_s=Table   |EXTEND sum(PercentClientOtherError_d,PercentNetworkError_d,PercentTimeoutError_d,PercentThrottlingError_d,PercentAuthorizationError_d,PercentServerOtherError_d) AS TotalError |measure avg(TotalError) as AvgPctError  by StorageAccount_s",
-                    "CenterLegend": {
-                      "Text": "Total",
-                      "Operation": "Percentage",
-                      "ArcsToSelect": []
-                    },
-                    "Options": {
-                      "colors": [
-                        "#e81123",
-                        "#ff8c00",
-                        "#ffb900"
-                      ],
-                      "valueColorMapping": []
-                    }
-                  },
-                  "List": {
-                    "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions StorageService_s=Table   |EXTEND sum(PercentClientOtherError_d,PercentNetworkError_d,PercentTimeoutError_d,PercentThrottlingError_d,PercentAuthorizationError_d,PercentServerOtherError_d) AS TotalError |measure avg(TotalError)as AvgPctError  by StorageAccount_s,StorageService_s",
-                    "HideGraph": false,
-                    "enableSparklines": false,
-                    "operation": "Summary",
-                    "ColumnsTitle": {
-                      "Name": "SA",
-                      "Value": "Error %"
-                    },
-                    "Color": "#0072c6",
-                    "thresholds": {
-                      "isEnabled": false,
-                      "values": [
-                        {
-                          "name": "Normal",
-                          "threshold": "Default",
-                          "color": "#009e49",
-                          "isDefault": true
-                        },
-                        {
-                          "name": "Warning",
-                          "threshold": "60",
-                          "color": "#fcd116",
-                          "isDefault": false
-                        },
-                        {
-                          "name": "Error",
-                          "threshold": "90",
-                          "color": "#ba141a",
-                          "isDefault": false
-                        }
-                      ]
-                    },
-                    "NameDSVSeparator": "",
-                    "NavigationQuery": "{selected item}"
-                  }
-                }
-              },
-              {
-                "Id": "LineChartCalloutStackedBuilderBlade",
-                "Type": "Blade",
-                "Version": 0,
-                "Configuration": {
-                  "General": {
-                    "title": "Request ErrorPct Distribution",
-                    "newGroup": false
-                  },
-                  "charts": [
-                    {
-                      "Header": {
-                        "Title": "Client Error Pct Over Time",
-                        "Subtitle": ""
-                      },
-                      "LineChart": {
-                        "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions StorageService_s=Table    |measure avg(PercentClientOtherError_d) by StorageAccount_s",
-                        "yAxis": {
-                          "isLogarithmic": false,
-                          "units": {
-                            "baseUnitType": "",
-                            "baseUnit": "",
-                            "displayUnit": ""
-                          },
-                          "customLabel": ""
-                        }
-                      }
-                    },
-                    {
-                      "Header": {
-                        "Title": "Network Error Pct Over Time",
-                        "Subtitle": ""
-                      },
-                      "LineChart": {
-                        "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions StorageService_s=Table   |measure avg(PercentNetworkError_d) by StorageAccount_s",
-                        "yAxis": {
-                          "isLogarithmic": false,
-                          "units": {
-                            "baseUnitType": "",
-                            "baseUnit": "",
-                            "displayUnit": ""
-                          },
-                          "customLabel": ""
-                        }
-                      }
-                    },
-                    {
-                      "Header": {
-                        "Title": "Authorization Error Pct Over Time",
-                        "Subtitle": ""
-                      },
-                      "LineChart": {
-                        "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions StorageService_s=Table   |measure avg(PercentAuthorizationError_d) by StorageAccount_s",
-                        "yAxis": {
-                          "isLogarithmic": false,
-                          "units": {
-                            "baseUnitType": "",
-                            "baseUnit": "",
-                            "displayUnit": ""
-                          },
-                          "customLabel": ""
-                        }
-                      }
-                    }
-                  ]
-                }
-              },
-              {
-                "Id": "LineChartCalloutStackedBuilderBlade",
-                "Type": "Blade",
-                "Version": 0,
-                "Configuration": {
-                  "General": {
-                    "title": "QUEUE STORAGE METRICS",
-                    "newGroup": false
-                  },
-                  "charts": [
-                    {
-                      "Header": {
-                        "Title": "Ingress Traffic KB Over Time",
-                        "Subtitle": ""
-                      },
-                      "LineChart": {
-                        "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions  StorageService_s=Queue StorageAccount_s IN {Type=AzureStorage_CL     MetricName_s=MetricsTransactions  StorageService_s=Queue | measure sum(TotalIngress_d) by StorageAccount_s |top 10 }  | EXTEND div(TotalIngress_d,1024)  as IngressKB | measure sum(IngressKB) by StorageAccount_s  interval 15Minutes",
-                        "yAxis": {
-                          "isLogarithmic": false,
-                          "units": {
-                            "baseUnitType": "",
-                            "baseUnit": "",
-                            "displayUnit": ""
-                          },
-                          "customLabel": ""
-                        }
-                      }
-                    },
-                    {
-                      "Header": {
-                        "Title": "Egress Traffic KB Over time",
-                        "Subtitle": ""
-                      },
-                      "LineChart": {
-                        "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions  StorageService_s=Queue StorageAccount_s IN {Type=AzureStorage_CL     MetricName_s=MetricsTransactions  StorageService_s=Queue | measure sum(TotalEgress_d) by StorageAccount_s |top 10 }  | EXTEND div(TotalEgress_d,1024)  as EgressKB | measure sum(EgressKB) by StorageAccount_s  interval 15Minutes",
-                        "yAxis": {
-                          "isLogarithmic": false,
-                          "units": {
-                            "baseUnitType": "",
-                            "baseUnit": "",
-                            "displayUnit": ""
-                          },
-                          "customLabel": ""
-                        }
-                      }
-                    },
-                    {
-                      "Header": {
-                        "Title": "Total Requests Over Time",
-                        "Subtitle": ""
-                      },
-                      "LineChart": {
-                        "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions StorageService_s=Queue StorageAccount_s IN {Type=AzureStorage_CL     MetricName_s=MetricsTransactions  StorageService_s=Queue | measure sum(TotalRequests_d) by StorageAccount_s |top 10 }   |measure sum(TotalRequests_d) by StorageAccount_s  Interval 15Minutes",
-                        "yAxis": {
-                          "isLogarithmic": false,
-                          "units": {
-                            "baseUnitType": "",
-                            "baseUnit": "",
-                            "displayUnit": ""
-                          },
-                          "customLabel": ""
-                        }
-                      }
-                    }
-                  ]
-                }
-              },
-              {
-                "Id": "SingleQueryDonutBuilderBladeV1",
-                "Type": "Blade",
-                "Version": 0,
-                "Configuration": {
-                  "General": {
-                    "title": "QUEUE - SA Request Errors",
-                    "newGroup": false,
-                    "icon": "",
-                    "useIcon": false
-                  },
-                  "Header": {
-                    "Title": "TotalErrorPct by Storage Account",
-                    "Subtitle": ""
-                  },
-                  "Donut": {
-                    "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions StorageService_s=Queue   |EXTEND sum(PercentClientOtherError_d,PercentNetworkError_d,PercentTimeoutError_d,PercentThrottlingError_d,PercentAuthorizationError_d,PercentServerOtherError_d) AS TotalError |measure avg(TotalError) as AvgPctError  by StorageAccount_s",
-                    "CenterLegend": {
-                      "Text": "Total",
-                      "Operation": "Percentage",
-                      "ArcsToSelect": []
-                    },
-                    "Options": {
-                      "colors": [
-                        "#e81123",
-                        "#ff8c00",
-                        "#ffb900"
-                      ],
-                      "valueColorMapping": []
-                    }
-                  },
-                  "List": {
-                    "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions StorageService_s=Queue  |EXTEND sum(PercentClientOtherError_d,PercentNetworkError_d,PercentTimeoutError_d,PercentThrottlingError_d,PercentAuthorizationError_d,PercentServerOtherError_d) AS TotalError |measure avg(TotalError)as AvgPctError  by StorageAccount_s,StorageService_s",
-                    "HideGraph": false,
-                    "enableSparklines": false,
-                    "operation": "Summary",
-                    "ColumnsTitle": {
-                      "Name": "SA",
-                      "Value": "Error %"
-                    },
-                    "Color": "#0072c6",
-                    "thresholds": {
-                      "isEnabled": false,
-                      "values": [
-                        {
-                          "name": "Normal",
-                          "threshold": "Default",
-                          "color": "#009e49",
-                          "isDefault": true
-                        },
-                        {
-                          "name": "Warning",
-                          "threshold": "60",
-                          "color": "#fcd116",
-                          "isDefault": false
-                        },
-                        {
-                          "name": "Error",
-                          "threshold": "90",
-                          "color": "#ba141a",
-                          "isDefault": false
-                        }
-                      ]
-                    },
-                    "NameDSVSeparator": "",
-                    "NavigationQuery": "{selected item}"
-                  }
-                }
-              },
-              {
-                "Id": "LineChartCalloutStackedBuilderBlade",
-                "Type": "Blade",
-                "Version": 0,
-                "Configuration": {
-                  "General": {
-                    "title": "Request ErrorPct Distribution",
-                    "newGroup": false
-                  },
-                  "charts": [
-                    {
-                      "Header": {
-                        "Title": "Client Error Pct Over Time",
-                        "Subtitle": ""
-                      },
-                      "LineChart": {
-                        "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions StorageService_s=Queue   |measure avg(PercentClientOtherError_d) by StorageAccount_s",
-                        "yAxis": {
-                          "isLogarithmic": false,
-                          "units": {
-                            "baseUnitType": "",
-                            "baseUnit": "",
-                            "displayUnit": ""
-                          },
-                          "customLabel": ""
-                        }
-                      }
-                    },
-                    {
-                      "Header": {
-                        "Title": "Network Error Pct Over Time",
-                        "Subtitle": ""
-                      },
-                      "LineChart": {
-                        "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions StorageService_s=Queue    |measure avg(PercentNetworkError_d) by StorageAccount_s",
-                        "yAxis": {
-                          "isLogarithmic": false,
-                          "units": {
-                            "baseUnitType": "",
-                            "baseUnit": "",
-                            "displayUnit": ""
-                          },
-                          "customLabel": ""
-                        }
-                      }
-                    },
-                    {
-                      "Header": {
-                        "Title": "Authorization Error Pct Over Time",
-                        "Subtitle": ""
-                      },
-                      "LineChart": {
-                        "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions StorageService_s=Queue   |measure avg(PercentAuthorizationError_d) by StorageAccount_s",
-                        "yAxis": {
-                          "isLogarithmic": false,
-                          "units": {
-                            "baseUnitType": "",
-                            "baseUnit": "",
-                            "displayUnit": ""
-                          },
-                          "customLabel": ""
-                        }
-                      }
-                    }
-                  ]
-                }
-              },
-              {
-                "Id": "LineChartCalloutStackedBuilderBlade",
-                "Type": "Blade",
-                "Version": 0,
-                "Configuration": {
-                  "General": {
-                    "title": "FILE STORAGE METRICS",
-                    "newGroup": false
-                  },
-                  "charts": [
-                    {
-                      "Header": {
-                        "Title": "Ingress Traffic KB Over Time",
-                        "Subtitle": ""
-                      },
-                      "LineChart": {
-                        "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions  StorageService_s=File  StorageAccount_s IN {Type=AzureStorage_CL     MetricName_s=MetricsTransactions  StorageService_s=File| measure sum(TotalIngress_d) by StorageAccount_s |top 10 }  | EXTEND div(TotalIngress_d,1024)  as IngressKB | measure sum(IngressKB) by StorageAccount_s  interval 15Minutes",
-                        "yAxis": {
-                          "isLogarithmic": false,
-                          "units": {
-                            "baseUnitType": "",
-                            "baseUnit": "",
-                            "displayUnit": ""
-                          },
-                          "customLabel": ""
-                        }
-                      }
-                    },
-                    {
-                      "Header": {
-                        "Title": "Egress Traffic KB Over time",
-                        "Subtitle": ""
-                      },
-                      "LineChart": {
-                        "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions  StorageService_s=File StorageAccount_s IN {Type=AzureStorage_CL     MetricName_s=MetricsTransactions  StorageService_s=File | measure sum(TotalEgress_d) by StorageAccount_s |top 10 }  | EXTEND div(TotalEgress_d,1024)  as EgressKB | measure sum(EgressKB)  by StorageAccount_s  interval 15Minutes",
-                        "yAxis": {
-                          "isLogarithmic": false,
-                          "units": {
-                            "baseUnitType": "",
-                            "baseUnit": "",
-                            "displayUnit": ""
-                          },
-                          "customLabel": ""
-                        }
-                      }
-                    },
-                    {
-                      "Header": {
-                        "Title": "Total Requests Over Time",
-                        "Subtitle": ""
-                      },
-                      "LineChart": {
-                        "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions StorageService_s=File StorageAccount_s IN {Type=AzureStorage_CL     MetricName_s=MetricsTransactions  StorageService_s=File | measure sum(TotalRequests_d) by StorageAccount_s |top 10 }  |measure sum(TotalRequests_d) by StorageAccount_s  Interval 15Minutes",
-                        "yAxis": {
-                          "isLogarithmic": false,
-                          "units": {
-                            "baseUnitType": "",
-                            "baseUnit": "",
-                            "displayUnit": ""
-                          },
-                          "customLabel": ""
-                        }
-                      }
-                    }
-                  ]
-                }
-              },
-              {
-                "Id": "SingleQueryDonutBuilderBladeV1",
-                "Type": "Blade",
-                "Version": 0,
-                "Configuration": {
-                  "General": {
-                    "title": "FILE - SA Request Errors",
-                    "newGroup": false,
-                    "icon": "",
-                    "useIcon": false
-                  },
-                  "Header": {
-                    "Title": "TotalErrorPct by Storage Account",
-                    "Subtitle": ""
-                  },
-                  "Donut": {
-                    "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions StorageService_s=File   |EXTEND sum(PercentClientOtherError_d,PercentNetworkError_d,PercentTimeoutError_d,PercentThrottlingError_d,PercentAuthorizationError_d,PercentServerOtherError_d) AS TotalError |measure avg(TotalError) as AvgPctError  by StorageAccount_s",
-                    "CenterLegend": {
-                      "Text": "Total",
-                      "Operation": "Percentage",
-                      "ArcsToSelect": []
-                    },
-                    "Options": {
-                      "colors": [
-                        "#e81123",
-                        "#ff8c00",
-                        "#ffb900"
-                      ],
-                      "valueColorMapping": []
-                    }
-                  },
-                  "List": {
-                    "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions StorageService_s=File   |EXTEND sum(PercentClientOtherError_d,PercentNetworkError_d,PercentTimeoutError_d,PercentThrottlingError_d,PercentAuthorizationError_d,PercentServerOtherError_d) AS TotalError |measure avg(TotalError)as AvgPctError  by StorageAccount_s,StorageService_s",
-                    "HideGraph": false,
-                    "enableSparklines": false,
-                    "operation": "Summary",
-                    "ColumnsTitle": {
-                      "Name": "SA",
-                      "Value": "Error %"
-                    },
-                    "Color": "#0072c6",
-                    "thresholds": {
-                      "isEnabled": false,
-                      "values": [
-                        {
-                          "name": "Normal",
-                          "threshold": "Default",
-                          "color": "#009e49",
-                          "isDefault": true
-                        },
-                        {
-                          "name": "Warning",
-                          "threshold": "60",
-                          "color": "#fcd116",
-                          "isDefault": false
-                        },
-                        {
-                          "name": "Error",
-                          "threshold": "90",
-                          "color": "#ba141a",
-                          "isDefault": false
-                        }
-                      ]
-                    },
-                    "NameDSVSeparator": "",
-                    "NavigationQuery": "{selected item}"
-                  }
-                }
-              },
-              {
-                "Id": "LineChartCalloutStackedBuilderBlade",
-                "Type": "Blade",
-                "Version": 0,
-                "Configuration": {
-                  "General": {
-                    "title": "Request ErrorPct Distribution",
-                    "newGroup": false
-                  },
-                  "charts": [
-                    {
-                      "Header": {
-                        "Title": "Client Error Pct Over Time",
-                        "Subtitle": ""
-                      },
-                      "LineChart": {
-                        "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions StorageService_s=File    |measure avg(PercentClientOtherError_d) by StorageAccount_s",
-                        "yAxis": {
-                          "isLogarithmic": false,
-                          "units": {
-                            "baseUnitType": "",
-                            "baseUnit": "",
-                            "displayUnit": ""
-                          },
-                          "customLabel": ""
-                        }
-                      }
-                    },
-                    {
-                      "Header": {
-                        "Title": "Network Error Pct Over Time",
-                        "Subtitle": ""
-                      },
-                      "LineChart": {
-                        "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions StorageService_s=File    |measure avg(PercentNetworkError_d) by StorageAccount_s",
-                        "yAxis": {
-                          "isLogarithmic": false,
-                          "units": {
-                            "baseUnitType": "",
-                            "baseUnit": "",
-                            "displayUnit": ""
-                          },
-                          "customLabel": ""
-                        }
-                      }
-                    },
-                    {
-                      "Header": {
-                        "Title": "Authorization Error Pct Over Time",
-                        "Subtitle": ""
-                      },
-                      "LineChart": {
-                        "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions StorageService_s=File   |measure avg(PercentAuthorizationError_d) by StorageAccount_s",
-                        "yAxis": {
-                          "isLogarithmic": false,
-                          "units": {
-                            "baseUnitType": "",
-                            "baseUnit": "",
-                            "displayUnit": ""
-                          },
-                          "customLabel": ""
-                        }
-                      }
-                    }
-                  ]
-                }
-              }
-            ],
-            "OverviewTile": {
-              "Id": "LineChartCalloutBuilderTile",
-              "Type": "OverviewTile",
-              "Version": 0,
-              "Configuration": {
-                "LineChart": {
-                  "Query": "Type=AzureStorage_CL     MetricName_s=MetricsTransactions |measure sum(TotalRequests_d) by StorageAccount_s  Interval 15Minutes",
-                  "Callout": {
-                    "Title": "TOTAL REQUESTS",
-                    "Series": "",
-                    "Operation": "Sum"
-                  },
-                  "yAxis": {
-                    "isLogarithmic": false,
-                    "units": {
-                      "baseUnitType": "",
-                      "baseUnit": "",
-                      "displayUnit": ""
-                    },
-                    "customLabel": ""
-                  }
-                },
-                "Advanced": {
-                  "DataFlowVerification": {
-                    "Enabled": false,
-                    "Query": "*",
-                    "Message": ""
-                  }
-                }
-              }
-            }
 
           }
         }
