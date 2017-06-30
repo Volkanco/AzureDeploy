@@ -101,7 +101,7 @@
                 "description": "This option creates extra collectors to collect and ingest storage audit logs"
             }
         },
-           "ingestSchedulerGuid": {
+           "ingestScheduleGuid": {
       "type": "string",
       "defaultValue": "8dad6b81-0110-4776-a619-36b28e8a460e",
       "metadata": {
@@ -164,8 +164,8 @@
                     "collectAuditLogs": {
                         "value": "[parameters('collectAuditLogs')]"
                     }
-                    ,"ingestSchedulerGuid":{
-                        "value":"[parameters('ingestSchedulerGuid')]"
+                    ,"ingestScheduleGuid":{
+                        "value":"[parameters('ingestScheduleGuid')]"
                         }
                 }
             }
@@ -203,8 +203,8 @@
                     "collectAuditLogs": {
                         "value": "[parameters('collectAuditLogs')]"
                     }  
-                    ,"ingestSchedulerGuid":{
-                        "value":"[parameters('ingestSchedulerGuid')]"
+                    ,"ingestScheduleGuid":{
+                        "value":"[parameters('ingestScheduleGuid')]"
                         }
                 }
             }
