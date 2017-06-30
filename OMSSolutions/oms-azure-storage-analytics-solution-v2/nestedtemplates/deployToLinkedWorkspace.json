@@ -2852,6 +2852,9 @@
             },
             "runbook": {
               "name": "[variables('Runbooks').ingestSchedulerRunbook.name]"
+            },
+            "parameters": {
+              "collectAuditLogs": "[parameters('collectAuditLogs')]"
             }
           }
         }
