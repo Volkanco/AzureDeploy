@@ -1,4 +1,4 @@
-param ($collectlogs)
+param ($collectAuditLogs)
 
 #region Login to Azure account and select the subscription.
 #Authenticate to Azure with SPN section
@@ -188,7 +188,7 @@ $Schedule = New-AzureRmAutomationSchedule -Name $MetricsScheduleName+"-4" -Start
 
 
 #Create Schedule for collecting Logs
-IF($collectlogs -match 'true')
+IF($collectAuditLogs -eq 'Enabled')
 {
 
     #Add the schedule an hour ahead and start the runbook
