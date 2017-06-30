@@ -93,8 +93,6 @@
         "description": "The sasToken required to access _artifactsLocation.  When the template is deployed using the accompanying scripts, a sasToken will be automatically generated."
       }
     },
-
-    //REMOVE
     "ingestSchedulerGuid": {
       "type": "string",
       "defaultValue": "8dad6b81-0110-4776-a619-36b28e8a460e",
@@ -133,9 +131,7 @@
         "type": "PowerShell",
         "Id": ""
       }
-
-
-      
+     
     },
     "metricsRunbookUri": "[concat(parameters('_artifactsLocation'),'/scripts/AzureSAIngestionMetrics-MS-Mgmt-SA.ps1', parameters('_artifactsLocationSasToken'))]",
     "logsRunbookUri": "[concat(parameters('_artifactsLocation'),'/scripts/AzureSAIngestionLogs-MS-Mgmt-SA.ps1', parameters('_artifactsLocationSasToken'))]",
@@ -4013,7 +4009,7 @@
           }
         },
           {
-          "name": "[concat(parameters('omsAutomationAccountName'), '/', variables('ingestscheduleName'),'-',uniqueString(resourceGroup().id, deployment().name))]",
+          "name": "[concat(parameters('omsAutomationAccountName'), '/', variables('ingestscheduleName'))]",
           "type": "microsoft.automation/automationAccounts/schedules",
           "apiVersion": "2015-10-31",
           "location": "[parameters('omsAutomationRegion')]",
@@ -4031,7 +4027,7 @@
           }
         },
         {
-          "name": "[concat(parameters('omsAutomationAccountName'), '/',variables('ingestscheduleName'),'-JobSchedule', uniqueString(resourceGroup().id, deployment().name))]",
+          "name": "[concat(parameters('omsAutomationAccountName'), '/',parameters('IngestScheduleGuid'))]",
           "type": "microsoft.automation/automationAccounts/jobSchedules",
           "apiVersion": "2015-10-31",
           "location": "[parameters('omsAutomationRegion')]",
@@ -4043,7 +4039,7 @@
           "tags": {},
           "properties": {
             "schedule": {
-              "name": "[concat(variables('ingestscheduleName'),'-',uniqueString(resourceGroup().id, deployment().name))]"
+              "name": "[variables('ingestscheduleName')]"
             },
             "runbook": {
               "name": "[variables('Runbooks').ingestSchedulerRunbook.name]"

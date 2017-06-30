@@ -1,3 +1,5 @@
+param ($collectlogs)
+
 #region Login to Azure account and select the subscription.
 #Authenticate to Azure with SPN section
 Write-Verbose "Logging in to Azure..."
@@ -29,10 +31,12 @@ Select-AzureRmSubscription -SubscriptionId $Conn.SubscriptionID -TenantId $Conn.
 
 $AAResourceGroup = Get-AutomationVariable -Name 'AzureSAIngestion-AzureAutomationResourceGroup-MS-Mgmt-SA'
 $AAAccount = Get-AutomationVariable -Name 'AzureSAIngestion-AzureAutomationAccount-MS-Mgmt-SA'
-$ParentRunbookName = "AzureSAIngestionParent-MS-Mgmt-SA"
-$ParentScheduleName = "AzureStorageIngestionParent-HourlySchedule-MS-Mgmt-SA"
-$MetricsRunbookName = "AzureStorageMetricsEnabler-MS-Mgmt-SA"
-$MetricsScheduleName = "AzureStorageMetricsEnabler-Schedule-MS-Mgmt-SA"
+$MetricsRunbookName = "AzureSAIngestionMetrics-MS-Mgmt-SA"
+$MetricsScheduleName = "AzureStorageMetrics-Schedule"
+$LogsRunbookName="AzureSAIngestionLogs-MS-Mgmt-SA"
+$LogsScheduleName = "AzureStorageLogs-HourlySchedule"
+$MetricsEnablerRunbookName = "AzureStorageMetricsEnabler-MS-Mgmt-SA"
+$MetricsScheduleName = "AzureStorageMetricsEnabler-DailySchedule"
 
 #Inventory variables
 $varVMIopsList="AzureSAIngestion-VM-IOPSLimits"
@@ -138,42 +142,74 @@ $vmiolimits=@{"Basic_A0"=300;
 
 New-AzureRmAutomationVariable -Name $varVMIopsList -Description "Variable to store IOPS limits for Azure VM Sizes." -Value $vmiolimits -Encrypted 0 -ResourceGroupName $AAResourceGroup -AutomationAccountName $AAAccount  -ea 0
 
-
-If((get-date).Minute -lt 35)
+IF([string]::IsNullOrEmpty($AAAccount) -or [string]::IsNullOrEmpty($AAResourceGroup))
 {
 
+Write-Error "Automation Account  or Automation Account Resource Group Variables is empty. Make sure AzureSAIngestion-AzureAutomationAccount-MS-Mgmt-SA and AzureSAIngestion-AzureAutomationResourceGroup-MS-Mgmt-SA variables exist in automation account and populated. "
+Write-Output "Script will not continue"
+Exit
 
-    $RunbookStartTime = $Date =(get-date -Minute 45 -Second 00).ToUniversalTime()
-    Write-Verbose "Creating schedule $ParentScheduleName for $RunbookStartTime for runbook $ParentRunbookName"
-    $Schedule = New-AzureRmAutomationSchedule -Name $ParentScheduleName -StartTime $RunbookStartTime -HourInterval 1 -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup
-    $Sch = Register-AzureRmAutomationScheduledRunbook -RunbookName $ParentRunbookName -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup -ScheduleName $ParentScheduleName
-
-    Start-AzureRmAutomationRunbook -AutomationAccountName $AAAccount -Name $ParentRunbookName -ResourceGroupName $AAResourceGroup
-
-}Else
-{
-    #Add the schedule an hour ahead and start the runbook
-
-     $RunbookStartTime = $Date =(get-date -Minute 45 -Second 00).AddHours(1).ToUniversalTime()
-    Write-Verbose "Creating schedule $ParentScheduleName for $RunbookStartTime for runbook $ParentRunbookName"
-    $Schedule = New-AzureRmAutomationSchedule -Name $ParentScheduleName -StartTime $RunbookStartTime -HourInterval 1 -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup
-    $Sch = Register-AzureRmAutomationScheduledRunbook -RunbookName $ParentRunbookName -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup -ScheduleName $ParentScheduleName
-
-    Start-AzureRmAutomationRunbook -AutomationAccountName $AAAccount -Name $ParentRunbookName -ResourceGroupName $AAResourceGroup
 
 }
 
 
+$min=(get-date).Minute 
+if($min -in 0..15)
+{
+    $RBStart1=(get-date -Minute 16 -Second 00).ToUniversalTime()
+}Elseif($min -in 16..30)
+{
+    $RBStart1=(get-date -Minute 31 -Second 00).ToUniversalTime()
+}elseif($min -in 31..45)
+{
+    $RBStart1=(get-date -Minute 46 -Second 00).ToUniversalTime()
+}Else
+{
+    $RBStart1=(get-date -Minute 01 -Second 00).AddHours(1).ToUniversalTime()
+}
+
+$RBStart2=$RBStart1.AddMinutes(15)
+$RBStart3=$RBStart2.AddMinutes(15)
+$RBStart4=$RBStart3.AddMinutes(15)
+
+    Write-output  "Creating schedule $MetricsScheduleName for runbook $MetricsRunbookName"
+
+    $Schedule = New-AzureRmAutomationSchedule -Name $MetricsScheduleName+"-1" -StartTime $RBStart1  -HourInterval 1 -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup
+    $Sch = Register-AzureRmAutomationScheduledRunbook -RunbookName $MetricsRunbookName -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup -ScheduleName $MetricsScheduleName+"-1"
+
+    $Schedule = New-AzureRmAutomationSchedule -Name $MetricsScheduleName+"-2" -StartTime $RBStart2  -HourInterval 1 -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup
+    $Sch = Register-AzureRmAutomationScheduledRunbook -RunbookName $MetricsRunbookName -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup -ScheduleName $MetricsScheduleName+"-2"
+
+$Schedule = New-AzureRmAutomationSchedule -Name $MetricsScheduleName+"-3" -StartTime $RBStart3  -HourInterval 1 -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup
+    $Sch = Register-AzureRmAutomationScheduledRunbook -RunbookName $MetricsRunbookName -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup -ScheduleName $MetricsScheduleName+"-3"
+
+$Schedule = New-AzureRmAutomationSchedule -Name $MetricsScheduleName+"-4" -StartTime $RBStart4  -HourInterval 1 -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup
+    $Sch = Register-AzureRmAutomationScheduledRunbook -RunbookName $MetricsRunbookName -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup -ScheduleName $MetricsScheduleName+"-4"
+
+
+#Create Schedule for collecting Logs
+IF($collectlogs -match 'true')
+{
+
+    #Add the schedule an hour ahead and start the runbook
+
+    $RunbookStartTime = $Date =(get-date -Minute 02 -Second 00).AddHours(1).ToUniversalTime()
+    Write-Output "Creating schedule $LogsScheduleName for $RunbookStartTime for runbook $LogsRunbookName"
+    $Schedule = New-AzureRmAutomationSchedule -Name $LogsScheduleName -StartTime $RunbookStartTime -HourInterval 1 -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup
+    $Sch = Register-AzureRmAutomationScheduledRunbook -RunbookName $LogsRunbookName -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup -ScheduleName $LogsScheduleName
+
+    Start-AzureRmAutomationRunbook -AutomationAccountName $AAAccount -Name $LogsRunbookName -ResourceGroupName $AAResourceGroup
+}
 
 # Creating Schedules for enabling MEtrics
 
 $MetricsRunbookStartTime = $Date = [DateTime]::Today.AddHours(2).AddDays(1)
 
-Write-Verbose "Creating schedule $MetricsScheduleName for $MetricsRunbookStartTime for runbook $MetricsRunbookName"
+Write-Verbose "Creating schedule $MetricsEnablerScheduleName for $MetricsRunbookStartTime for runbook $MetricsEnablerRunbookName"
     $Schedule = New-AzureRmAutomationSchedule -Name "$MetricsScheduleName" -StartTime $MetricsRunbookStartTime  -DayInterval 1  -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup
-    $Sch = Register-AzureRmAutomationScheduledRunbook -RunbookName $MetricsRunbookName -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup -ScheduleName "$MetricsScheduleName"
+    $Sch = Register-AzureRmAutomationScheduledRunbook -RunbookName $MetricsEnablerRunbookName -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup -ScheduleName "$MetricsScheduleName"
 
 #finally start the  MEtrics enabled runbook once to enable metrics asap
 
-Start-AzureRmAutomationRunbook -Name $MetricsRunbookName -ResourceGroupName $AAResourceGroup -AutomationAccountName $AAAccount
+Start-AzureRmAutomationRunbook -Name $MetricsEnablerRunbookName -ResourceGroupName $AAResourceGroup -AutomationAccountName $AAAccount
 
