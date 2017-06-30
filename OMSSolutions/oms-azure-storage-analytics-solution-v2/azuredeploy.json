@@ -164,6 +164,9 @@
                     "collectAuditLogs": {
                         "value": "[parameters('collectAuditLogs')]"
                     }
+                    ,"ingestSchedulerGuid":{
+                        "value":"[parameters('ingestSchedulerGuid')]"
+                        }
                 }
             }
         },
@@ -199,7 +202,10 @@
                     },
                     "collectAuditLogs": {
                         "value": "[parameters('collectAuditLogs')]"
-                    }
+                    }  
+                    ,"ingestSchedulerGuid":{
+                        "value":"[parameters('ingestSchedulerGuid')]"
+                        }
                 }
             }
         }
