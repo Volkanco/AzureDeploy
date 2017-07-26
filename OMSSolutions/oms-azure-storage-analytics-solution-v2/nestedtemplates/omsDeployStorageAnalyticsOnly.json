@@ -125,8 +125,8 @@
     },
     "variables": {
         "nestedTemplates": {
-            "deployLinkedWorkspaceStorageAnalyticsOnly": "[concat(parameters('_artifactsLocation'), '/nestedtemplates/deployToLinkedWorkspaceAnalyticsOnly.json', parameters('_artifactsLocationSasToken'))]",
-            "deployStorageAnalyticsOnly": "[concat(parameters('_artifactsLocation'), '/nestedtemplates/deployToWorkspaceAnalyticsOnly.json', parameters('_artifactsLocationSasToken'))]"
+            "deployToLinkedWorkspaceAnalyticsOnly": "[concat(parameters('_artifactsLocation'), '/nestedtemplates/deployToLinkedWorkspaceAnalyticsOnly.json', parameters('_artifactsLocationSasToken'))]",
+            "deployToWorkspaceAnalyticsOnly": "[concat(parameters('_artifactsLocation'), '/nestedtemplates/deployToWorkspaceAnalyticsOnly.json', parameters('_artifactsLocationSasToken'))]"
         }
     },
     "resources": [
@@ -174,7 +174,7 @@
             "condition": "[equals(parameters('omsWorkspaceType'), 'Unlinked')]",
             "type": "Microsoft.Resources/deployments",
             "apiVersion": "2016-02-01",
-            "name": "DeployStorageAnalyticsOnly",
+            "name": "deployToWorkspaceAnalyticsOnly",
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
