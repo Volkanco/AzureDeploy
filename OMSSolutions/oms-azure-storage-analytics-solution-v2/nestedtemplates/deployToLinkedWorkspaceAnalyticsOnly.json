@@ -140,7 +140,7 @@
     "azureSubscriptionId": "saAzureSubscriptionId",
     "omsSolutions": {
       "customSolution1": {
-        "name": "Azure Storage Analytics v2",
+        "name": "Azure Storage Analytics",
         "solutionName": "[concat('AzureStorageAnalytics', '[', parameters('omsLogAnalyticsWorkspaceName'), ']')]",
         "publisher": "volkanc@microsoft.com",
         "displayName": "Azure Storage Analytics",
