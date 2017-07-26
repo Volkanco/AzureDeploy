@@ -125,8 +125,8 @@
     },
     "variables": {
         "nestedTemplates": {
-            "deployToLinkedWorkspace": "[concat(parameters('_artifactsLocation'), '/nestedtemplates/deployToLinkedWorkspace.json', parameters('_artifactsLocationSasToken'))]",
-            "deployToWorkspace": "[concat(parameters('_artifactsLocation'), '/nestedtemplates/deployToWorkspace.json', parameters('_artifactsLocationSasToken'))]"
+            "omsDeployWithAuditLogs": "[concat(parameters('_artifactsLocation'), '/nestedtemplates/omsDeployStorageAnalyticsWithAuditLogs.json', parameters('_artifactsLocationSasToken'))]",
+            "omsDeployStorageAnalyticsOnly": "[concat(parameters('_artifactsLocation'), '/nestedtemplates/omsDeployStorageAnalyticsOnly.json', parameters('_artifactsLocationSasToken'))]"
         }
     },
     "resources": [

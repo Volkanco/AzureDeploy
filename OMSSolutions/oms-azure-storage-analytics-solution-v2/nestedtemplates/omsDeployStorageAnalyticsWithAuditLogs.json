@@ -125,8 +125,8 @@
     },
     "variables": {
         "nestedTemplates": {
-            "deployToLinkedWorkspace": "[concat(parameters('_artifactsLocation'), '/nestedtemplates/deployToLinkedWorkspace.json', parameters('_artifactsLocationSasToken'))]",
-            "deployToWorkspace": "[concat(parameters('_artifactsLocation'), '/nestedtemplates/deployToWorkspace.json', parameters('_artifactsLocationSasToken'))]"
+            "DeployToLinkedWorkspaceWithAuditLogs": "[concat(parameters('_artifactsLocation'), '/nestedtemplates/deployToLinkedWorkspaceWithAuditLogs.json', parameters('_artifactsLocationSasToken'))]",
+            "deployToWorkspaceWithAuditLogs": "[concat(parameters('_artifactsLocation'), '/nestedtemplates/deployToWorkspaceWithAuditLogs.json', parameters('_artifactsLocationSasToken'))]"
         }
     },
     "resources": [
