@@ -130,97 +130,16 @@
         }
     },
     "resources": [
-           {
-            "condition": "[equals(parameters('collectAuditLogs'), 'Enabled')]",
-            "type": "Microsoft.Resources/deployments",
-            "apiVersion": "2016-02-01",
-            "name": "omsDeployWithAuditLogs",
-            "dependsOn": [],
-            "properties": {
-                "mode": "Incremental",
-                "templateLink": {
-                    "uri": "[variables('nestedTemplates').omsDeployStorageAnalyticsWithAuditLogs]",
-                    "contentVersion": "1.0.0.0"
-                },
-                "parameters": {
-                    "omsLogAnalyticsWorkspaceName": {
-                        "value": "[parameters('omsLogAnalyticsWorkspaceName')]"
-                    },
-                    "omsLogAnalyticsRegion": {
-                        "value": "[parameters('omsLogAnalyticsRegion')]"
-                    },
-                    "omsLogAnalyticsSku": {
-                        "value": "[parameters('omsLogAnalyticsSku')]"
-                    },
-                    "omsAutomationAccountName": {
-                        "value": "[parameters('omsAutomationAccountName')]"
-                    },
-                    "omsAutomationRegion": {
-                        "value": "[parameters('omsAutomationRegion')]"
-                    },                    
-                    "linkedWorkspaceSKU": {
-                        "value": "[parameters('linkedWorkspaceSKU')]"
-                    },
-                    "collectAuditLogs": {
-                        "value": "[parameters('collectAuditLogs')]"
-                    }
-                    ,"ingestScheduleGuid":{
-                        "value":"[parameters('ingestScheduleGuid')]"
-                        }
-                }
-            }
-        }
-        ,
           {
-            "condition": "[equals(parameters('collectAuditLogs'), 'Disabled')]",
-            "type": "Microsoft.Resources/deployments",
-            "apiVersion": "2016-02-01",
-            "name": "omsDeployStorageAnalyticsOnly",
-            "dependsOn": [],
-            "properties": {
-                "mode": "Incremental",
-                "templateLink": {
-                    "uri": "[variables('nestedTemplates').omsDeployStorageAnalyticsOnly]",
-                    "contentVersion": "1.0.0.0"
-                },
-                "parameters": {
-                    "omsLogAnalyticsWorkspaceName": {
-                        "value": "[parameters('omsLogAnalyticsWorkspaceName')]"
-                    },
-                    "omsLogAnalyticsRegion": {
-                        "value": "[parameters('omsLogAnalyticsRegion')]"
-                    },
-                    "omsLogAnalyticsSku": {
-                        "value": "[parameters('omsLogAnalyticsSku')]"
-                    },
-                    "omsAutomationAccountName": {
-                        "value": "[parameters('omsAutomationAccountName')]"
-                    },
-                    "omsAutomationRegion": {
-                        "value": "[parameters('omsAutomationRegion')]"
-                    },                    
-                    "linkedWorkspaceSKU": {
-                        "value": "[parameters('linkedWorkspaceSKU')]"
-                    },
-                    "collectAuditLogs": {
-                        "value": "[parameters('collectAuditLogs')]"
-                    }
-                    ,"ingestScheduleGuid":{
-                        "value":"[parameters('ingestScheduleGuid')]"
-                        }
-                }
-            }
-        }
-        ,{
             "condition": "[equals(parameters('omsWorkspaceType'), 'Linked')]",
             "type": "Microsoft.Resources/deployments",
             "apiVersion": "2016-02-01",
-            "name": "omsLinkedWorkspace",
+            "name": "DeployLinkedWorkspaceStorageAnalyticsOnly",
             "dependsOn": [],
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
-                    "uri": "[variables('nestedTemplates').deployToLinkedWorkspace]",
+                    "uri": "[variables('nestedTemplates').deployToLinkedWorkspaceAnalyticsOnly]",
                     "contentVersion": "1.0.0.0"
                 },
                 "parameters": {
@@ -255,11 +174,11 @@
             "condition": "[equals(parameters('omsWorkspaceType'), 'Unlinked')]",
             "type": "Microsoft.Resources/deployments",
             "apiVersion": "2016-02-01",
-            "name": "omsWorkspace",
+            "name": "DeployStorageAnalyticsOnly",
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
-                    "uri": "[variables('nestedTemplates').deployToWorkspace]",
+                    "uri": "[variables('nestedTemplates').deployToWorkspaceAnalyticsOnly]",
                     "contentVersion": "1.0.0.0"
                 },
                 "parameters": {
