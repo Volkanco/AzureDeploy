@@ -157,7 +157,10 @@
                     },
                     "omsAutomationRegion": {
                         "value": "[parameters('omsAutomationRegion')]"
-                    },                    
+                    }, 
+                    "omsWorkspaceType": {
+                        "value": "[parameters('omsWorkspaceType')]"
+                   },
                     "linkedWorkspaceSKU": {
                         "value": "[parameters('linkedWorkspaceSKU')]"
                     },
@@ -198,92 +201,16 @@
                     },
                     "omsAutomationRegion": {
                         "value": "[parameters('omsAutomationRegion')]"
-                    },                    
+                    },
+                    "omsWorkspaceType": {
+                        "value": "[parameters('omsWorkspaceType')]"
+                   },                    
                     "linkedWorkspaceSKU": {
                         "value": "[parameters('linkedWorkspaceSKU')]"
                     },
                     "collectAuditLogs": {
                         "value": "[parameters('collectAuditLogs')]"
                     }
-                    ,"ingestScheduleGuid":{
-                        "value":"[parameters('ingestScheduleGuid')]"
-                        }
-                }
-            }
-        }
-        ,{
-            "condition": "[equals(parameters('omsWorkspaceType'), 'Linked')]",
-            "type": "Microsoft.Resources/deployments",
-            "apiVersion": "2016-02-01",
-            "name": "omsLinkedWorkspace",
-            "dependsOn": [],
-            "properties": {
-                "mode": "Incremental",
-                "templateLink": {
-                    "uri": "[variables('nestedTemplates').deployToLinkedWorkspace]",
-                    "contentVersion": "1.0.0.0"
-                },
-                "parameters": {
-                    "omsLogAnalyticsWorkspaceName": {
-                        "value": "[parameters('omsLogAnalyticsWorkspaceName')]"
-                    },
-                    "omsLogAnalyticsRegion": {
-                        "value": "[parameters('omsLogAnalyticsRegion')]"
-                    },
-                    "omsLogAnalyticsSku": {
-                        "value": "[parameters('omsLogAnalyticsSku')]"
-                    },
-                    "omsAutomationAccountName": {
-                        "value": "[parameters('omsAutomationAccountName')]"
-                    },
-                    "omsAutomationRegion": {
-                        "value": "[parameters('omsAutomationRegion')]"
-                    },                    
-                    "linkedWorkspaceSKU": {
-                        "value": "[parameters('linkedWorkspaceSKU')]"
-                    },
-                    "collectAuditLogs": {
-                        "value": "[parameters('collectAuditLogs')]"
-                    }
-                    ,"ingestScheduleGuid":{
-                        "value":"[parameters('ingestScheduleGuid')]"
-                        }
-                }
-            }
-        },
-        {
-            "condition": "[equals(parameters('omsWorkspaceType'), 'Unlinked')]",
-            "type": "Microsoft.Resources/deployments",
-            "apiVersion": "2016-02-01",
-            "name": "omsWorkspace",
-            "properties": {
-                "mode": "Incremental",
-                "templateLink": {
-                    "uri": "[variables('nestedTemplates').deployToWorkspace]",
-                    "contentVersion": "1.0.0.0"
-                },
-                "parameters": {
-                    "omsLogAnalyticsWorkspaceName": {
-                        "value": "[parameters('omsLogAnalyticsWorkspaceName')]"
-                    },
-                    "omsLogAnalyticsRegion": {
-                        "value": "[parameters('omsLogAnalyticsRegion')]"
-                    },
-                    "omsLogAnalyticsSku": {
-                        "value": "[parameters('omsLogAnalyticsSku')]"
-                    },
-                    "omsAutomationAccountName": {
-                        "value": "[parameters('omsAutomationAccountName')]"
-                    },
-                    "omsAutomationRegion": {
-                        "value": "[parameters('omsAutomationRegion')]"
-                    },
-                      "linkedWorkspaceSKU": {
-                        "value": "[parameters('linkedWorkspaceSKU')]"
-                    },
-                    "collectAuditLogs": {
-                        "value": "[parameters('collectAuditLogs')]"
-                    }  
                     ,"ingestScheduleGuid":{
                         "value":"[parameters('ingestScheduleGuid')]"
                         }
