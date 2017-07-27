@@ -2333,7 +2333,8 @@
           "[resourceId('Microsoft.OperationalInsights/workspaces/views/', parameters('omsLogAnalyticsWorkspaceName'), variables('omsSolutions').customSolution1.name)]",
            "[resourceId('Microsoft.Automation/automationAccounts/runbooks/', parameters('omsAutomationAccountName'), variables('runbooks').ingestSchedulerRunbook.name)]",
           "[resourceId('Microsoft.Automation/automationAccounts/runbooks/', parameters('omsAutomationAccountName'), variables('runbooks').ingestMetricsRunbook.name)]",
-          "[resourceId('Microsoft.Automation/automationAccounts/runbooks/', parameters('omsAutomationAccountName'), variables('runbooks').ingestMetricsEnablerRunbook.name)]"
+          "[resourceId('Microsoft.Automation/automationAccounts/runbooks/', parameters('omsAutomationAccountName'), variables('runbooks').ingestMetricsEnablerRunbook.name)]",
+        "[resourceId('Microsoft.Automation/automationAccounts/variables/', parameters('omsAutomationAccountName'), variables('azureSubscriptionId'))]"
         
          
         ]
