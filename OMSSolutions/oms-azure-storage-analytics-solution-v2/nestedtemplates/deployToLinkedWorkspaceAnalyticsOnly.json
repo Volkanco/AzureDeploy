@@ -135,8 +135,8 @@
     },
     "metricsRunbookUri": "[concat(parameters('_artifactsLocation'),'/scripts/AzureSAIngestionMetrics-MS-Mgmt-SA.ps1', parameters('_artifactsLocationSasToken'))]",
     "logsRunbookUri": "[concat(parameters('_artifactsLocation'),'/scripts/AzureSAIngestionLogs-MS-Mgmt-SA.ps1', parameters('_artifactsLocationSasToken'))]",
-    "metricsEnablerRunbookUri": "[concat(parameters('_artifactsLocation'),'/scripts/AzureStorageMetricsEnabler-MS-Mgmt-SA.ps1', parameters('_artifactsLocationSasToken'))]",
-    "schedulerRunbookUri": "[concat(parameters('_artifactsLocation'),'/scripts/CreateSchedules-MS-Mgmt-SA.ps1', parameters('_artifactsLocationSasToken'))]",
+    "metricsEnablerRunbookUri": "[concat(parameters('_artifactsLocation'),'/scripts/AzureSAMetricsEnabler-MS-Mgmt-SA.ps1', parameters('_artifactsLocationSasToken'))]",
+    "schedulerRunbookUri": "[concat(parameters('_artifactsLocation'),'/scripts/AzureSACreateSchedules-MS-Mgmt-SA.ps1', parameters('_artifactsLocationSasToken'))]",
     "azureSubscriptionId": "saAzureSubscriptionId",
     "omsSolutions": {
       "customSolution1": {

@@ -35,8 +35,13 @@ $MetricsRunbookName = "AzureSAIngestionMetrics-MS-Mgmt-SA"
 $MetricsScheduleName = "AzureStorageMetrics-Schedule"
 $LogsRunbookName="AzureSAIngestionLogs-MS-Mgmt-SA"
 $LogsScheduleName = "AzureStorageLogs-HourlySchedule"
-$MetricsEnablerRunbookName = "AzureStorageMetricsEnabler-MS-Mgmt-SA"
+$MetricsEnablerRunbookName = "AzureSAMetricsEnabler-MS-Mgmt-SA"
 $MetricsEnablerScheduleName = "AzureStorageMetricsEnabler-DailySchedule"
+$mainSchedulerName="AzureSA-Scheduler-Hourly"
+
+$varText= "AAResourceGroup = $AAResourceGroup , AAAccount = $AAAccount"
+
+Write-output $varText
 
 #Inventory variables
 $varVMIopsList="AzureSAIngestion-VM-IOPSLimits"
@@ -172,30 +177,47 @@ $RBStart2=$RBStart1.AddMinutes(15)
 $RBStart3=$RBStart2.AddMinutes(15)
 $RBStart4=$RBStart3.AddMinutes(15)
 
-    Write-output  "Creating schedule $MetricsScheduleName for runbook $MetricsRunbookName"
 
-<#
-    $Schedule = New-AzureRmAutomationSchedule -Name $MetricsScheduleName+"-1" -StartTime $RBStart1  -HourInterval 1 -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup
-    $Sch = Register-AzureRmAutomationScheduledRunbook -RunbookName $MetricsRunbookName -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup -ScheduleName $MetricsScheduleName+"-1"
+# First clean up any previous schedules to prevent any conflict 
 
-    $Schedule = New-AzureRmAutomationSchedule -Name $MetricsScheduleName+"-2" -StartTime $RBStart2  -HourInterval 1 -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup
-    $Sch = Register-AzureRmAutomationScheduledRunbook -RunbookName $MetricsRunbookName -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup -ScheduleName $MetricsScheduleName+"-2"
+$allSchedules=Get-AzureRmAutomationSchedule `
+		-AutomationAccountName $AAAccount `
+		-ResourceGroupName $AAResourceGroup
 
-$Schedule = New-AzureRmAutomationSchedule -Name $MetricsScheduleName+"-3" -StartTime $RBStart3  -HourInterval 1 -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup
-    $Sch = Register-AzureRmAutomationScheduledRunbook -RunbookName $MetricsRunbookName -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup -ScheduleName $MetricsScheduleName+"-3"
+foreach ($sch in  $allSchedules|where{$_.Name -match $MetricsScheduleName -or $_.Name -match $MetricsEnablerScheduleName -or $_.Name -match $LogsScheduleName })
+{
 
-$Schedule = New-AzureRmAutomationSchedule -Name $MetricsScheduleName+"-4" -StartTime $RBStart4  -HourInterval 1 -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup
-    $Sch = Register-AzureRmAutomationScheduledRunbook -RunbookName $MetricsRunbookName -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup -ScheduleName $MetricsScheduleName+"-4"
-
-    #>
+Write-output "Removing Schedule $($sch.Name)    "
+Remove-AzureRmAutomationSchedule `
+		-AutomationAccountName $AAAccount `
+		-Force `
+		-Name $sch.Name `
+		-ResourceGroupName $AAResourceGroup `
     
-New-AzureRmAutomationSchedule  -AutomationAccountName  $AAAccount  -HourInterval 1 	-Name $MetricsScheduleName+"-1"  -ResourceGroupName $AAResourceGroup  -StartTime $RBStart1
+} 
+
+Write-output  "Creating schedule $MetricsScheduleName for runbook $MetricsRunbookName"
+
+$i=1
+Do {
+    New-AzureRmAutomationSchedule `
+		-AutomationAccountName $AAAccount `
+		-HourInterval 1 `
+		-Name $($MetricsScheduleName+"-$i") `
+		-ResourceGroupName $AAResourceGroup `
+		-StartTime (Get-Variable -Name RBStart"$i").Value
+
 
 Register-AzureRmAutomationScheduledRunbook `
 		-AutomationAccountName $AAAccount `
 		-ResourceGroupName  $AAResourceGroup `
 		-RunbookName $MetricsRunbookName `
-		-ScheduleName $MetricsScheduleName+"-1"
+		-ScheduleName $($MetricsScheduleName+"-$i")
+    $i++
+    }
+While ($i -le 4)
+
+
 
 
 #Create Schedule for collecting Logs
@@ -206,21 +228,76 @@ IF($collectAuditLogs -eq 'Enabled')
 
     $RunbookStartTime = $Date =(get-date -Minute 02 -Second 00).AddHours(1).ToUniversalTime()
     Write-Output "Creating schedule $LogsScheduleName for $RunbookStartTime for runbook $LogsRunbookName"
-    $Schedule = New-AzureRmAutomationSchedule -Name $LogsScheduleName -StartTime $RunbookStartTime -HourInterval 1 -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup
-    $Sch = Register-AzureRmAutomationScheduledRunbook -RunbookName $LogsRunbookName -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup -ScheduleName $LogsScheduleName
 
-    Start-AzureRmAutomationRunbook -AutomationAccountName $AAAccount -Name $LogsRunbookName -ResourceGroupName $AAResourceGroup
+New-AzureRmAutomationSchedule `
+		-AutomationAccountName $AAAccount `
+		-HourInterval 1 `
+		-Name $LogsScheduleName `
+		-ResourceGroupName $AAResourceGroup `
+		-StartTime $MetricsRunbookStartTime
+
+
+Register-AzureRmAutomationScheduledRunbook `
+		-AutomationAccountName $AAAccount `
+		-ResourceGroupName  $AAResourceGroup `
+		-RunbookName $LogsRunbookName `
+		-ScheduleName $LogsScheduleName
+  
+
+
+<#    $Schedule = New-AzureRmAutomationSchedule -Name $LogsScheduleName -StartTime $RunbookStartTime -HourInterval 1 -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup
+    $Sch = Register-AzureRmAutomationScheduledRunbook -RunbookName $LogsRunbookName -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup -ScheduleName $LogsScheduleName
+#>
+    Start-AzureRmAutomationRunbook -AutomationAccountName $AAAccount -Name $LogsRunbookName -ResourceGroupName $AAResourceGroup | out-null
 }
 
 # Creating Schedules for enabling MEtrics
 
 $MetricsRunbookStartTime = $Date = [DateTime]::Today.AddHours(2).AddDays(1)
 
-Write-Verbose "Creating schedule $MetricsEnablerScheduleName for $MetricsRunbookStartTime for runbook $MetricsEnablerRunbookName"
-    $Schedule = New-AzureRmAutomationSchedule -Name "$MetricsScheduleName" -StartTime $MetricsRunbookStartTime  -DayInterval 1  -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup
-    $Sch = Register-AzureRmAutomationScheduledRunbook -RunbookName $MetricsEnablerRunbookName -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup -ScheduleName "$MetricsScheduleName"
+Write-Output "Creating schedule $MetricsEnablerScheduleName for $MetricsRunbookStartTime for runbook $MetricsEnablerRunbookName"
+  
+      New-AzureRmAutomationSchedule `
+		-AutomationAccountName $AAAccount `
+		-DayInterval 1 `
+		-Name "$MetricsEnablerScheduleName" `
+		-ResourceGroupName $AAResourceGroup `
+		-StartTime $MetricsRunbookStartTime
 
+
+Register-AzureRmAutomationScheduledRunbook `
+		-AutomationAccountName $AAAccount `
+		-ResourceGroupName  $AAResourceGroup `
+		-RunbookName $MetricsEnablerRunbookName `
+		-ScheduleName "$MetricsEnablerScheduleName"
+  
+  
+  <#
+    $Schedule = New-AzureRmAutomationSchedule -Name " -StartTime $MetricsRunbookStartTime  -DayInterval 1  -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup
+    $Sch = Register-AzureRmAutomationScheduledRunbook -RunbookName $MetricsEnablerRunbookName -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup -ScheduleName "$MetricsScheduleName"
+#>
 #finally start the  MEtrics enabled runbook once to enable metrics asap
 
-Start-AzureRmAutomationRunbook -Name $MetricsEnablerRunbookName -ResourceGroupName $AAResourceGroup -AutomationAccountName $AAAccount
+Start-AzureRmAutomationRunbook -Name $MetricsEnablerRunbookName -ResourceGroupName $AAResourceGroup -AutomationAccountName $AAAccount | out-null
+
+#finally remove the schedule for the createschedules runbook as not needed if all schedules are in place
+
+$allSchedules=Get-AzureRmAutomationSchedule `
+		-AutomationAccountName $AAAccount `
+		-ResourceGroupName $AAResourceGroup |where{$_.Name -match $MetricsScheduleName -or $_.Name -match $MetricsEnablerScheduleName -or $_.Name -match $LogsScheduleName }
+
+
+If ($allSchedules.count -ge 5)
+{
+Write-output "Removing hourly schedule for this runbook as its not needed anymore  "
+Remove-AzureRmAutomationSchedule `
+		-AutomationAccountName $AAAccount `
+		-Force `
+		-Name $mainSchedulerName `
+		-ResourceGroupName $AAResourceGroup `
+
+
+}
+
+    
 

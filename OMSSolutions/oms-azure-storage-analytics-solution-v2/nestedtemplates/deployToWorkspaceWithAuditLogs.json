@@ -135,8 +135,8 @@
     },
     "metricsRunbookUri": "[concat(parameters('_artifactsLocation'),'/scripts/AzureSAIngestionMetrics-MS-Mgmt-SA.ps1', parameters('_artifactsLocationSasToken'))]",
     "logsRunbookUri": "[concat(parameters('_artifactsLocation'),'/scripts/AzureSAIngestionLogs-MS-Mgmt-SA.ps1', parameters('_artifactsLocationSasToken'))]",
-    "metricsEnablerRunbookUri": "[concat(parameters('_artifactsLocation'),'/scripts/AzureStorageMetricsEnabler-MS-Mgmt-SA.ps1', parameters('_artifactsLocationSasToken'))]",
-    "schedulerRunbookUri": "[concat(parameters('_artifactsLocation'),'/scripts/CreateSchedules-MS-Mgmt-SA.ps1', parameters('_artifactsLocationSasToken'))]",
+    "metricsEnablerRunbookUri": "[concat(parameters('_artifactsLocation'),'/scripts/AzureSAMetricsEnabler-MS-Mgmt-SA.ps1', parameters('_artifactsLocationSasToken'))]",
+    "schedulerRunbookUri": "[concat(parameters('_artifactsLocation'),'/scripts/AzureSACreateSchedules-MS-Mgmt-SA.ps1', parameters('_artifactsLocationSasToken'))]",
     "azureSubscriptionId": "saAzureSubscriptionId",
     "omsSolutions": {
       "customSolution1": {
@@ -381,7 +381,7 @@
       "location": "[parameters('omsLogAnalyticsRegion')]",
       "properties": {
         "sku": {
-          "name": "[first(parameters('linkedWorkspaceSKU'))]"
+          "name": "[parameters('omsLogAnalyticsSku')]"
         }
       },
       "resources": [
@@ -2644,7 +2644,8 @@
       "type": "Microsoft.Automation/automationAccounts",
       "properties": {
         "sku": {
-          "name": "[last(parameters('linkedWorkspaceSKU'))]"
+          //needs to double check
+          "name": "Basic"
         }
       },
       "resources": [
@@ -2860,17 +2861,6 @@
         }
       ]
     },
-    {
-			
-		   "type": "Microsoft.OperationalInsights/workspaces/linkedServices",
-            "name": "[concat(parameters('omsLogAnalyticsWorkspaceName'), '/' , 'Automation')]",
-            "apiVersion": "2015-11-01-preview",
-            "location": "[parameters('omsLogAnalyticsRegion')]",
-            "properties": {
-             	"resourceId": "[resourceId('Microsoft.Automation/automationAccounts/',parameters('omsAutomationAccountName'))]"
-             },
-            "dependsOn": []
-        },	
     {
       "name": "[variables('omsSolutions').customSolution1.solutionName]",
       "type": "Microsoft.OperationsManagement/solutions",

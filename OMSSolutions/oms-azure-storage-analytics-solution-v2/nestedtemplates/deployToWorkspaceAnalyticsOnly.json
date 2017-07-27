@@ -135,24 +135,16 @@
     },
     "metricsRunbookUri": "[concat(parameters('_artifactsLocation'),'/scripts/AzureSAIngestionMetrics-MS-Mgmt-SA.ps1', parameters('_artifactsLocationSasToken'))]",
     "logsRunbookUri": "[concat(parameters('_artifactsLocation'),'/scripts/AzureSAIngestionLogs-MS-Mgmt-SA.ps1', parameters('_artifactsLocationSasToken'))]",
-    "metricsEnablerRunbookUri": "[concat(parameters('_artifactsLocation'),'/scripts/AzureStorageMetricsEnabler-MS-Mgmt-SA.ps1', parameters('_artifactsLocationSasToken'))]",
-    "schedulerRunbookUri": "[concat(parameters('_artifactsLocation'),'/scripts/CreateSchedules-MS-Mgmt-SA.ps1', parameters('_artifactsLocationSasToken'))]",
+    "metricsEnablerRunbookUri": "[concat(parameters('_artifactsLocation'),'/scripts/AzureSAMetricsEnabler-MS-Mgmt-SA.ps1', parameters('_artifactsLocationSasToken'))]",
+    "schedulerRunbookUri": "[concat(parameters('_artifactsLocation'),'/scripts/AzureSACreateSchedules-MS-Mgmt-SA.ps1', parameters('_artifactsLocationSasToken'))]",
     "azureSubscriptionId": "saAzureSubscriptionId",
     "omsSolutions": {
       "customSolution1": {
-        "name": "Azure Storage Analytics v2",
+        "name": "Azure Storage Analytics",
         "solutionName": "[concat('AzureStorageAnalytics', '[', parameters('omsLogAnalyticsWorkspaceName'), ']')]",
         "publisher": "volkanc@microsoft.com",
         "displayName": "Azure Storage Analytics",
         "description": "Monitor and analyze Azure Storage Accounts",
-        "author": "volkanc@microsoft.com"
-      },
-      "customSolution2": {
-        "name": "Azure Storage Audit Logs",
-        "solutionName": "[concat('AzureStorageAnalytics', '[', parameters('omsLogAnalyticsWorkspaceName'), ']')]",
-        "publisher": "volkanc@microsoft.com",
-        "displayName": "Azure Storage Audit Logs",
-        "description": "Monitor and analyze Azure Storage Account Audit Logs",
         "author": "volkanc@microsoft.com"
       }
     },
@@ -381,7 +373,7 @@
       "location": "[parameters('omsLogAnalyticsRegion')]",
       "properties": {
         "sku": {
-          "name": "[first(parameters('linkedWorkspaceSKU'))]"
+          "name": "[parameters('omsLogAnalyticsSku')]"
         }
       },
       "resources": [
@@ -2105,7 +2097,8 @@
 
           }
         }
-         ]
+      
+      ]
     },
     {
       "apiversion": "2015-10-31",
@@ -2114,7 +2107,8 @@
       "type": "Microsoft.Automation/automationAccounts",
       "properties": {
         "sku": {
-          "name": "[last(parameters('linkedWorkspaceSKU'))]"
+          //need to double check this 
+          "name": "basic"
         }
       },
       "resources": [
@@ -2218,30 +2212,6 @@
           }
         },
         {
-          "condition": "[equals(parameters('collectAuditLogs'), 'Enabled')]",
-          "name": "[variables('runbooks').ingestLogsRunbook.name]",
-          "type": "runbooks",
-          "apiVersion": "2015-10-31",
-          "location": "[parameters('omsAutomationRegion')]",
-          "dependsOn": [
-            "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'))]",
-            "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'), '/variables/', variables('azureSubscriptionId'))]",
-            "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'), '/variables/', variables('opsInsightWorkspaceID'))]",
-            "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'), '/variables/', variables('opsInsightWorkspaceKey'))]"
-          ],
-          "tags": {},
-          "properties": {
-            "runbookType": "[variables('runbooks').ingestLogsRunbook.type]",
-            "logProgress": "false",
-            "logVerbose": "false",
-            "description": "[variables('runbooks').ingestLogsRunbook.description]",
-            "publishContentLink": {
-              "uri": "[variables('logsRunbookUri')]",
-              "version": "[variables('runbooks').ingestLogsRunbook.version]"
-            }
-          }
-        },
-        {
           "name": "[variables('runbooks').ingestSchedulerRunbook.name]",
           "type": "runbooks",
           "apiVersion": "2015-10-31",
@@ -2330,18 +2300,7 @@
         }
       ]
     },
-    {
-			
-		   "type": "Microsoft.OperationalInsights/workspaces/linkedServices",
-            "name": "[concat(parameters('omsLogAnalyticsWorkspaceName'), '/' , 'Automation')]",
-            "apiVersion": "2015-11-01-preview",
-            "location": "[parameters('omsLogAnalyticsRegion')]",
-            "properties": {
-             	"resourceId": "[resourceId('Microsoft.Automation/automationAccounts/',parameters('omsAutomationAccountName'))]"
-             },
-            "dependsOn": []
-        },	
-    {
+  {
       "name": "[variables('omsSolutions').customSolution1.solutionName]",
       "type": "Microsoft.OperationsManagement/solutions",
       "apiVersion": "2015-11-01-preview",
@@ -2362,9 +2321,8 @@
         "referencedResources": [],
         "containedResources": [
           "[resourceId('Microsoft.OperationalInsights/workspaces/views/', parameters('omsLogAnalyticsWorkspaceName'), variables('omsSolutions').customSolution1.name)]",
-          "[resourceId('Microsoft.Automation/automationAccounts/runbooks/', parameters('omsAutomationAccountName'), variables('runbooks').ingestSchedulerRunbook.name)]",
+           "[resourceId('Microsoft.Automation/automationAccounts/runbooks/', parameters('omsAutomationAccountName'), variables('runbooks').ingestSchedulerRunbook.name)]",
           "[resourceId('Microsoft.Automation/automationAccounts/runbooks/', parameters('omsAutomationAccountName'), variables('runbooks').ingestMetricsRunbook.name)]",
-         "[resourceId('Microsoft.Automation/automationAccounts/runbooks/', parameters('omsAutomationAccountName'), variables('runbooks').ingestLogsRunbook.name)]",
           "[resourceId('Microsoft.Automation/automationAccounts/runbooks/', parameters('omsAutomationAccountName'), variables('runbooks').ingestMetricsEnablerRunbook.name)]"
         
          
