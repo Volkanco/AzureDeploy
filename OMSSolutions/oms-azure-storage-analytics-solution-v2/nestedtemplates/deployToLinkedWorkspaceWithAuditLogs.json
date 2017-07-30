@@ -2916,7 +2916,7 @@
       "dependsOn": [
         "[concat('Microsoft.OperationalInsights/workspaces/', parameters('omsLogAnalyticsWorkspaceName'))]",
         "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'))]",
-        "[concat('Microsoft.OperationalInsights/workspaces/', parameters('omsLogAnalyticsWorkspaceName'), '/views/', variables('omsSolutions').customSolution1.name)]"
+        "[concat('Microsoft.OperationalInsights/workspaces/', parameters('omsLogAnalyticsWorkspaceName'), '/views/', variables('omsSolutions').customSolution2.name)]"
       ],
       "plan": {
         "name": "[variables('omsSolutions').customSolution2.solutionName]",
