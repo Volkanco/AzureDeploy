@@ -103,7 +103,7 @@
   },
   "variables": {
      "runbooks": {
-      "ingestMetricsRunbook": {
+         "ingestMetricsRunbook": {
         "name": "AzureSAIngestionMetrics-MS-Mgmt-SA",
         "version": "1.0.0.1",
         "description": "Runbook to automatically ingest Azure Storage Inventory data and events into OMS Log Analytics",
@@ -125,7 +125,7 @@
         "Id": ""
       },
       "ingestSchedulerRunbook": {
-        "name": "CreateSchedules-MS-Mgmt-SA",
+        "name": "AzureSACreateSchedules-MS-Mgmt-SA",
         "version": "1.0.0.1",
         "description": "Runbook to automatically create required schedules for OMS Log Analytics ingestion",
         "type": "PowerShell",
@@ -137,7 +137,7 @@
     "logsRunbookUri": "[concat(parameters('_artifactsLocation'),'/scripts/AzureSAIngestionLogs-MS-Mgmt-SA.ps1', parameters('_artifactsLocationSasToken'))]",
     "metricsEnablerRunbookUri": "[concat(parameters('_artifactsLocation'),'/scripts/AzureSAMetricsEnabler-MS-Mgmt-SA.ps1', parameters('_artifactsLocationSasToken'))]",
     "schedulerRunbookUri": "[concat(parameters('_artifactsLocation'),'/scripts/AzureSACreateSchedules-MS-Mgmt-SA.ps1', parameters('_artifactsLocationSasToken'))]",
-    "azureSubscriptionId": "saAzureSubscriptionId",
+      "azureSubscriptionId": "saAzureSubscriptionId",
     "omsSolutions": {
       "customSolution1": {
         "name": "Azure Storage Analytics v2",
