@@ -139,7 +139,7 @@
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
-                    "uri": "[variables('nestedTemplates').omsDeployStorageAnalyticsWithAuditLogs]",
+                    "uri": "[variables('nestedTemplates').omsDeployWithAuditLogs]",
                     "contentVersion": "1.0.0.0"
                 },
                 "parameters": {
