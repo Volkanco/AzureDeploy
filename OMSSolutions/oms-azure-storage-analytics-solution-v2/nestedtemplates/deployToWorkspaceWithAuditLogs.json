@@ -118,7 +118,7 @@
         "Id": ""
       },
       "ingestMetricsEnablerRunbook": {
-        "name": "AzureStorageMetricsEnabler-MS-Mgmt-SA",
+        "name": "AzureSAMetricsEnabler-MS-Mgmt-SA",
         "version": "1.0.0.1",
         "description": "Runbook to enable Storage Analytics metrics",
         "type": "PowerShell",

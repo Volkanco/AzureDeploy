@@ -118,14 +118,14 @@
         "Id": ""
       },
       "ingestMetricsEnablerRunbook": {
-        "name": "AzureStorageMetricsEnabler-MS-Mgmt-SA",
+        "name": "AzureSAMetricsEnabler-MS-Mgmt-SA",
         "version": "1.0.0.1",
         "description": "Runbook to enable Storage Analytics metrics",
         "type": "PowerShell",
         "Id": ""
       },
       "ingestSchedulerRunbook": {
-        "name": "CreateSchedules-MS-Mgmt-SA",
+        "name": "AzureSACreateSchedules-MS-Mgmt-SA",
         "version": "1.0.0.1",
         "description": "Runbook to automatically create required schedules for OMS Log Analytics ingestion",
         "type": "PowerShell",

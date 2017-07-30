@@ -234,7 +234,7 @@ New-AzureRmAutomationSchedule `
 		-HourInterval 1 `
 		-Name $LogsScheduleName `
 		-ResourceGroupName $AAResourceGroup `
-		-StartTime $MetricsRunbookStartTime
+		-StartTime $RunbookStartTime
 
 
 Register-AzureRmAutomationScheduledRunbook `
