@@ -1163,7 +1163,7 @@ $blobdate=(Get-date).AddHours(-1).ToUniversalTime().ToString("yyyy/MM/dd/HH00")
 $s=1
 
 #testing
- write-output $hash.SAInfo|select Logging ,storageaccount,key
+ write-output $hash.SAInfo|select Logging ,storageaccount
 
 
 foreach($sa in @($hash.SAInfo|Where{$_.Logging -eq 'True' -and $_.key -ne $null}))
