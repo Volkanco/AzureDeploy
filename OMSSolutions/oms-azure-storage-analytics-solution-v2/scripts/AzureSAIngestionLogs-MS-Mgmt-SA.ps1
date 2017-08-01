@@ -365,42 +365,6 @@ Function Post-OMSData($customerId, $sharedKey, $body, $logType)
 	Write-error $error[0]
 }
 
-Function Post-OMSIntData($customerId, $sharedKey, $body, $logType)
-{
-	$method = "POST"
-	$contentType = "application/json"
-	$resource = "/api/logs"
-	$rfc1123date = [DateTime]::UtcNow.ToString("r")
-	$contentLength = $body.Length
-	$signature = Build-OMSSignature `
-	-customerId $customerId `
-	-sharedKey $sharedKey `
-	-date $rfc1123date `
-	-contentLength $contentLength `
-	-fileName $fileName `
-	-method $method `
-	-contentType $contentType `
-	-resource $resource
-	$uri = "https://" + $customerId + ".ods.int2.microsoftatlanta-int.com" + $resource + "?api-version=2016-04-01"
-	$OMSheaders = @{
-		"Authorization" = $signature;
-		"Log-Type" = $logType;
-		"x-ms-date" = $rfc1123date;
-		"time-generated-field" = $TimeStampField;
-	}
-#write-output "OMS parameters"
-#$OMSheaders
-	Try{
-		$response = Invoke-WebRequest -Uri $uri -Method POST  -ContentType $contentType -Headers $OMSheaders -Body $body -UseBasicParsing
-	}
-	Catch
-	{
-		$_.MEssage
-	}
-	return $response.StatusCode
-	#write-output $response.StatusCode
-	Write-error $error[0]
-}
 
 function Cleanup-Variables {
 
@@ -996,42 +960,6 @@ Function Post-OMSData($customerId, $sharedKey, $body, $logType)
 	Write-error $error[0]
 }
 
-Function Post-OMSIntData($customerId, $sharedKey, $body, $logType)
-{
-	$method = "POST"
-	$contentType = "application/json"
-	$resource = "/api/logs"
-	$rfc1123date = [DateTime]::UtcNow.ToString("r")
-	$contentLength = $body.Length
-	$signature = Build-OMSSignature `
-	-customerId $customerId `
-	-sharedKey $sharedKey `
-	-date $rfc1123date `
-	-contentLength $contentLength `
-	-fileName $fileName `
-	-method $method `
-	-contentType $contentType `
-	-resource $resource
-	$uri = "https://" + $customerId + ".ods.int2.microsoftatlanta-int.com" + $resource + "?api-version=2016-04-01"
-	$OMSheaders = @{
-		"Authorization" = $signature;
-		"Log-Type" = $logType;
-		"x-ms-date" = $rfc1123date;
-		"time-generated-field" = $TimeStampField;
-	}
-#write-output "OMS parameters"
-#$OMSheaders
-	Try{
-		$response = Invoke-WebRequest -Uri $uri -Method POST  -ContentType $contentType -Headers $OMSheaders -Body $body -UseBasicParsing
-	}
-	Catch
-	{
-		$_.MEssage
-	}
-	return $response.StatusCode
-	#write-output $response.StatusCode
-	Write-error $error[0]
-}
 
 
 
@@ -1072,7 +1000,7 @@ Function Post-OMSIntData($customerId, $sharedKey, $body, $logType)
 
 	}
 
-check if metrics are enabled
+#check if metrics are enabled
 IF ($kind -eq 'BlobStorage')
 {
 $svclist=@('blob','table')
@@ -1234,6 +1162,10 @@ $blobdate=(Get-date).AddHours(-1).ToUniversalTime().ToString("yyyy/MM/dd/HH00")
 
 $s=1
 
+#testing
+ write-output $hash.SAInfo|select Logging ,storageaccount,key
+
+
 foreach($sa in @($hash.SAInfo|Where{$_.Logging -eq 'True' -and $_.key -ne $null}))
 {
 
@@ -1348,7 +1280,7 @@ Foreach ($svc in @('blob','table','queue'))
                       $jsonlogs= ConvertTo-Json -InputObject $logArray
                       $logarray=@()
 
-                    Post-OMSIntData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
+                    Post-OMSData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
 
                     remove-variable jsonlogs -force 
                     [gc]::Collect()
@@ -1391,7 +1323,7 @@ If($logArray)
         $splitLogs=$null
         $splitLogs=$_
           $jsonlogs= ConvertTo-Json -InputObject $splitLogs
-         Post-OMSIntData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
+         Post-OMSData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
   
      }
 
@@ -1401,7 +1333,7 @@ If($logArray)
 
     $jsonlogs= ConvertTo-Json -InputObject $logArray
 
-    Post-OMSIntData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
+    Post-OMSData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
 
     }
 }
