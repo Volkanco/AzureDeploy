@@ -1348,11 +1348,8 @@ Foreach ($svc in @('blob','table','queue'))
                       $jsonlogs= ConvertTo-Json -InputObject $logArray
                       $logarray=@()
 
-                        $customerID2='1079dd51-120e-481a-bd1d-874434e9c0cd'
-                     $sharedKey2='pfgJIQqccGlAcFsKRcDwjLNaJPXmK0e3QwBdcG5ZMdp8JhUy224v3uwDQWJX+gG+20XTmhjPSvc5I28pU1hLiQ=='
                     Post-OMSIntData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
-                    Post-OMSData -customerId $customerId2 -sharedKey $sharedKey2 -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
-                 
+
                     remove-variable jsonlogs -force 
                     [gc]::Collect()
                     
@@ -1404,10 +1401,8 @@ If($logArray)
 
     $jsonlogs= ConvertTo-Json -InputObject $logArray
 
-    $customerID2='1079dd51-120e-481a-bd1d-874434e9c0cd'
-    $sharedKey2='pfgJIQqccGlAcFsKRcDwjLNaJPXmK0e3QwBdcG5ZMdp8JhUy224v3uwDQWJX+gG+20XTmhjPSvc5I28pU1hLiQ=='
     Post-OMSIntData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
-    Post-OMSData -customerId $customerId2 -sharedKey $sharedKey2 -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
+
     }
 }
 
