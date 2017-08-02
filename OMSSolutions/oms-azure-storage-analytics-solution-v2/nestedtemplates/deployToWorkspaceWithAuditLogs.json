@@ -2644,7 +2644,7 @@
       "type": "Microsoft.Automation/automationAccounts",
       "properties": {
         "sku": {
-          //needs to double check
+          //need to double check
           "name": "Basic"
         }
       },
@@ -2869,7 +2869,11 @@
       "dependsOn": [
         "[concat('Microsoft.OperationalInsights/workspaces/', parameters('omsLogAnalyticsWorkspaceName'))]",
         "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'))]",
-        "[concat('Microsoft.OperationalInsights/workspaces/', parameters('omsLogAnalyticsWorkspaceName'), '/views/', variables('omsSolutions').customSolution1.name)]"
+        "[concat('Microsoft.OperationalInsights/workspaces/', parameters('omsLogAnalyticsWorkspaceName'), '/views/', variables('omsSolutions').customSolution1.name)]",
+          "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'), '/runbooks/', variables('runbooks').ingestSchedulerRunbook.name)]",
+          "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'), '/runbooks/', variables('runbooks').ingestMetricsRunbook.name)]",
+          "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'), '/runbooks/', variables('runbooks').ingestMetricsEnablerRunbook.name)]"
+          
       ],
       "plan": {
         "name": "[variables('omsSolutions').customSolution1.solutionName]",
@@ -2882,13 +2886,10 @@
         "referencedResources": [],
         "containedResources": [
           "[resourceId('Microsoft.OperationalInsights/workspaces/views/', parameters('omsLogAnalyticsWorkspaceName'), variables('omsSolutions').customSolution1.name)]",
-         "[resourceId('Microsoft.OperationalInsights/workspaces/views/', parameters('omsLogAnalyticsWorkspaceName'), variables('omsSolutions').customSolution2.name)]",
           "[resourceId('Microsoft.Automation/automationAccounts/runbooks/', parameters('omsAutomationAccountName'), variables('runbooks').ingestSchedulerRunbook.name)]",
           "[resourceId('Microsoft.Automation/automationAccounts/runbooks/', parameters('omsAutomationAccountName'), variables('runbooks').ingestMetricsRunbook.name)]",
-         "[resourceId('Microsoft.Automation/automationAccounts/runbooks/', parameters('omsAutomationAccountName'), variables('runbooks').ingestLogsRunbook.name)]",
-          "[resourceId('Microsoft.Automation/automationAccounts/runbooks/', parameters('omsAutomationAccountName'), variables('runbooks').ingestMetricsEnablerRunbook.name)]"
-        ,
-        "[resourceId('Microsoft.Automation/automationAccounts/variables/', parameters('omsAutomationAccountName'), variables('azureSubscriptionId'))]",
+          "[resourceId('Microsoft.Automation/automationAccounts/runbooks/', parameters('omsAutomationAccountName'), variables('runbooks').ingestMetricsEnablerRunbook.name)]",
+               "[resourceId('Microsoft.Automation/automationAccounts/variables/', parameters('omsAutomationAccountName'), variables('azureSubscriptionId'))]",
         "[resourceId('Microsoft.Automation/automationAccounts/variables/', parameters('omsAutomationAccountName'), variables('opsInsightWorkspaceID'))]",
         "[resourceId('Microsoft.Automation/automationAccounts/variables/', parameters('omsAutomationAccountName'), variables('opsInsightWorkspaceKey'))]",
         "[resourceId('Microsoft.Automation/automationAccounts/variables/', parameters('omsAutomationAccountName'), variables('createScheduleAutomationAccountName'))]",
@@ -2898,7 +2899,34 @@
         ]
       }
     },
-    {
+      {
+      "name": "[variables('omsSolutions').customSolution2.solutionName]",
+      "type": "Microsoft.OperationsManagement/solutions",
+      "apiVersion": "2015-11-01-preview",
+      "location": "[parameters('omsLogAnalyticsRegion')]",
+      "dependsOn": [
+        "[concat('Microsoft.OperationalInsights/workspaces/', parameters('omsLogAnalyticsWorkspaceName'))]",
+        "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'))]",
+        "[concat('Microsoft.OperationalInsights/workspaces/', parameters('omsLogAnalyticsWorkspaceName'), '/views/', variables('omsSolutions').customSolution2.name)]",
+          "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'), '/runbooks/', variables('runbooks').ingestLogsRunbook.name)]",
+          "[concat('Microsoft.OperationsManagement/solutions/',variables('omsSolutions').customSolution1.solutionName)]"
+      ],
+      "plan": {
+        "name": "[variables('omsSolutions').customSolution2.solutionName]",
+        "product": "[variables('omsSolutions').customSolution2.name]",
+        "publisher": "[variables('omsSolutions').customSolution2.publisher]",
+        "promotionCode": ""
+      },
+      "properties": {
+        "workspaceResourceId": "[resourceId('Microsoft.OperationalInsights/workspaces/', parameters('omsLogAnalyticsWorkspaceName'))]",
+        "referencedResources": [],
+        "containedResources": [
+          "[resourceId('Microsoft.OperationalInsights/workspaces/views/', parameters('omsLogAnalyticsWorkspaceName'), variables('omsSolutions').customSolution2.name)]",          
+          "[resourceId('Microsoft.Automation/automationAccounts/runbooks/', parameters('omsAutomationAccountName'), variables('runbooks').ingestLogsRunbook.name)]"        
+        ]
+      }
+    },
+      {
       "apiVersion": "2015-11-01-preview",
       "type": "Microsoft.OperationalInsights/workspaces/savedSearches",
       "name": "[concat(parameters('omsLogAnalyticsWorkspaceName'), '/', tolower(variables('alertArray')[copyIndex()].searchCategory), '|', toLower(variables('alertArray')[copyIndex()].searchName))]",
