@@ -29,7 +29,7 @@
         "collectAuditLogs": {
             "value": "Enabled"
         },
-        "ingestSchedulerGuid": {
+        "ingestScheduleGuid": {
             "value": "fee41d0f-cd9f-4932-8e5e-0d5b1706e02f"
         },
         "_artifactsLocation": {
