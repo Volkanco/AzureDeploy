@@ -159,18 +159,21 @@ Exit
 
 
 $min=(get-date).Minute 
-if($min -in 0..15)
+if($min -in 0..10) 
 {
     $RBStart1=(get-date -Minute 16 -Second 00).ToUniversalTime()
-}Elseif($min -in 16..30)
+}Elseif($min -in 11..25) 
 {
     $RBStart1=(get-date -Minute 31 -Second 00).ToUniversalTime()
-}elseif($min -in 31..45)
+}elseif($min -in 26..40) 
 {
     $RBStart1=(get-date -Minute 46 -Second 00).ToUniversalTime()
-}Else
+}ElseIf($min -in 46..55) 
 {
     $RBStart1=(get-date -Minute 01 -Second 00).AddHours(1).ToUniversalTime()
+}Else
+{
+	$RBStart1=(get-date -Minute 16 -Second 00).AddHours(1).ToUniversalTime()
 }
 
 $RBStart2=$RBStart1.AddMinutes(15)
