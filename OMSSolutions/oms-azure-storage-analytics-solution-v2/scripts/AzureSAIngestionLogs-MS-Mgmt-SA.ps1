@@ -1,7 +1,7 @@
 ﻿#Param($blobMetrics,$tableMEtrics,$queueMetrics,$fileMetrics)
 $ErrorActionPreference= "Stop"
 
-Write-Output "RB Start  : $([System.gc]::gettotalmemory('forcefullcollection') /1MB) MB" 
+Write-Output "RB Initial Memory  : $([System.gc]::gettotalmemory('forcefullcollection') /1MB) MB" 
 
 #region Variables definition
 # Variables definition
@@ -42,7 +42,6 @@ $logname='AzureStorage'
 $childrunbook="AzureSAIngestionChild-MS-Mgmt-SA"
 $schedulename="AzureStorageIngestionChild-Schedule-MS-Mgmt-SA"
 
-Write-Output "Initial Memory $([System.gc]::gettotalmemory('forcefullcollection') /1MB) MB"
 
 #Variable to sync between runspaces
 
@@ -1064,7 +1063,6 @@ Foreach ($svc in $svclist)
 }
 
 
-Write-Output "After Runspace creation  $([System.gc]::gettotalmemory('forcefullcollection') /1MB) MB"
 write-output "$($colParamsforChild.count) objects will be processed "
 
 $i=1 
@@ -1151,7 +1149,7 @@ new-variable -force -name startupVariables -value ( Get-Variable |
 
    % { $_.Name } )
 
-Write-Output "After Initial pool for keys : $([System.gc]::gettotalmemory('forcefullcollection') /1MB) MB" 
+Write-Output "Memory After Initial pool for keys : $([System.gc]::gettotalmemory('forcefullcollection') /1MB) MB" 
 
 
 
@@ -1163,7 +1161,7 @@ $blobdate=(Get-date).AddHours(-1).ToUniversalTime().ToString("yyyy/MM/dd/HH00")
 $s=1
 
 #testing
- write-output $hash.SAInfo|select Logging ,storageaccount
+write-output $hash.SAInfo|select Logging ,storageaccount
 
 
 foreach($sa in @($hash.SAInfo|Where{$_.Logging -eq 'True' -and $_.key -ne $null}))
