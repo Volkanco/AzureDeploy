@@ -33,7 +33,7 @@
             "value": "fee41d0f-cd9f-4932-8e5e-0d5b1706e02f"
         },
         "_artifactsLocation": {
-            "value": "https://raw.githubusercontent.com/volkanco/AzureDeploy/master/OMSSolutions/StorageAnalytics"
+            "value": "https://raw.githubusercontent.com/Volkanco/AzureDeploy/master/OMSSolutions/oms-azure-storage-analytics-solution-v2"
         }
     }
 }
