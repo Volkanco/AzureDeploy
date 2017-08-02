@@ -101,13 +101,13 @@
                 "description": "This option creates extra collectors to collect and ingest storage audit logs"
             }
         },
-           "ingestScheduleGuid": {
-      "type": "string",
-      "defaultValue": "8dad6b81-0110-4776-a619-36b28e8a460e",
-      "metadata": {
-        "description": "GUID for the schedule creation - create a unique before deploy"
-      }
-    },
+        "ingestScheduleGuid": {
+            "type": "string",
+            "defaultValue": "8dad6b81-0110-4776-a619-36b28e8a460e",
+            "metadata": {
+                "description": "GUID for the schedule creation - create a unique before deploy"
+            }
+        },
         "_artifactsLocation": {
             "type": "string",
             "defaultValue": "https://raw.githubusercontent.com/Volkanco/AzureDeploy/master/OMSSolutions/oms-azure-storage-analytics-solution-v2",
@@ -157,16 +157,16 @@
                     },
                     "omsAutomationRegion": {
                         "value": "[parameters('omsAutomationRegion')]"
-                    },                    
+                    },
                     "linkedWorkspaceSKU": {
                         "value": "[parameters('linkedWorkspaceSKU')]"
                     },
                     "collectAuditLogs": {
                         "value": "[parameters('collectAuditLogs')]"
+                    },
+                    "ingestScheduleGuid": {
+                        "value": "[parameters('ingestScheduleGuid')]"
                     }
-                    ,"ingestScheduleGuid":{
-                        "value":"[parameters('ingestScheduleGuid')]"
-                        }
                 }
             }
         },
@@ -197,15 +197,15 @@
                     "omsAutomationRegion": {
                         "value": "[parameters('omsAutomationRegion')]"
                     },
-                      "linkedWorkspaceSKU": {
+                    "linkedWorkspaceSKU": {
                         "value": "[parameters('linkedWorkspaceSKU')]"
                     },
                     "collectAuditLogs": {
                         "value": "[parameters('collectAuditLogs')]"
-                    }  
-                    ,"ingestScheduleGuid":{
-                        "value":"[parameters('ingestScheduleGuid')]"
-                        }
+                    },
+                    "ingestScheduleGuid": {
+                        "value": "[parameters('ingestScheduleGuid')]"
+                    }
                 }
             }
         }
