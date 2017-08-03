@@ -2552,7 +2552,7 @@
                                         "Subtitle": ""
                                     },
                                     "Donut": {
-                                        "Query": "* Type=AzureStorage_CL Type=AzureStorage_CL MetricName_s=AuditLogs AND NOT (USerAgent_s=\"\\\"Azure-Storage/0.5.0 (Native; Windows)\\\"\")|measure count() by RequesterIP_s",
+                                        "Query": "Type=AzureStorage_CL MetricName_s=AuditLogs AND NOT (UserAgent_s=\"\\\"Azure-Storage/0.5.0 (Native; Windows)\\\"\")|measure count() by RequesterIP_s",
                                         "CenterLegend": {
                                             "Text": "Total",
                                             "Operation": "Sum",
@@ -2568,7 +2568,7 @@
                                         }
                                     },
                                     "List": {
-                                        "Query": "* Type=AzureStorage_CL Type=AzureStorage_CL MetricName_s=AuditLogs AND NOT (USerAgent_s=\"\\\"Azure-Storage/0.5.0 (Native; Windows)\\\"\")|measure count() by RequesterIP_s",
+                                        "Query": "Type=AzureStorage_CL MetricName_s=AuditLogs AND NOT (UserAgent_s=\"\\\"Azure-Storage/0.5.0 (Native; Windows)\\\"\")|measure count() by RequesterIP_s",
                                         "HideGraph": false,
                                         "enableSparklines": false,
                                         "operation": "Summary",
