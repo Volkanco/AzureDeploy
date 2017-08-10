@@ -2274,7 +2274,7 @@
                     }
                 },
                 {
-                    "name": "[concat(parameters('omsAutomationAccountName'), '/',parameters('IngestScheduleGuid'))]",
+                    "name": "[concat(parameters('omsAutomationAccountName'), '/',variables('IngestScheduleGuid'))]",
                     "type": "microsoft.automation/automationAccounts/jobSchedules",
                     "apiVersion": "2015-10-31",
                     "location": "[parameters('omsAutomationRegion')]",
