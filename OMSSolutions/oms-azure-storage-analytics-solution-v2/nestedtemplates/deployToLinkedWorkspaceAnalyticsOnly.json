@@ -101,13 +101,6 @@
             "metadata": {
                 "description": "The sasToken required to access _artifactsLocation.  When the template is deployed using the accompanying scripts, a sasToken will be automatically generated."
             }
-        },
-        "ingestScheduleGuid": {
-            "type": "string",
-            "defaultValue": "8dad6b81-0110-4776-a619-36b28e8a460e",
-            "metadata": {
-                "description": "GUID for the schedule creation - create a unique before deploy"
-            }
         }
     },
     "variables": {
@@ -141,6 +134,7 @@
                 "Id": ""
             }
         },
+        "ingestScheduleGuid": "[guid(uniqueString(resourceGroup().id, deployment().name))]",
         "metricsRunbookUri": "[concat(parameters('_artifactsLocation'),'/scripts/AzureSAIngestionMetrics-MS-Mgmt-SA.ps1', parameters('_artifactsLocationSasToken'))]",
         "logsRunbookUri": "[concat(parameters('_artifactsLocation'),'/scripts/AzureSAIngestionLogs-MS-Mgmt-SA.ps1', parameters('_artifactsLocationSasToken'))]",
         "metricsEnablerRunbookUri": "[concat(parameters('_artifactsLocation'),'/scripts/AzureSAMetricsEnabler-MS-Mgmt-SA.ps1', parameters('_artifactsLocationSasToken'))]",

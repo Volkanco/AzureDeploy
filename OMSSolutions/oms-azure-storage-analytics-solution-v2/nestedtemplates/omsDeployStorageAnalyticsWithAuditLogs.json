@@ -202,9 +202,6 @@
                     },
                     "collectAuditLogs": {
                         "value": "[parameters('collectAuditLogs')]"
-                    },
-                    "ingestScheduleGuid": {
-                        "value": "[parameters('ingestScheduleGuid')]"
                     }
                 }
             }
