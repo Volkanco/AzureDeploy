@@ -2400,7 +2400,7 @@
                                         "useIcon": false
                                     },
                                     "Header": {
-                                        "Title": "--",
+                                        "Title": "SASvsAuthenticated",
                                         "Subtitle": ""
                                     },
                                     "Donut": {
