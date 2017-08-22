@@ -2,6 +2,11 @@
   "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
+    "randomDeploymentText": {
+      "type": "string",
+      "metadata": {
+        "description": "This Text will be used to generate a new GUID for automation Schedule"
+      },
     "omsLogAnalyticsWorkspaceName": {
       "type": "string",
       "metadata": {
@@ -145,7 +150,7 @@
         "author": "volkanc@microsoft.com"
       }
     },
-     "ingestSchedulerGuid": "[guid(uniqueString(resourceGroup().id, deployment().name),parameters('omsDataIngestionFrequency')]",
+     "ingestSchedulerGuid": "[guid(uniqueString(resourceGroup().id, deployment().name),parameters('randomDeploymentText')]",
     "opsInsightWorkspaceID": "AzureVMInventory-OPSINSIGHTS_WS_ID",
     "opsInsightWorkspaceIDType": "string",
     "opsInsightWorkspaceIDDescription": "Value of the user's omsWorkspaceId",
