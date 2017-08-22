@@ -145,7 +145,7 @@
         "author": "volkanc@microsoft.com"
       }
     },
-     "ingestScheduleGuid": "[guid(uniqueString(resourceGroup().id, deployment().name))]",
+     "ingestSchedulerGuid": "[guid(uniqueString(resourceGroup().id, deployment().name))]",
     "opsInsightWorkspaceID": "AzureVMInventory-OPSINSIGHTS_WS_ID",
     "opsInsightWorkspaceIDType": "string",
     "opsInsightWorkspaceIDDescription": "Value of the user's omsWorkspaceId",
@@ -1351,7 +1351,7 @@
           "apiVersion": "2015-10-31",
           "location": "[parameters('omsAutomationRegion')]",
           "dependsOn": [
-            "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'), '/schedules/', variables('ingestscheduleName'),'-',parameters('ingestSchedulerGuid'))]",
+            "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'), '/schedules/', variables('ingestscheduleName'),'-',variables('ingestSchedulerGuid'))]",
             "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'), '/runbooks/', variables('runbooks').ingestSchedulerRunbook.name)]",
             "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'))]"
           ],
