@@ -69,6 +69,26 @@
         "description": "Specify the Azure Region for your OMS Automation Account"
       }
     },
+     "linkedWorkspaceSKU": {
+            "type": "array",
+            "defaultValue": [
+                "pernode",
+                "OMS"
+            ],
+            "allowedValues": [
+                [
+                    "pernode",
+                    "OMS"
+                ],
+                [
+                    "free",
+                    "free"
+                ]
+            ],
+            "metadata": {
+                "description": "Choose the SKU for linked workspace  , only valid  if omsWorkspaceType is Linked otherwise ignored."
+            }
+        },
 	    "omsDataIngestionFrequency": {
       "type": "int",
       "defaultValue": 30,
@@ -183,9 +203,9 @@
       "apiVersion": "2015-11-01-preview",
       "location": "[parameters('omsLogAnalyticsRegion')]",
       "properties": {
-        "sku": {
-          "name": "[parameters('omsLogAnalyticsSku')]"
-        }
+                "sku": {
+                    "name": "[first(parameters('linkedWorkspaceSKU'))]"
+                }
       },
       "resources": [
         {
@@ -1198,9 +1218,9 @@
       "name": "[parameters('omsAutomationAccountName')]",
       "type": "Microsoft.Automation/automationAccounts",
       "properties": {
-        "sku": {
-          "name": "Basic"
-        }
+                "sku": {
+                    "name": "[last(parameters('linkedWorkspaceSKU'))]"
+                }
       },
       "resources": [
         {
