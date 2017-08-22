@@ -281,222 +281,6 @@ Else
 
 #region Define Required Functions
 
-Function Build-tableSignature ($customerId, $sharedKey, $date,  $method,  $resource,$uri)
-{
-    $stringToHash = $method + "`n" + "`n" + "`n"+$date+"`n"+"/"+$resource+$uri.AbsolutePath
-	Add-Type -AssemblyName System.Web
-	$query = [System.Web.HttpUtility]::ParseQueryString($uri.query)  
-	$querystr=''
-	$bytesToHash = [Text.Encoding]::UTF8.GetBytes($stringToHash)
-	$keyBytes = [Convert]::FromBase64String($sharedKey)
-	$sha256 = New-Object System.Security.Cryptography.HMACSHA256
-	$sha256.Key = $keyBytes
-	$calculatedHash = $sha256.ComputeHash($bytesToHash)
-	$encodedHash = [Convert]::ToBase64String($calculatedHash)
-	$authorization = 'SharedKey {0}:{1}' -f $resource,$encodedHash
-	return $authorization
-}
-
-# Create the function to create the authorization signature
-Function Build-StorageSignature ($sharedKey, $date,  $method, $bodylength, $resource,$uri ,$service)
-{
-	Add-Type -AssemblyName System.Web
-
-	$str=  New-Object -TypeName "System.Text.StringBuilder";
-	$builder=  [System.Text.StringBuilder]::new("/")
-	$builder.Append($resource) |out-null
-	$builder.Append($uri.AbsolutePath) | out-null
-	$str.Append($builder.ToString()) | out-null
-	$values2=@{}
-
-	IF($service -eq 'Table')
-	{
-		$values= [System.Web.HttpUtility]::ParseQueryString($uri.query)  
-		#    NameValueCollection values = HttpUtility.ParseQueryString(address.Query);
-		foreach ($str2 in $values.Keys)
-		{
-			[System.Collections.ArrayList]$list=$values.GetValues($str2)
-			$list.sort()
-			$builder2=  [System.Text.StringBuilder]::new()
-		
-			foreach ($obj2 in $list)
-			{
-				if ($builder2.Length -gt 0)
-				{
-					$builder2.Append(",");
-				}
-				$builder2.Append($obj2.ToString()) |Out-Null
-			}
-
-			IF ($str2 -ne $null)
-			{
-				$values2.add($str2.ToLowerInvariant(),$builder2.ToString())
-			} 
-		}
-		
-		$list2=[System.Collections.ArrayList]::new($values2.Keys)
-		$list2.sort()
-
-		foreach ($str3 in $list2)
-		{
-			IF($str3 -eq 'comp')
-			{
-				$builder3=[System.Text.StringBuilder]::new()
-				$builder3.Append($str3) |out-null
-				$builder3.Append("=") |out-null
-				$builder3.Append($values2[$str3]) |out-null
-				$str.Append("?") |out-null
-				$str.Append($builder3.ToString())|out-null
-			}
-		}
-	}
-	Else
-	{
-		$values= [System.Web.HttpUtility]::ParseQueryString($uri.query)  
-		#    NameValueCollection values = HttpUtility.ParseQueryString(address.Query);
-		foreach ($str2 in $values.Keys)
-		{
-			[System.Collections.ArrayList]$list=$values.GetValues($str2)
-			$list.sort()
-			$builder2=  [System.Text.StringBuilder]::new()
-		
-			foreach ($obj2 in $list)
-			{
-				if ($builder2.Length -gt 0)
-				{
-					$builder2.Append(",");
-				}
-				$builder2.Append($obj2.ToString()) |Out-Null
-			}
-
-			IF ($str2 -ne $null)
-			{
-				$values2.add($str2.ToLowerInvariant(),$builder2.ToString())
-			} 
-		}
-
-		$list2=[System.Collections.ArrayList]::new($values2.Keys)
-		$list2.sort()
-
-		foreach ($str3 in $list2)
-		{
-			$builder3=[System.Text.StringBuilder]::new()
-			$builder3.Append($str3) |out-null
-			$builder3.Append(":") |out-null
-			$builder3.Append($values2[$str3]) |out-null
-			$str.Append("`n") |out-null
-			$str.Append($builder3.ToString())|out-null
-		}
-	} 
-
-	$xHeaders = "x-ms-date:" + $date+ "`n" +"x-ms-version:$ApiStorage"
-
-	if ($service -eq 'Table')
-	{
-		$stringToHash= $method + "`n" + "`n" + "`n"+$date+"`n"+$str.ToString()
-	}
-	Else
-	{
-		IF ($method -eq 'GET' -or $method -eq 'HEAD')
-		{
-			$stringToHash = $method + "`n" + "`n" + "`n" + "`n" + "`n"+"application/xml"+ "`n"+ "`n"+ "`n"+ "`n"+ "`n"+ "`n"+ "`n"+$xHeaders+"`n"+$str.ToString()
-		}
-		Else
-		{
-			$stringToHash = $method + "`n" + "`n" + "`n" +$bodylength+ "`n" + "`n"+"application/xml"+ "`n"+ "`n"+ "`n"+ "`n"+ "`n"+ "`n"+ "`n"+$xHeaders+"`n"+$str.ToString()
-		}     
-	}
-# write-host $stringToHash
-
-	$bytesToHash = [Text.Encoding]::UTF8.GetBytes($stringToHash)
-	$keyBytes = [Convert]::FromBase64String($sharedKey)
-	$sha256 = New-Object System.Security.Cryptography.HMACSHA256
-	$sha256.Key = $keyBytes
-	$calculatedHash = $sha256.ComputeHash($bytesToHash)
-	$encodedHash = [Convert]::ToBase64String($calculatedHash)
-	$authorization = 'SharedKey {0}:{1}' -f $resource,$encodedHash
-	return $authorization
-}
-
-
-# Create the function to create and post the request
-Function invoke-StorageREST($sharedKey, $method, $msgbody, $resource,$uri,$svc)
-{
-
-	$rfc1123date = [DateTime]::UtcNow.ToString("r")
-
-	
-	If ($method -eq 'PUT')
-	{$signature = Build-StorageSignature `
-		-sharedKey $sharedKey `
-		-date  $rfc1123date `
-		-method $method -resource $resource -uri $uri -bodylength $msgbody.length -service $svc
-	}Else
-	{
-
-		$signature = Build-StorageSignature `
-		-sharedKey $sharedKey `
-		-date  $rfc1123date `
-		-method $method -resource $resource -uri $uri -body $body -service $svc
-	} 
-
-	If($svc -eq 'Table')
-	{
-		$headersforsa=  @{
-			'Authorization'= "$signature"
-			'x-ms-version'="$apistorage"
-			'x-ms-date'=" $rfc1123date"
-			'Accept-Charset'='UTF-8'
-			'MaxDataServiceVersion'='3.0;NetFx'
-			#      'Accept'='application/atom+xml,application/json;odata=nometadata'
-			'Accept'='application/json;odata=nometadata'
-		}
-	}
-	Else
-	{ 
-		$headersforSA=  @{
-			'x-ms-date'="$rfc1123date"
-			'Content-Type'='application\xml'
-			'Authorization'= "$signature"
-			'x-ms-version'="$ApiStorage"
-		}
-	}
-	
-
-	If ($svc -eq 'Table')
-	{
-		IF ($method -eq 'PUT'){  
-			$resp1= Invoke-WebRequest -Uri $uri -Headers $headersforsa -Method $method  -UseBasicParsing -Body $msgbody  
-			return $resp1
-		}Else
-		{  $resp1=Invoke-WebRequest -Uri $uri -Headers $headersforsa -Method $method   -UseBasicParsing -Body $msgbody 
-
-			$xresp=$resp1.Content.Substring($resp1.Content.IndexOf("<")) 
-		} 
-		return $xresp
-
-	}Else
-	{
-		IF ($method -eq 'PUT'){  
-			$resp1= Invoke-WebRequest -Uri $uri -Headers $headersforsa -Method $method -ContentType application/xml -UseBasicParsing -Body $msgbody 
-			return $resp1
-		}Elseif($method -eq 'GET')
-		{
-			$resp1= Invoke-WebRequest -Uri $uri -Headers $headersforsa -Method $method -ContentType application/xml -UseBasicParsing -Body $msgbody 
-
-			$xresp=$resp1.Content.Substring($resp1.Content.IndexOf("<")) 
-			return $xresp
-		}Elseif($method -eq 'HEAD')
-        {
-            $resp1= Invoke-WebRequest -Uri $uri -Headers $headersforsa -Method $method -ContentType application/xml -UseBasicParsing -Body $msgbody 
-
-			
-			return $resp1
-        }
-	}
-}
-
-
 # Create the function to create the authorization signature
 Function Build-OMSSignature ($customerId, $sharedKey, $date, $contentLength, $method, $contentType, $resource)
 {
@@ -554,38 +338,6 @@ Function Post-OMSData($customerId, $sharedKey, $body, $logType)
 	Write-error $error[0]
 }
 
-function Get-BlobSize ($bloburi,$storageaccount,$rg,$type)
-{
-
-	If($type -eq 'ARM')
-	{
-		$Uri="https://management.azure.com{3}/resourceGroups/{2}/providers/Microsoft.Storage/storageAccounts/{1}/listKeys?api-version={0}"   -f  $ApiVerSaArm, $storageaccount,$rg,$Subscriptioninfo.id 
-		$keyresp=Invoke-WebRequest -Uri $uri -Method POST  -Headers $headers -UseBasicParsing
-		$keys=ConvertFrom-Json -InputObject $keyresp.Content
-		$prikey=$keys.keys[0].value
-	}Elseif($type -eq 'Classic')
-	{
-		$Uri="https://management.azure.com{3}/resourceGroups/{2}/providers/Microsoft.ClassicStorage/storageAccounts/{1}/listKeys?api-version={0}"   -f  $ApiVerSaAsm,$storageaccount,$rg,$Subscriptioninfo.id
-		$keyresp=Invoke-WebRequest -Uri $uri -Method POST  -Headers $headers -UseBasicParsing
-		$keys=ConvertFrom-Json -InputObject $keyresp.Content
-		$prikey=$keys.primaryKey
-	}Else
-	{
-		"Could not detect storage account type, $storageaccount will not be processed"
-		Continue
-	}
-
-
-
-
-
-$vhdblob=invoke-StorageREST -sharedKey $prikey -method HEAD -resource $storageaccount -uri $bloburi
-	
-Return [math]::round($vhdblob.Headers.'Content-Length'/1024/1024/1024,0)
-
-
-
-}		
 #endregion
 
 
@@ -598,14 +350,8 @@ $timestamp=(get-date).ToUniversalTime().ToString("yyyy-MM-ddT$($hour):$($min):00
 
 
  $SubscriptionsURI="https://management.azure.com/subscriptions?api-version=2016-06-01" 
-
- 
  $Subscriptions = Invoke-WebRequest -Uri  $SubscriptionsURI -Method GET  -Headers $headers -UseBasicParsing
- 
-  $Subscriptions = Invoke-RestMethod -Uri $SubscriptionsURI -Method Get -Headers $headers
- 
  $Subscriptions =  $Subscriptions.value
-
  Write-Output "$($Subscriptions.count)  subscrptions found"
 
 
@@ -1139,6 +885,7 @@ foreach($sa in $saArmList)
 		
 		SubscriptionId = $subscriptionID
         AzureSubscription = $subscriptionname
+		ShowinDesigner=1
 	}
 	
 	IF ($sa.properties.creationTime){$cu|Add-Member -MemberType NoteProperty -Name CreationTime -Value $sa.properties.creationTime}
@@ -1170,6 +917,7 @@ foreach($sa in $saAsmList)
 		Tier=$iotype
 			SubscriptionId = $subscriptionID
         AzureSubscription = $subscriptionname
+		ShowinDesigner=1
 	}
 	
 	IF ($sa.properties.creationTime){$cu|Add-Member -MemberType NoteProperty -Name CreationTime -Value $sa.properties.creationTime}
@@ -1336,6 +1084,7 @@ $vm.properties.extensions|?{$extlist+=$_.extension+";"}
                             privateIpAddress=$vm.properties.instanceView.privateIpAddress
                             SubscriptionId = $subscriptionID
                              AzureSubscription = $subscriptionname
+							 ShowinDesigner=1
       
                                    }
 
@@ -1371,6 +1120,7 @@ $vm.properties.extensions|?{$extlist+=$_.extension+";"}
                         ID=$vm.id+"/extensions/"+$extobj.Extension
                         SubscriptionId = $subscriptionID
                              AzureSubscription = $subscriptionname
+							 ShowinDesigner=1
                           
                                    }
 
@@ -1401,6 +1151,7 @@ $vm.properties.extensions|?{$extlist+=$_.extension+";"}
                             enableDirectServerReturn=$ep.enableDirectServerReturn
                             SubscriptionId = $subscriptionID
                              AzureSubscription = $subscriptionname
+							 ShowinDesigner=1
       
                                    }
 
@@ -1449,6 +1200,7 @@ $vm.properties.extensions|?{$extlist+=$_.extension+";"}
 			SubscriptionId = $subscriptionID
         AzureSubscription = $subscriptionname
 		SizeinGB=$sizeingb
+		ShowinDesigner=1
 		
 	}
 	
@@ -1507,6 +1259,7 @@ $vm.properties.extensions|?{$extlist+=$_.extension+";"}
 				        	SubscriptionId = $subscriptionID
         AzureSubscription = $subscriptionname
 				        SizeinGB=$disk.diskSize
+						ShowinDesigner=1
 				
 			        }
 			
@@ -1566,6 +1319,7 @@ Foreach ($vm in $vmsarm)
                        
                            	SubscriptionId = $subscriptionID
         AzureSubscription = $subscriptionname
+		ShowinDesigner=1
       
                             }
 
@@ -1615,6 +1369,7 @@ Foreach ($nicobj in $vm.properties.networkProfile.networkInterfaces)
                             subnet=$nic.properties.ipConfigurations[0].properties.subnet.id.split('/')[10]
                            	SubscriptionId = $subscriptionID
                             AzureSubscription = $subscriptionname
+							ShowinDesigner=1
       
                             } 
 
@@ -1672,6 +1427,7 @@ Foreach ($nicobj in $vm.properties.networkProfile.networkInterfaces)
                             direction=$rule.properties.direction
                              	SubscriptionId = $subscriptionID
                              AzureSubscription = $subscriptionname
+							 ShowinDesigner=1
       
                             } 
                     }
@@ -1699,6 +1455,7 @@ Foreach ($nicobj in $vm.properties.networkProfile.networkInterfaces)
                          ID=$extobj.id
                                                      SubscriptionId = $subscriptionID
                              AzureSubscription = $subscriptionname
+							 ShowinDesigner=1
                           
                                    }
                         }
@@ -1733,6 +1490,7 @@ Foreach ($nicobj in $vm.properties.networkProfile.networkInterfaces)
                       $cutag|Add-Member -MemberType NoteProperty -Name  $_.Name   -Value $_.value -Force
                 }
                    $cutag|Add-Member -MemberType NoteProperty -Name Tag  -Value "$name : $value"
+				    $cutag|Add-Member -MemberType NoteProperty -Name ShowinDesigner  -Value 1
 
                 }
                 $vmtags+=$cutag
@@ -1779,6 +1537,7 @@ Foreach ($nicobj in $vm.properties.networkProfile.networkInterfaces)
 		        	SubscriptionId = $subscriptionID
         AzureSubscription = $subscriptionname
 		        SizeinGB=$sizeingb
+				ShowinDesigner=1
                 } -ea 0
 
 	    IF ($cudisk.DiskIOType -eq 'Standard' -and $vm.properties.hardwareProfile.vmSize.ToString() -like  'BAsic*')
@@ -1823,6 +1582,7 @@ Foreach ($nicobj in $vm.properties.networkProfile.networkInterfaces)
 		    	SubscriptionId = $subscriptionID
         AzureSubscription = $subscriptionname
 		    SizeinGB=128
+			ShowinDesigner=1
                 } -ea 0
 
 	    IF ($vm.properties.storageProfile.osDisk.managedDisk.storageAccountType -match 'Standard')
@@ -1871,6 +1631,7 @@ Foreach ($nicobj in $vm.properties.networkProfile.networkInterfaces)
 				        	SubscriptionId = $subscriptionID
         AzureSubscription = $subscriptionname
 				        SizeinGB=$disk.diskSizeGB
+						ShowinDesigner=1
 				
 			        } -ea 0 
 			
@@ -1913,6 +1674,7 @@ Foreach ($nicobj in $vm.properties.networkProfile.networkInterfaces)
 		            	SubscriptionId = $subscriptionID
         AzureSubscription = $subscriptionnamee
 		            SizeinGB=$disk.diskSizeGB
+					ShowinDesigner=1
                         } -ea 0
 
                IF ($vm.properties.storageProfile.osDisk.managedDisk.storageAccountType -match 'Standard')
@@ -1990,10 +1752,9 @@ Foreach($usgdata in $usagecontent.value)
                             currentValue=$usgdata.currentValue
                             limit=$usgdata.limit
                             Usagemetric = $usgdata.name[0].value.ToString()
-
-                                                                              
                             SubscriptionID = $subscriptionID
                             AzureSubscription = $subscriptionname
+							ShowinDesigner=1
       
                             }
 
@@ -2026,7 +1787,7 @@ $allvms+=New-Object PSObject -Property @{
                             HWProfile="NO RESOURCE FOUND"
                             SubscriptionId = $subscriptionID
                             AzureSubscription = $subscriptionname
-                            Exclude=1
+                            ShowinDesigner=0
                             }
 
 
@@ -2042,7 +1803,7 @@ $allvms+=New-Object PSObject -Property @{
                             Tag="NO RESOURCE FOUND"
                             SubscriptionId = $subscriptionID
                             AzureSubscription = $subscriptionname
-                            Exclude=1
+                            ShowinDesigner=0
                             }
 
 
@@ -2058,7 +1819,7 @@ $allvhds+=New-Object PSObject -Property @{
 		             StorageAccount="NO RESOURCE FOUND"
 		            	SubscriptionId = $subscriptionID
                       AzureSubscription = $subscriptionname
-                      Exclude=1
+                      ShowinDesigner=0
                         }
 
 }
@@ -2072,7 +1833,7 @@ if($invnic.count -eq 0)
                             subnet="NO RESOURCE FOUND"
                            	SubscriptionId = $subscriptionID
                             AzureSubscription = $subscriptionname
-                            Exclude=1
+                            ShowinDesigner=0
       
                             } 
 
@@ -2088,7 +1849,7 @@ $invnsg+= New-Object PSObject -Property @{
                             sourcePortRange="NO RESOURCE FOUND"
                             SubscriptionId = $subscriptionID
                              AzureSubscription = $subscriptionname
-                             Exclude=1
+                             ShowinDesigner=0
       
                             } 
 
@@ -2103,7 +1864,7 @@ if($invendpoints.count -eq 0)
                            endpointName="NO RESOURCE FOUND"
                             SubscriptionId = $subscriptionID
                              AzureSubscription = $subscriptionname
-                             Exclude=1
+                             ShowinDesigner=0
       
                                    }
 
@@ -2118,7 +1879,7 @@ if($invextensions.count -eq 0)
                                          Extension="NO RESOURCE FOUND"
                                          SubscriptionId = $subscriptionID
                              AzureSubscription = $subscriptionname
-                             Exclude=1
+                             ShowinDesigner=0
                           
                                    }
 }
@@ -2260,9 +2021,9 @@ $Starttimer=get-date
         $Job.RunspacePool = $RunspacePool
         $Jobs += New-Object PSObject -Property @{
           RunNum = $i
+          subscriptionId=$_.subscriptionId
           Pipe = $Job
           Result = $Job.BeginInvoke()
- 
             }
            
         $i++
@@ -2273,6 +2034,10 @@ Write-Output "After dispatching runspaces $([System.gc]::gettotalmemory('forcefu
 $jobsClone=$jobs.clone()
 Write-Output "Waiting.."
 
+#create variables to collect any errors warnings from runspaces
+
+$errorarray=@()
+$warningarray=@()
 
 
 $s=1
@@ -2285,6 +2050,21 @@ foreach ($jobobj in $JobsClone)
 
     if ($Jobobj.result.IsCompleted -eq $true)
     {
+
+
+		   $errorarray+=New-Object PSObject -Property @{
+          subscriptionId=$Jobobj.subscriptionId
+          errortext=$Jobobj.pipe.Streams.Error
+            }
+
+
+    $warningarray+=New-Object PSObject -Property @{
+          subscriptionId=$Jobobj.subscriptionId
+          Warningtext=$Jobobj.pipe.Streams.Warning
+ 
+            }
+
+
         $jobobj.Pipe.Endinvoke($jobobj.Result)
         $jobobj.pipe.dispose()
         $jobs.Remove($jobobj)
@@ -2313,6 +2093,21 @@ $msg= "All jobs completed! {5} subscriptions scanned. VMCount = {4}, VHD Count= 
 Write-output $msg
 $rbend=get-date
 Write-Output "Runbook total run time  $([math]::Round(($rbend-$rbstart).TotalMinutes,0)) minutes "
+Write-Output "##############################################################################"
+Write-Output " $($warningarray.count)  warnings , $($errorarray.count) errors  found in jobs; "
+IF($errorarray.count -gt 0)
+{
+	Write-Output "########### ERRORS #############"
+	Write-Output -InputObject $errorarray
+}
+
+IF($warningarray.count -gt 0)
+{
+	Write-Output "########### WARNINGS #############"
+	Write-Output -InputObject $warningarray
+}
+
+
 
 
 

@@ -308,7 +308,7 @@
                     "Subtitle": ""
                   },
                   "Donut": {
-                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMInventory Exclude_d!=1 | measure countdistinct(VmName_s) by HWProfile_s",
+                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMInventory ShowinDesigner_d=1 | measure countdistinct(VmName_s) by HWProfile_s",
                     "CenterLegend": {
                       "Text": "Total",
                       "Operation": "Sum",
@@ -324,7 +324,7 @@
                     }
                   },
                   "List": {
-                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMInventory Exclude_d!=1 | measure countdistinct(VmName_s) by HWProfile_s",
+                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMInventory ShowinDesigner_d=1 | measure countdistinct(VmName_s) by HWProfile_s",
                     "HideGraph": false,
                     "enableSparklines": false,
                     "operation": "Summary",
@@ -581,7 +581,7 @@
                     "useIcon": false
                   },
                   "Tile": {
-                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMInventory Exclude_d!=1|measure countdistinct(Tag_s) by AzureSubscription_s",
+                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMInventory ShowinDesigner_d=1|measure countdistinct(Tag_s) by AzureSubscription_s",
                     "Legend": "Tagged VM Count"
                   },
                   "List": {
@@ -638,7 +638,7 @@
                     "Subtitle": ""
                   },
                   "Donut": {
-                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMNIC Exclude_d!=1 | measure countdistinct(VmName_s) by subnet_s",
+                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMNIC ShowinDesigner_d=1 | measure countdistinct(VmName_s) by subnet_s",
                     "CenterLegend": {
                       "Text": "Total",
                       "Operation": "Sum",
@@ -707,7 +707,7 @@
                     "Subtitle": ""
                   },
                   "Donut": {
-                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMEndpoint Exclude_d!=1| measure countdistinct(VmName_s) by endpointName_s",
+                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMEndpoint ShowinDesigner_d=1| measure countdistinct(VmName_s) by endpointName_s",
                     "CenterLegend": {
                       "Text": "Total",
                       "Operation": "Sum",
@@ -776,7 +776,7 @@
                     "Subtitle": ""
                   },
                   "Donut": {
-                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMNSGrule Exclude_d!=1| measure countdistinct(VmName_s) by RuleName_s",
+                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMNSGrule ShowinDesigner_d=1| measure countdistinct(VmName_s) by RuleName_s",
                     "CenterLegend": {
                       "Text": "Total",
                       "Operation": "Sum",
@@ -983,7 +983,7 @@
                     "Subtitle": ""
                   },
                   "Donut": {
-                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMDisk Exclude_d!=1 | measure countdistinct(VHDUri_s) by MaxDiskIO_d",
+                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMDisk ShowinDesigner_d=1 | measure countdistinct(VHDUri_s) by MaxDiskIO_d",
                     "CenterLegend": {
                       "Text": "Total",
                       "Operation": "Sum",
@@ -1052,7 +1052,7 @@
                     "Subtitle": ""
                   },
                   "Donut": {
-                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMDisk Exclude_d!=1| measure countdistinct(VHDUri_s) by StorageAccount_s",
+                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMDisk ShowinDesigner_d=1| measure countdistinct(VHDUri_s) by StorageAccount_s",
                     "CenterLegend": {
                       "Text": "Total",
                       "Operation": "Sum",
@@ -1121,7 +1121,7 @@
                     "Subtitle": ""
                   },
                   "Donut": {
-                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMExtensions Exclude_d!=1| measure countdistinct(VmName_s) by Extension_s",
+                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMExtensions ShowinDesigner_d=1| measure countdistinct(VmName_s) by Extension_s",
                     "CenterLegend": {
                       "Text": "Total",
                       "Operation": "Sum",
@@ -1181,7 +1181,7 @@
               "Version": 0,
               "Configuration": {
                 "LineChart": {
-                  "Query": "[concat('Type=AzureVMInventory_CL MetricName_s=VMInventory  Exclude_d!=1 | measure countdistinct(VmName_s) by Status_s interval ', parameters('omsDataIngestionFrequency'),'Minutes')]",
+                  "Query": "[concat('Type=AzureVMInventory_CL MetricName_s=VMInventory  ShowinDesigner_d=1 | measure countdistinct(VmName_s) by Status_s interval ', parameters('omsDataIngestionFrequency'),'Minutes')]",
                   "Callout": {
                     "Title": "Running",
                     "Series": "Running",
