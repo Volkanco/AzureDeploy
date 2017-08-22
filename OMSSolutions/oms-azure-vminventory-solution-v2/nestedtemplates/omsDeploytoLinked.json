@@ -145,7 +145,7 @@
         "author": "volkanc@microsoft.com"
       }
     },
-     "ingestSchedulerGuid": "[guid(uniqueString(resourceGroup().id, deployment().name,parameters('omsDataIngestionFrequency')]",
+     "ingestSchedulerGuid": "[guid(uniqueString(resourceGroup().id, deployment().name,parameters('omsDataIngestionFrequency'))]",
     "opsInsightWorkspaceID": "AzureVMInventory-OPSINSIGHTS_WS_ID",
     "opsInsightWorkspaceIDType": "string",
     "opsInsightWorkspaceIDDescription": "Value of the user's omsWorkspaceId",
