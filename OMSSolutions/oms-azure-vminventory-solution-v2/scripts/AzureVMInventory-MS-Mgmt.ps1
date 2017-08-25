@@ -7,9 +7,6 @@ param(
     
     )
 
-
-
-
 #region Variables definition
 # Variables definition
 # Common  variables  accross solution 
@@ -27,11 +24,7 @@ $sharedKey = Get-AutomationVariable -Name  "AzureVMInventory-OPSINSIGHT_WS_KEY"
 $ApiVerSaAsm = '2016-04-01'
 $ApiVerSaArm = '2016-01-01'
 $ApiStorage='2016-05-31'
-
 $apiverVM='2016-02-01'
-
-
-
 
 # OMS log analytics custom log name
 
@@ -46,8 +39,6 @@ $VMstates = @{
 "PowerState/stopped" ="Stopped";
 "StoppedVM" ="Stopped";
 "PowerState/running" ="Running"}
-
-
 
 #Define VMSizes - Fetch from variable but failback to hardcoded if needed 
 $vmiolimits = Get-AutomationVariable -Name 'VMinfo_-IOPSLimits'  -ea 0 
@@ -119,6 +110,14 @@ $vmiolimits=@{"Basic_A0"=300;
 "Standard_DS13_v2"=25600;
 "Standard_DS14_v2"=51200;
 "Standard_DS15_v2"=64000;
+"Standard_D2s_v3"=4000;
+"Standard_D4s_v3"=8000;
+"Standard_D8s_v3"=16000;
+"Standard_D16s_v3"=32000;
+"Standard_D2_v3"=3000;
+"Standard_D4_v3"=6000;
+"Standard_D8_v3"=12000;
+"Standard_D16_v3"=24000;
 "Standard_F1"=500;
 "Standard_F2"=500;
 "Standard_F4"=500;
@@ -348,10 +347,9 @@ $timestamp=(get-date).ToUniversalTime().ToString("yyyy-MM-ddT$($hour):$($min):00
 #################
 
 
-
  $SubscriptionsURI="https://management.azure.com/subscriptions?api-version=2016-06-01" 
- $Subscriptions = Invoke-WebRequest -Uri  $SubscriptionsURI -Method GET  -Headers $headers -UseBasicParsing
- $Subscriptions =  $Subscriptions.value
+ $Subscriptions = Invoke-WebRequest -Uri  $SubscriptionsURI -Method GET  -Headers $headers -UseBasicParsing 
+ $Subscriptions =  @((ConvertFrom-Json -InputObject $Subscriptions.Content).value)
  Write-Output "$($Subscriptions.count)  subscrptions found"
 
 
