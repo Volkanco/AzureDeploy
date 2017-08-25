@@ -546,6 +546,7 @@ Foreach($sa in $salist)
 			Foreach($blob in $blobs)
 			{
 				IF($blob.name -match '.vhd')
+
 				{
 					$cu = New-Object PSObject -Property @{
 						Timestamp = $timestamp
