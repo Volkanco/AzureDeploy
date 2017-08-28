@@ -133,7 +133,7 @@
             "condition": "[equals(parameters('omsWorkspaceType'), 'Linked')]",
             "type": "Microsoft.Resources/deployments",
             "apiVersion": "2016-02-01",
-            "name": "[concat('omsDeployWithAuditLogs-',parameters('deploymentNameSuffix'))]",
+            "name": "[concat('omsDeploytoLinked-',parameters('deploymentNameSuffix'))]",
             "dependsOn": [],
             "properties": {
                 "mode": "Incremental",
@@ -170,7 +170,7 @@
             "condition": "[equals(parameters('omsWorkspaceType'), 'Unlinked')]",
             "type": "Microsoft.Resources/deployments",
             "apiVersion": "2016-02-01",
-            "name": "omsDeployStorageAnalyticsOnly",
+            "name": "[concat('omsDeploytoUnlinked-',parameters('deploymentNameSuffix'))]",
             "dependsOn": [],
             "properties": {
                 "mode": "Incremental",
