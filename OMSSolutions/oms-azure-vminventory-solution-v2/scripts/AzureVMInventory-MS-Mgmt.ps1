@@ -1044,13 +1044,13 @@ $vmsarm=$vmlist|where {$_.type -eq 'Microsoft.Compute/virtualMachines'}
 
 $vm=$cu=$cuvm=$cudisk=$null
 
-$allvms=@()
-$vmtags=@()
-$allvhds=@()
-$invendpoints=@()
-$invnsg=@()
-$invnic=@() 
-$invextensions=@()
+$invVMs=@()
+$invTags=@()
+$invVHDs=@()
+$invEndpoints=@()
+$invNSGs=@()
+$invNics=@() 
+$invExtensions=@()
 $colltime=get-date
 
 
@@ -1098,7 +1098,7 @@ $vm.properties.extensions|?{$extlist+=$_.extension+";"}
                     $cuvm|Add-Member -MemberType NoteProperty -Name PublicIP -Value $vm.properties.instanceView.publicIpAddresses[0].tostring()
                     }
                               
-                $allvms+=$cuvm
+                $invVMs+=$cuvm
 
     #inv extensions
     IF(![string]::IsNullOrEmpty($vm.properties.extensions))
@@ -1106,7 +1106,7 @@ $vm.properties.extensions|?{$extlist+=$_.extension+";"}
     Foreach ($extobj in $vm.properties.extensions)
         {
 
-        $invextensions+=New-Object PSObject -Property @{
+        $invExtensions+=New-Object PSObject -Property @{
                             Timestamp = $colltime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
                             MetricName = 'VMExtensions';
                            VmName=$vm.Name
@@ -1137,7 +1137,7 @@ $vm.properties.extensions|?{$extlist+=$_.extension+";"}
         Foreach($ep in $vm.properties.networkProfile.inputEndpoints)
         {
             
-             $invendpoints+= New-Object PSObject -Property @{
+             $invEndpoints+= New-Object PSObject -Property @{
                             Timestamp = $colltime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
                             MetricName = 'VMEndpoint';
                            VmName=$vm.Name
@@ -1226,7 +1226,7 @@ $vm.properties.extensions|?{$extlist+=$_.extension+";"}
            }
         }
         
-        $allvhds+=$cudisk
+        $invVHDs+=$cudisk
     }
 
 #check data disks 
@@ -1283,7 +1283,7 @@ $vm.properties.extensions|?{$extlist+=$_.extension+";"}
                    }
                 }
 
-			    $allvhds+=$cudisk    
+			    $invVHDs+=$cudisk    
 		      }
 		   }
 	}
@@ -1333,7 +1333,7 @@ Foreach ($vm in $vmsarm)
         $cuvm|Add-Member -MemberType NoteProperty -Name Status  -Value $VMstates.get_item(($ivcontent.statuses|select -Last 1).Code)
                 }
 
-                $allvms+=$cuVM
+                $invVMs+=$cuVM 
 
                 If($getNICandNSG)
                 {
@@ -1387,7 +1387,7 @@ Foreach ($nicobj in $vm.properties.networkProfile.networkInterfaces)
 
             }
 
-            $invNic+=$cuNic
+            $invNics+=$cuNic
 
         #inventory NSG
         
@@ -1405,7 +1405,7 @@ Foreach ($nicobj in $vm.properties.networkProfile.networkInterfaces)
                     foreach($rule in $Nsg.properties.securityRules)
                     {
 
-                      $invnsg+= New-Object PSObject -Property @{
+                      $invNSGs+= New-Object PSObject -Property @{
                             Timestamp = $colltime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
                             MetricName = 'VMNSGrule';
                             VmName=$vm.Name
@@ -1445,7 +1445,7 @@ Foreach ($nicobj in $vm.properties.networkProfile.networkInterfaces)
                     {
                         if($extobj.id.Split('/')[9] -eq 'extensions')
                         {
-                            $invextensions+=New-Object PSObject -Property @{
+                            $invExtensions+=New-Object PSObject -Property @{
                                         Timestamp = $colltime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
                                         MetricName = 'VMExtensions';
                            VmName=$vm.Name
@@ -1488,10 +1488,10 @@ Foreach ($nicobj in $vm.properties.networkProfile.networkInterfaces)
                       $cutag|Add-Member -MemberType NoteProperty -Name  $_.Name   -Value $_.value -Force
                 }
                    $cutag|Add-Member -MemberType NoteProperty -Name Tag  -Value "$name : $value"
-				    $cutag|Add-Member -MemberType NoteProperty -Name ShowinDesigner  -Value 1
+
 
                 }
-                $vmtags+=$cutag
+                $invTags+=$cutag
                         
                         #End tag processing 
            }
@@ -1560,7 +1560,7 @@ Foreach ($nicobj in $vm.properties.networkProfile.networkInterfaces)
                 $cudisk|Add-Member -MemberType NoteProperty -Name MaxDiskIO -Value 5000
            }
         }
-        $allvhds+=$cudisk    
+        $invVHDs+=$cudisk    
     
     }
     Else
@@ -1595,7 +1595,7 @@ Foreach ($nicobj in $vm.properties.networkProfile.networkInterfaces)
                   $cudisk|Add-Member -MemberType NoteProperty -Name DiskIOType -Value 'Premium'
 
            }
-           $allvhds+=$cudisk
+           $invVHDs+=$cudisk
      }
 
                
@@ -1655,7 +1655,7 @@ Foreach ($nicobj in $vm.properties.networkProfile.networkInterfaces)
                }
            }
                        
-			$allvhds+=$cudisk
+			$invVHDs+=$cudisk
     		}
             Else
             {
@@ -1696,7 +1696,7 @@ Foreach ($nicobj in $vm.properties.networkProfile.networkInterfaces)
                     $cudisk|Add-Member -MemberType NoteProperty -Name MaxDiskIO -Value 5000
                }
            }
-                $allvhds+=$cudisk
+                $invVHDs+=$cudisk
             }
 
 
@@ -1715,7 +1715,7 @@ Foreach ($nicobj in $vm.properties.networkProfile.networkInterfaces)
 
 $locations=$loclistcontent=$cu=$null
 
-$allvmusage=@()
+$invServiceQuota=@()
 
 
 $loclisturi="https://management.azure.com/"+$subscriptionID+"/locations?api-version=2016-09-01"
@@ -1757,7 +1757,7 @@ Foreach($usgdata in $usagecontent.value)
                             }
 
 
-$allvmusage+=$cu
+$invServiceQuota+=$cu
 
 
 }
@@ -1768,17 +1768,17 @@ $allvmusage+=$cu
 
 #populate  No resource found messages  for empty collections so OMS views does not generate erro msg 
 
- $hash['TotalVMCount']+=$allvms.count
-    $hash['TotalVHDCount']+=$allvhds.count
-     $hash['TotalNSGCount']+=$invnsg.count
-      $hash['TotalEndPointCount']+=$invendpoints.count
-       $hash['TotalExtensionCount']+=$invextensions.count
+ $hash['TotalVMCount']+=$invVMs.count
+    $hash['TotalVHDCount']+=$invVHDs.count
+     $hash['TotalNSGCount']+=$invNSGs.count
+      $hash['TotalEndPointCount']+=$invEndpoints.count
+       $hash['TotalExtensionCount']+=$invExtensions.count
 
 
-if($allvms.count -eq 0)
+if($invVMs.count -eq 0)
 {
 
-$allvms+=New-Object PSObject -Property @{
+$invVMs+=New-Object PSObject -Property @{
                             Timestamp = $colltime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
                             MetricName = 'VMInventory';
                             ResourceGroup="NO RESOURCE FOUND"
@@ -1792,10 +1792,10 @@ $allvms+=New-Object PSObject -Property @{
 
 }
 
-if($vmtags.count -eq 0)
+if($invTags.count -eq 0)
 {
 
-$allvms+=New-Object PSObject -Property @{
+$invVMs+=New-Object PSObject -Property @{
                             Timestamp = $colltime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
                             MetricName = 'VMInventory';
                             Tag="NO RESOURCE FOUND"
@@ -1808,10 +1808,10 @@ $allvms+=New-Object PSObject -Property @{
 
 }
 
-if($allvhds.count -eq 0)
+if($invVHDs.count -eq 0)
 {
 
-$allvhds+=New-Object PSObject -Property @{
+$invVHDs+=New-Object PSObject -Property @{
 		            Timestamp = $timestamp
 		            MetricName = 'Inventory';
 		             StorageAccount="NO RESOURCE FOUND"
@@ -1822,10 +1822,10 @@ $allvhds+=New-Object PSObject -Property @{
 
 }
 
-if($invnic.count -eq 0)
+if($invNics.count -eq 0)
 {
 
- $invnic+=New-Object PSObject -Property @{
+ $invNics+=New-Object PSObject -Property @{
                             Timestamp = $colltime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
                             MetricName = 'VMNIC';
                             subnet="NO RESOURCE FOUND"
@@ -1837,10 +1837,10 @@ if($invnic.count -eq 0)
 
 }
 
-if($invnsg.count -eq 0)
+if($invNSGs.count -eq 0)
 {
 
-$invnsg+= New-Object PSObject -Property @{
+$invNSGs+= New-Object PSObject -Property @{
                             Timestamp = $colltime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
                             MetricName = 'VMNSGrule';
                             RuleName="NO RESOURCE FOUND"
@@ -1853,10 +1853,10 @@ $invnsg+= New-Object PSObject -Property @{
 
 
 }
-if($invendpoints.count -eq 0)
+if($invEndpoints.count -eq 0)
 {
 
- $invendpoints+= New-Object PSObject -Property @{
+ $invEndpoints+= New-Object PSObject -Property @{
                             Timestamp = $colltime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
                             MetricName = 'VMEndpoint';
                            endpointName="NO RESOURCE FOUND"
@@ -1868,10 +1868,10 @@ if($invendpoints.count -eq 0)
 
 }
 
-if($invextensions.count -eq 0)
+if($invExtensions.count -eq 0)
 {
 
-  $invextensions+=New-Object PSObject -Property @{
+  $invExtensions+=New-Object PSObject -Property @{
                                         Timestamp = $colltime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
                                         MetricName = 'VMExtensions';
                                          Extension="NO RESOURCE FOUND"
@@ -1882,19 +1882,140 @@ if($invextensions.count -eq 0)
                                    }
 }
 
+
+
+<#
+#add sclae sets 
+
+$vmSSList=@()
+$invvmSS=@()
+
+$vmScaleSetPrv=$providers|where {$_.resourcetype -eq 'virtualMachineScaleSets'}
+
+Foreach ($prvitem in $vmScaleSetPrv)
+{
+
+$uri="https://management.azure.com"+$prvitem.id+"/$($prvitem.Resourcetype)?api-version=$($prvitem.apiversion)"
+
+$resultarm = Invoke-WebRequest -Method GET -Uri $uri -Headers $headers -UseBasicParsing
+$content=$resultarm.Content
+$content= ConvertFrom-Json -InputObject $resultarm.Content
+$vmSSList+=$content.value
+
+
+    IF(![string]::IsNullOrEmpty($content.nextLink))
+    {
+        do 
+        {
+            $uri2=$content.nextLink
+            $content=$null
+             $resultarm = Invoke-WebRequest -Method GET -Uri $uri2 -Headers $headers -UseBasicParsing
+	            $content=$resultarm.Content
+	            $content= ConvertFrom-Json -InputObject $resultarm.Content
+	           $vmSSList+=$content.value
+
+        $uri2=$null
+        }While (![string]::IsNullOrEmpty($content.nextLink))
+    }
+
+
+
+
+}
+
+Foreach ($ss in $vmsslist)
+{
+
+
+        $cuss = New-Object PSObject -Property @{
+                            Timestamp = $colltime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
+                            MetricName = 'VMInventory';
+                            ResourceGroup=$ss.id.split('/')[4]
+                            Location=$ss.location
+                            Name=$ss.Name
+                            Sku=$ss.sku.name
+                            Tier=$ss.sku.tier
+                            Capacity=$ss.sku.capacity
+                            upgradePolicy=$ss.properties.upgradePolicy.mode
+                            overprovision=$ss.properties.overprovision
+                            uniqueId=$ss.properties.uniqueId
+                            computerNamePrefix=$ss.properties.virtualMachineProfile.osProfile.computerNamePrefix
+                            imageReference=$ss.properties.virtualMachineProfile.storageProfile.imageReference.offer+ "/"+$ss.properties.virtualMachineProfile.storageProfile.imageReference.sku
+
+                            networkInterfaceConfigurations=$ss.properties.virtualMachineProfile.networkProfile.networkInterfaceConfigurations[0].name
+                            subnetid=$ss.properties.virtualMachineProfile.networkProfile.networkInterfaceConfigurations[0].properties.ipConfigurations.properties.subnet.id
+                            loadBalancerBackendAddressPoolsid=$ss.properties.virtualMachineProfile.networkProfile.networkInterfaceConfigurations[0].properties.ipConfigurations.properties.loadBalancerBackendAddressPools.id
+                            loadBalancerInboundNatPoolsid=$ss.properties.virtualMachineProfile.networkProfile.networkInterfaceConfigurations[0].properties.ipConfigurations.properties.loadBalancerInboundNatPools.id
+                            
+                            ID=$ss.id
+                            DeploymentType='ARM'                                       
+                           	SubscriptionId = $subscriptionID
+                            AzureSubscription = $subscriptionname
+		                    ShowinDesigner=1
+      
+                            }
+
+                         
+
+
+ 
+
+ $uri="https://management.azure.com"+$ss.id+"/virtualMachines?api-version=$($prvitem.apiversion)"
+
+$resultarm = Invoke-WebRequest -Method GET -Uri $uri -Headers $headers -UseBasicParsing
+$content=$resultarm.Content
+$content= ConvertFrom-Json -InputObject $resultarm.Content
+$vmSS+=$content.value
+
+
+    IF(![string]::IsNullOrEmpty($content.nextLink))
+    {
+        do 
+        {
+            $uri2=$content.nextLink
+            $content=$null
+             $resultarm = Invoke-WebRequest -Method GET -Uri $uri2 -Headers $headers -UseBasicParsing
+	            $content=$resultarm.Content
+	            $content= ConvertFrom-Json -InputObject $resultarm.Content
+	            $vmss+=$content.value
+
+        $uri2=$null
+        }While (![string]::IsNullOrEmpty($content.nextLink))
+    }
+
+
+     $cuss|Add-Member -MemberType NoteProperty -Name RunningVMs -Value $vmSS.count
+
+
+
+
+      $invvmSS+=$cuSS 
+}
+
+
+
+
+
+
+
+#>
+
+
+
+
 ### Send data to OMS
 
 
 
 
- $jsonvmpool = ConvertTo-Json -InputObject $allvms
-  $jsonvmtags = ConvertTo-Json -InputObject $vmtags
-  $jsonVHDData= ConvertTo-Json -InputObject $allvhds
-    $jsonallvmusage = ConvertTo-Json -InputObject $allvmusage
-  $jsoninvnic = ConvertTo-Json -InputObject $invnic
-$jsoninvnsg = ConvertTo-Json -InputObject $invnsg
-$jsoninvendpoint = ConvertTo-Json -InputObject $invendpoints
-$jsoninveextensions = ConvertTo-Json -InputObject $invextensions
+ $jsonvmpool = ConvertTo-Json -InputObject $invVMs
+  $jsonvmtags = ConvertTo-Json -InputObject $invTags
+  $jsonVHDData= ConvertTo-Json -InputObject $invVHDs
+    $jsonallvmusage = ConvertTo-Json -InputObject $invServiceQuota
+  $jsoninvnic = ConvertTo-Json -InputObject $invNics
+$jsoninvnsg = ConvertTo-Json -InputObject $invNSGs
+$jsoninvendpoint = ConvertTo-Json -InputObject $invEndpoints
+$jsoninveextensions = ConvertTo-Json -InputObject $invExtensions
 
 
  Write-output "$(get-date) - Uploading all data to OMS , Final memory  $([System.gc]::gettotalmemory('forcefullcollection') /1MB) "
@@ -1905,43 +2026,43 @@ If($jsonvmpool){$postres1=Post-OMSData -customerId $customerId -sharedKey $share
 
 	If ($postres1 -ge 200 -and $postres1 -lt 300)
 	{
-		#Write-Output " Succesfully uploaded $($allvms.count) vm inventory   to OMS"
+		#Write-Output " Succesfully uploaded $($invVMs.count) vm inventory   to OMS"
 	}
 	Else
 	{
-		Write-Warning " Failed to upload  $($allvms.count) vm inventory   to OMS"
+		Write-Warning " Failed to upload  $($invVMs.count) vm inventory   to OMS"
 	}
 
 If($jsonvmtags){$postres2=Post-OMSData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonvmtags)) -logType $logname}
 
 	If ($postres2 -ge 200 -and $postres2 -lt 300)
 	{
-	#	Write-Output " Succesfully uploaded $($vmtags.count) vm tags  to OMS"
+	#	Write-Output " Succesfully uploaded $($invTags.count) vm tags  to OMS"
 	}
 	Else
 	{
-		Write-Warning " Failed to upload  $($vmtags.count) vm tags   to OMS"
+		Write-Warning " Failed to upload  $($invTags.count) vm tags   to OMS"
 	}
 
 If($jsonallvmusage){$postres3=Post-OMSData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonallvmusage)) -logType $logname}
 	If ($postres3 -ge 200 -and $postres3 -lt 300)
 	{
-	#	Write-Output " Succesfully uploaded $($allvmusage.count) vm core usage  metrics to OMS"
+	#	Write-Output " Succesfully uploaded $($invServiceQuota.count) vm core usage  metrics to OMS"
 	}
 	Else
 	{
-		Write-Warning " Failed to upload  $($allvmusage.count) vm core usage  metrics to OMS"
+		Write-Warning " Failed to upload  $($invServiceQuota.count) vm core usage  metrics to OMS"
 	}
 
 If($jsonVHDData){$postres4=Post-OMSData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonVHDData)) -logType $logname}
 
 	If ($postres4 -ge 200 -and $postres4 -lt 300)
 	{
-	#	Write-Output " Succesfully uploaded $($allvhds.count) disk usage metrics to OMS"
+	#	Write-Output " Succesfully uploaded $($invVHDs.count) disk usage metrics to OMS"
 	}
 	Else
 	{
-		Write-Warning " Failed to upload  $($allvhds.count) Disk metrics to OMS"
+		Write-Warning " Failed to upload  $($invVHDs.count) Disk metrics to OMS"
 	}
 
 
@@ -1949,11 +2070,11 @@ If($jsoninvnic){$postres5=Post-OMSData -customerId $customerId -sharedKey $share
 
 	If ($postres5 -ge 200 -and $postres5 -lt 300)
 	{
-	#	Write-Output " Succesfully uploaded $($invnic.count) NICs to OMS"
+	#	Write-Output " Succesfully uploaded $($invNics.count) NICs to OMS"
 	}
 	Else
 	{
-		Write-Warning " Failed to upload  $($invnic.count) NICs to OMS"
+		Write-Warning " Failed to upload  $($invNics.count) NICs to OMS"
 	}
 
 
@@ -1961,11 +2082,11 @@ If($jsoninvnsg){$postres6=Post-OMSData -customerId $customerId -sharedKey $share
 
 	If ($postres6 -ge 200 -and $postres6 -lt 300)
 	{
-	#	Write-Output " Succesfully uploaded $($invnsg.count) NSG metrics to OMS"
+	#	Write-Output " Succesfully uploaded $($invNSGs.count) NSG metrics to OMS"
 	}
 	Else
 	{
-		Write-Warning " Failed to upload  $($invnsg.count) NSG metrics to OMS"
+		Write-Warning " Failed to upload  $($invNSGs.count) NSG metrics to OMS"
 	}
 
 
@@ -1973,11 +2094,11 @@ If($jsoninvendpoint){$postres7=Post-OMSData -customerId $customerId -sharedKey $
 
 	If ($postres7 -ge 200 -and $postres7 -lt 300)
 	{
-	#	Write-Output " Succesfully uploaded $($invendpoints.count) input endpoint metrics to OMS"
+	#	Write-Output " Succesfully uploaded $($invEndpoints.count) input endpoint metrics to OMS"
 	}
 	Else
 	{
-		Write-Warning " Failed to upload  $($invendpoints.count) input endpoint metrics to OMS"
+		Write-Warning " Failed to upload  $($invEndpoints.count) input endpoint metrics to OMS"
 	}
 
 
@@ -1985,11 +2106,11 @@ If($jsoninveextensions){$postres8=Post-OMSData -customerId $customerId -sharedKe
 
 	If ($postres8 -ge 200 -and $postres8 -lt 300)
 	{
-	#	Write-Output " Succesfully uploaded $($invendpoints.count) extensionsto OMS"
+	#	Write-Output " Succesfully uploaded $($invEndpoints.count) extensionsto OMS"
 	}
 	Else
 	{
-		Write-Warning " Failed to upload  $($invendpoints.count) extensions  to OMS"
+		Write-Warning " Failed to upload  $($invEndpoints.count) extensions  to OMS"
 	}
 #endregion
 

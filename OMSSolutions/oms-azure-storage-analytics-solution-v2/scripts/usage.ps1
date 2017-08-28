@@ -24,19 +24,27 @@ foreach ($prv in $providerslist)
 
 $allres+=$prv
 
+$prv.id
+
 $apiverforprv=$prv.resourcetypes[0].apiversions[0]
 
-Foreach($res in $prv.resourceTypes)
+$locations=$prv.resourceTypes.locations|select -Unique
+
+
+
+Foreach ($loc in $locations[0].replace(' ','').tolower())
 {
 
 $usgdata=$cu=$usagecontent=$null
 $usageuri="https://management.azure.com"+$prv.id+"/locations/"+$loc+"/usages?api-version=$apiverforprv"
+$usageuri
 
-$usageapi = Invoke-WebRequest -Uri $usageuri -Method GET -Headers $Headers  -UseBasicParsing
+$usageapi=$null
+$usageapi = Invoke-WebRequest -Uri $usageuri -Method GET -Headers $Headers  -UseBasicParsing -ea 0
 
+If($usageapi.Content)
+{
 $usagecontent= ConvertFrom-Json -InputObject $usageapi.Content
-
-
 
 Foreach($usgdata in $usagecontent.value)
 {
@@ -44,10 +52,11 @@ Foreach($usgdata in $usagecontent.value)
 
  $cu= New-Object PSObject -Property @{
                               Timestamp = $timestamp
-                             MetricName = 'ARMVMUsageStats';
+                             MetricName = 'ARMQuotas';
                             Location = $loc
                             currentValue=$usgdata.currentValue
                             limit=$usgdata.limit
+                            Namespace=$prv.namespace
                             Usagemetric = $usgdata.name[0].value.ToString()
                             SubscriptionID = $subscriptionID
                             AzureSubscription = $subscriptionname
@@ -57,15 +66,16 @@ Foreach($usgdata in $usagecontent.value)
 
 
 $allvmusage+=$cu
-
-
+}
+}
 }
 
 
 
-}
+
 
 #>
 }
 
 }
+

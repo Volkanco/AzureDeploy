@@ -3,7 +3,7 @@ param (
     [int] $frequency=30,
     [Parameter(Mandatory=$false)] [bool] $getNICandNSG=$true,
     [Parameter(Mandatory=$false)] [bool] $getDiskInfo=$true,
-    [Parameter(Mandatory=$false)] [bool] $clearLocks=$false
+    [Parameter(Mandatory=$false)] [bool] $getarmvmstatus=$true
     )
 
 
@@ -45,6 +45,7 @@ $RunbookName = "AzureVMInventory-MS-Mgmt-v2"
 $ScheduleName = "AzureVMInventory-Scheduler-Hourly"
 $schedulerrunbookname="AzureVMInventory-Schedules-MS-Mgmt"
 $varVMIopsList="AzureVMInventory-VM-IOPSLimits"
+$mainSchedulerName="AzureVMInventory-Scheduler"
 
 
    
@@ -53,7 +54,7 @@ $varVMIopsList="AzureVMInventory-VM-IOPSLimits"
 $iopslist=Get-AzureRmAutomationVariable -Name $varVMIopsList -ResourceGroupName $AAResourceGroup -AutomationAccountName $AAAccount
 If (!$iopslist)
 {
-    $vmiolimits=@{"Basic_A0"=300;
+$vmiolimits=@{"Basic_A0"=300;
 "Basic_A1"=300;
 "Basic_A2"=300;
 "Basic_A3"=300;
@@ -118,6 +119,14 @@ If (!$iopslist)
 "Standard_DS13_v2"=25600;
 "Standard_DS14_v2"=51200;
 "Standard_DS15_v2"=64000;
+"Standard_D2s_v3"=4000;
+"Standard_D4s_v3"=8000;
+"Standard_D8s_v3"=16000;
+"Standard_D16s_v3"=32000;
+"Standard_D2_v3"=3000;
+"Standard_D4_v3"=6000;
+"Standard_D8_v3"=12000;
+"Standard_D16_v3"=24000;
 "Standard_F1"=500;
 "Standard_F2"=500;
 "Standard_F4"=500;
@@ -151,12 +160,97 @@ If (!$iopslist)
 "Standard_NC12"=500;
 "Standard_NC24"=500;
 "Standard_NC24r"=500}
+
     New-AzureRmAutomationVariable -Name $varVMIopsList -Description "Variable to store IOPS limits for Azure VM Sizes." -Value $vmiolimits -Encrypted 0 -ResourceGroupName $AAResourceGroup -AutomationAccountName $AAAccount  -ea 0
 
 }
 
+IF([string]::IsNullOrEmpty($AAAccount) -or [string]::IsNullOrEmpty($AAResourceGroup))
+{
+
+Write-Error "Automation Account  or Automation Account Resource Group Variables is empty. Make sure AzureVMInventory-AzureAutomationResourceGroup-MS-Mgmt and AzureVMInventory-AzureAutomationAccount-MS-Mgmt variables exist in automation account and populated. "
+Write-Output "Script will not continue"
+Exit
+
+
+}
 
 #schedules
+
+# First clean up any previous schedules to prevent any conflict 
+
+$allSchedules=Get-AzureRmAutomationSchedule `
+		-AutomationAccountName $AAAccount `
+		-ResourceGroupName $AAResourceGroup
+
+foreach ($sch in  $allSchedules|where{$_.Name -match $ScheduleName})
+{
+
+Write-output "Removing Schedule $($sch.Name)    "
+Remove-AzureRmAutomationSchedule `
+		-AutomationAccountName $AAAccount `
+		-Force `
+		-Name $sch.Name `
+		-ResourceGroupName $AAResourceGroup `
+    
+} 
+
+
+# Create required schedules 
+
+$schcount=60/$frequency
+
+Write-output  "Creating schedule $ScheduleName for runbook $RunbookName"
+
+$RunbookStartTime = $Date = $([DateTime]::Now.AddMinutes(10))
+$params = @{"getNICandNSG"=$getNICandNSG;"getDiskInfo" = $getDiskInfo;"getarmvmstatus"=$getarmvmstatus}
+
+
+$i=1
+Do {
+
+
+    New-AzureRmAutomationSchedule `
+		-AutomationAccountName $AAAccount `
+		-HourInterval 1 `
+		-Name $($ScheduleName+"-$i") `
+		-ResourceGroupName $AAResourceGroup `
+		-StartTime $RunbookStartTime
+
+
+Register-AzureRmAutomationScheduledRunbook `
+		-AutomationAccountName $AAAccount `
+		-ResourceGroupName  $AAResourceGroup `
+		-RunbookName $RunbookName `
+		-ScheduleName $($ScheduleName+"-$i") -Parameters $params
+    $i++
+    $RunbookStartTime=$RunbookStartTime.AddMinutes($frequency)
+
+    }
+While ($i -le $schcount)
+
+
+#finally remove the schedule for the createschedules runbook as not needed if all schedules are in place
+
+$allSchedules=Get-AzureRmAutomationSchedule `
+		-AutomationAccountName $AAAccount `
+		-ResourceGroupName $AAResourceGroup |where{$_.Name -match $ScheduleName -or $_.Name -match $schedulerrunbookname}
+
+
+If ($allSchedules.count -ge $schcount+1)
+{
+Write-output "Removing hourly schedule for scheduler runbook as its not needed anymore, you may rerun this runbook anytime to fix schedules  "
+Remove-AzureRmAutomationSchedule `
+		-AutomationAccountName $AAAccount `
+		-Force `
+		-Name $mainSchedulerName `
+		-ResourceGroupName $AAResourceGroup `
+
+
+}
+
+    
+<# OLD WILL BE REMOVED 
 
 #check and create a  weekly schedule to check  and redeploy scheduler runbook
 
@@ -203,7 +297,7 @@ If (!$iopslist)
 
         $hourlysch=$RBsch|where{$_.ScheduleName  -match 'Hourly'}
                 $RunbookStartTime = $RunbookStartTime.Addhours(24)
-        $params1 = @{"frequency"=$frequency;"getNICandNSG"=$getNICandNSG;"getDiskInfo" = $getDiskInfo;"clearLocks"=0}
+        $params1 = @{"frequency"=$frequency;"getNICandNSG"=$getNICandNSG;"getDiskInfo" = $getDiskInfo;"getarmvmstatus"=1}
 
     Remove-AzureRmAutomationSchedule -AutomationAccountName $AAAccount -Name $hourlysch.ScheduleName  -ResourceGroupName $AAResourceGroup -Force
     $Schedule1 = New-AzureRmAutomationSchedule -Name 'AzureVMInventory-Scheduler-Weekly' -StartTime $RunbookStartTime -DayInterval 7 -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup 
@@ -264,3 +358,6 @@ While ($count -lt $NumberofSchedules)
         Start-AzureRmAutomationRunbook -AutomationAccountName $AAAccount -Name $RunbookName -ResourceGroupName $AAResourceGroup -Parameters $params
     }
 }
+
+
+#>
