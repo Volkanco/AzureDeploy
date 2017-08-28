@@ -164,6 +164,7 @@
     "ingestScheduleName": "AzureVMInventory-Scheduler-Hourly",
     "collectDiskInventory": "1",
     "collectNICandNSGInventory": "1",
+    "collectArmVMStatus":"1",
     "alertArray": [
       {
         "searchName": "Azure VMs in Stopped State",
@@ -1362,6 +1363,13 @@
             },
             "runbook": {
               "name": "[variables('Runbooks').ingestSchedulerRunbook.name]"
+            },
+            "parameters": {
+              "frequency": "[parameters('omsDataIngestionFrequency')]",
+              "getNICandNSG": "[variables('collectNICandNSGInventory')]",
+              "getDiskInfo": "[variables('collectDiskInventory')]",
+              "getarmvmstatus": "[variables('collectArmVMStatus')]"
+
             }
           }
         }

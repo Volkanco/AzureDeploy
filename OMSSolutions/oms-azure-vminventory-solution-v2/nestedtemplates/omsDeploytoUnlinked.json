@@ -132,6 +132,7 @@
         "author": "volkanc@microsoft.com"
       }
     },
+    "ingestSchedulerGuid": "[guid(uniqueString(resourceGroup().id, deployment().name))]",
     "opsInsightWorkspaceID": "AzureVMInventory-OPSINSIGHTS_WS_ID",
     "opsInsightWorkspaceIDType": "string",
     "opsInsightWorkspaceIDDescription": "Value of the user's omsWorkspaceId",
@@ -150,6 +151,7 @@
     "ingestScheduleName": "AzureVMInventory-Scheduler-Hourly",
     "collectDiskInventory": "1",
     "collectNICandNSGInventory": "1",
+    "collectArmVMStatus":"1",
     "alertArray": [
       {
         "searchName": "Azure VMs in Stopped State",
@@ -1314,7 +1316,7 @@
           }
         },
                 {
-          "name": "[concat(parameters('omsAutomationAccountName'), '/', variables('ingestscheduleName'),'-',parameters('ingestSchedulerGuid'))]",
+          "name": "[concat(parameters('omsAutomationAccountName'), '/', variables('ingestscheduleName'),'-',variables('ingestSchedulerGuid'))]",
           "type": "microsoft.automation/automationAccounts/schedules",
           "apiVersion": "2015-10-31",
           "location": "[parameters('omsAutomationRegion')]",
@@ -1332,7 +1334,7 @@
           }
         },
         {
-          "name": "[concat(parameters('omsAutomationAccountName'), '/', parameters('ingestSchedulerGuid'))]",
+          "name": "[concat(parameters('omsAutomationAccountName'), '/', variables('ingestSchedulerGuid'))]",
           "type": "microsoft.automation/automationAccounts/jobSchedules",
           "apiVersion": "2015-10-31",
           "location": "[parameters('omsAutomationRegion')]",
@@ -1344,10 +1346,16 @@
           "tags": {},
           "properties": {
             "schedule": {
-              "name": "[concat(variables('ingestscheduleName'),'-',parameters('ingestSchedulerGuid'))]"
+              "name": "[concat(variables('ingestscheduleName'),'-',variables('ingestSchedulerGuid'))]"
             },
             "runbook": {
               "name": "[variables('Runbooks').ingestSchedulerRunbook.name]"
+            },
+            "parameters": {
+              "frequency": "[parameters('omsDataIngestionFrequency')]",
+              "getNICandNSG": "[variables('collectNICandNSGInventory')]",
+              "getDiskInfo": "[variables('collectDiskInventory')]",
+              "getarmvmstatus": "[variables('collectArmVMStatus')]"
             }
           }
         }
