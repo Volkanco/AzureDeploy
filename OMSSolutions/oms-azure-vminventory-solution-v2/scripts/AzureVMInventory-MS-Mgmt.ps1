@@ -1889,6 +1889,7 @@ if($invExtensions.count -eq 0)
 
 $vmSSList=@()
 $invvmSS=@()
+$vmSS=@(
 
 $vmScaleSetPrv=$providers|where {$_.resourcetype -eq 'virtualMachineScaleSets'}
 
@@ -1941,12 +1942,10 @@ Foreach ($ss in $vmsslist)
                             uniqueId=$ss.properties.uniqueId
                             computerNamePrefix=$ss.properties.virtualMachineProfile.osProfile.computerNamePrefix
                             imageReference=$ss.properties.virtualMachineProfile.storageProfile.imageReference.offer+ "/"+$ss.properties.virtualMachineProfile.storageProfile.imageReference.sku
-
+                            diskname=$ss.properties.virtualMachineProfile.storageProfile.osDisk.name
                             networkInterfaceConfigurations=$ss.properties.virtualMachineProfile.networkProfile.networkInterfaceConfigurations[0].name
+                            VNet=$ss.properties.virtualMachineProfile.networkProfile.networkInterfaceConfigurations[0].properties.ipConfigurations.properties.subnet.id.split('/')[8]
                             subnetid=$ss.properties.virtualMachineProfile.networkProfile.networkInterfaceConfigurations[0].properties.ipConfigurations.properties.subnet.id
-                            loadBalancerBackendAddressPoolsid=$ss.properties.virtualMachineProfile.networkProfile.networkInterfaceConfigurations[0].properties.ipConfigurations.properties.loadBalancerBackendAddressPools.id
-                            loadBalancerInboundNatPoolsid=$ss.properties.virtualMachineProfile.networkProfile.networkInterfaceConfigurations[0].properties.ipConfigurations.properties.loadBalancerInboundNatPools.id
-                            
                             ID=$ss.id
                             DeploymentType='ARM'                                       
                            	SubscriptionId = $subscriptionID
@@ -1959,9 +1958,9 @@ Foreach ($ss in $vmsslist)
 
 
  
+#GET VMs
 
- $uri="https://management.azure.com"+$ss.id+"/virtualMachines?api-version=$($prvitem.apiversion)"
-
+$uri="https://management.azure.com"+$ss.id+"/virtualMachines?api-version=$($prvitem.apiversion)"
 $resultarm = Invoke-WebRequest -Method GET -Uri $uri -Headers $headers -UseBasicParsing
 $content=$resultarm.Content
 $content= ConvertFrom-Json -InputObject $resultarm.Content
@@ -1984,7 +1983,134 @@ $vmSS+=$content.value
     }
 
 
-     $cuss|Add-Member -MemberType NoteProperty -Name RunningVMs -Value $vmSS.count
+$cuss|Add-Member -MemberType NoteProperty -Name RunningVMs -Value $vmSS.count
+
+#subnets
+
+$prvforresource=$providers|where {$_.namespace -match $cuss.subnetid.split('/')[6] -and $_.resourcetype -match $cuss.subnetid.split('/')[7]}
+
+
+$uri="https://management.azure.com"+$cuss.subnetid+"?api-version=$($prvforresource.Apiversion)"
+$resultarm = Invoke-WebRequest -Method GET -Uri $uri -Headers $headers -UseBasicParsing 
+$content=$resultarm.Content
+$content= ConvertFrom-Json -InputObject $resultarm.Content
+
+
+$cuss|Add-Member -MemberType NoteProperty -Name SubnetAddressSpace -Value $content.properties.addressPrefix -force
+
+
+#get load balancer 
+
+$lb=$ss.properties.virtualMachineProfile.networkProfile.networkInterfaceConfigurations.properties.ipConfigurations.properties.loadBalancerBackendAddressPools.id
+
+$cuss|Add-Member -MemberType NoteProperty -Name LoadBalancer -Value $lb.split('/')[8] -force
+
+#/subscriptions/2de20a16-20c6-41af-82cd-bceb39195d1c/resourceGroups/VMScaleRG/providers/Microsoft.Network/loadBalancers/scaledemo1Lb
+
+
+
+
+
+
+
+#get NEtworkinterfaces
+
+
+$prvforresource=$uri=$resultarm=$content=$null
+
+$pipprv=$providers|where {$_.resourcetype -match 'virtualMachineScaleSets/publicIPAddresses'}
+
+$uri="https://management.azure.com"+$ss.id+"/publicIPAddresses?api-version=$($pipprv.Apiversion)"
+$resultarm = Invoke-WebRequest -Method GET -Uri $uri -Headers $headers -UseBasicParsing
+$content=$resultarm.Content
+$content= ConvertFrom-Json -InputObject $resultarm.Content
+
+
+
+    IF(![string]::IsNullOrEmpty($content.nextLink))
+    {
+        do 
+        {
+            $uri2=$content.nextLink
+            $content=$null
+             $resultarm = Invoke-WebRequest -Method GET -Uri $uri2 -Headers $headers -UseBasicParsing
+	            $content=$resultarm.Content
+	            $content= ConvertFrom-Json -InputObject $resultarm.Content
+	            $vmss+=$content.value
+
+        $uri2=$null
+        }While (![string]::IsNullOrEmpty($content.nextLink))
+    }
+
+
+
+
+$prvforresource=$uri=$resultarm=$content=$null
+
+$nwprv=$providers|where {$_.resourcetype -match 'virtualMachineScaleSets/networkInterfaces'}
+
+$uri="https://management.azure.com"+$ss.id+"/networkInterfaces?api-version=$($nwprv.Apiversion)"
+$resultarm = Invoke-WebRequest -Method GET -Uri $uri -Headers $headers -UseBasicParsing
+$content=$resultarm.Content
+$content= ConvertFrom-Json -InputObject $resultarm.Content
+
+
+
+    IF(![string]::IsNullOrEmpty($content.nextLink))
+    {
+        do 
+        {
+            $uri2=$content.nextLink
+            $content=$null
+             $resultarm = Invoke-WebRequest -Method GET -Uri $uri2 -Headers $headers -UseBasicParsing
+	            $content=$resultarm.Content
+	            $content= ConvertFrom-Json -InputObject $resultarm.Content
+	            $vmss+=$content.value
+
+        $uri2=$null
+        }While (![string]::IsNullOrEmpty($content.nextLink))
+    }
+
+
+
+
+
+
+
+#GET Publicip 
+
+
+
+# /subscriptions/2de20a16-20c6-41af-82cd-bceb39195d1c/resourceGroups/VMScaleRG/providers/Microsoft.Network/publicIPAddresses/Scaleseppip
+
+
+
+
+$prvforresource=$uri=$resultarm=$content=$null
+
+$pipprv=$providers|where {$_.resourcetype -match 'virtualMachineScaleSets/publicIPAddresses'}
+
+$uri="https://management.azure.com"+$ss.id+"/publicIPAddresses?api-version=$($pipprv.Apiversion)"
+$resultarm = Invoke-WebRequest -Method GET -Uri $uri -Headers $headers -UseBasicParsing
+$content=$resultarm.Content
+$content= ConvertFrom-Json -InputObject $resultarm.Content
+
+
+
+    IF(![string]::IsNullOrEmpty($content.nextLink))
+    {
+        do 
+        {
+            $uri2=$content.nextLink
+            $content=$null
+             $resultarm = Invoke-WebRequest -Method GET -Uri $uri2 -Headers $headers -UseBasicParsing
+	            $content=$resultarm.Content
+	            $content= ConvertFrom-Json -InputObject $resultarm.Content
+	            $vmss+=$content.value
+
+        $uri2=$null
+        }While (![string]::IsNullOrEmpty($content.nextLink))
+    }
 
 
 
