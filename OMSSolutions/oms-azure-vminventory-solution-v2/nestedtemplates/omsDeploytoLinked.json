@@ -1260,7 +1260,7 @@
                                         "Subtitle": ""
                                     },
                                     "Donut": {
-                                        "Query": "[concat('Type=AzureVMInventory_CL MetricName_s=ScaleSetInventory ShowinDesigner_d=1 TimeGenerated>NOW-', parameters('omsDataIngestionFrequency'),'Minutes |measure avg(RunningVMs_d) as RunningVMs by AzureSubscription_s)]",
+                                        "Query": "[concat('Type=AzureVMInventory_CL MetricName_s=ScaleSetInventory ShowinDesigner_d=1 TimeGenerated>NOW-', parameters('omsDataIngestionFrequency'),'Minutes |measure avg(RunningVMs_d) as RunningVMs by AzureSubscription_s')]",
                                         "CenterLegend": {
                                             "Text": "Total",
                                             "Operation": "Sum",
@@ -1276,7 +1276,7 @@
                                         }
                                     },
                                     "List": {
-                                        "Query": "[concat('Type=AzureVMInventory_CL MetricName_s=ScaleSetInventory ShowinDesigner_d=1 TimeGenerated>NOW-', parameters('omsDataIngestionFrequency'),'Minutes |measure avg(RunningVMs_d) as RunningVMs by Name_s)]",
+                                        "Query": "[concat('Type=AzureVMInventory_CL MetricName_s=ScaleSetInventory ShowinDesigner_d=1 TimeGenerated>NOW-', parameters('omsDataIngestionFrequency'),'Minutes |measure avg(RunningVMs_d) as RunningVMs by Name_s')]",
                                        "HideGraph": false,
                                         "enableSparklines": false,
                                         "operation": "Summary",
