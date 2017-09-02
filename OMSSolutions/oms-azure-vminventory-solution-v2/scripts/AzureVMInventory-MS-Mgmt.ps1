@@ -21,6 +21,8 @@ $customerID = Get-AutomationVariable -Name  "AzureVMInventory-OPSINSIGHTS_WS_ID"
 #For shared key use either the primary or seconday Connected Sources client authentication key   
 $sharedKey = Get-AutomationVariable -Name  "AzureVMInventory-OPSINSIGHT_WS_KEY"
 
+
+
 $ApiVerSaAsm = '2016-04-01'
 $ApiVerSaArm = '2016-01-01'
 $ApiStorage='2016-05-31'
@@ -393,6 +395,7 @@ $hash['TotalNSGCount']=0
 $hash['TotalEndPointCount']=0
 $hash['TotalExtensionCount']=0
 $hash['TotalVMScaleSetCount']=0
+$hash['PostDataResults']=@()
 
 
 $SAInfo=@()
@@ -758,53 +761,16 @@ Function Post-OMSData($customerId, $sharedKey, $body, $logType)
 	}
 	return $response.StatusCode
 	#write-output $response.StatusCode
+
 	Write-error $error[0]
+
+
 }
 
-Function Post-OMSIntData($customerId, $sharedKey, $body, $logType)
-{
-	$method = "POST"
-	$contentType = "application/json"
-	$resource = "/api/logs"
-	$rfc1123date = [DateTime]::UtcNow.ToString("r")
-	$contentLength = $body.Length
-	$signature = Build-OMSSignature `
-	-customerId $customerId `
-	-sharedKey $sharedKey `
-	-date $rfc1123date `
-	-contentLength $contentLength `
-	-fileName $fileName `
-	-method $method `
-	-contentType $contentType `
-	-resource $resource
-	$uri = "https://" + $customerId + ".ods.int2.microsoftatlanta-int.com" + $resource + "?api-version=2016-04-01"
-	$OMSheaders = @{
-		"Authorization" = $signature;
-		"Log-Type" = $logType;
-		"x-ms-date" = $rfc1123date;
-		"time-generated-field" = $TimeStampField;
-	}
-#write-output "OMS parameters"
-#$OMSheaders
-	Try{
-		$response = Invoke-WebRequest -Uri $uri -Method POST  -ContentType $contentType -Headers $OMSheaders -Body $body -UseBasicParsing
-	}
-	Catch
-	{
-		$_.MEssage
-	}
-	return $response.StatusCode
-	#write-output $response.StatusCode
-	Write-error $error[0]
-}
 
 
 
 #endregion
-
-
-
-
 
 #"$(GEt-date)  Get ARM storage Accounts "
 
@@ -2159,7 +2125,55 @@ IF($invvmSS.count -eq 0)
 ### Send data to OMS
 
 
+$omsdata=@()
 
+$omsdata+=ConvertTo-Json -InputObject $invVMs
+$omsdata+=ConvertTo-Json -InputObject $invTags
+$omsdata+=ConvertTo-Json -InputObject $invVHDs
+$omsdata+=ConvertTo-Json -InputObject $invServiceQuota
+$omsdata+=ConvertTo-Json -InputObject $invNics
+$omsdata+=ConvertTo-Json -InputObject $invNSGs
+$omsdata+=ConvertTo-Json -InputObject $invEndpoints
+$omsdata+=ConvertTo-Json -InputObject $invExtensions
+$omsdata+=ConvertTo-Json -InputObject $invvmSS
+
+
+
+ Write-output "$(get-date) - Uploading all data to OMS , Final memory  $([System.gc]::gettotalmemory('forcefullcollection') /1MB) "
+
+ $omsdata|foreach{
+ 
+ $postres1=Post-OMSData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($_)) -logType $logname
+ 
+    IF($debug)
+    {
+    $hash['PostDataResults']+= New-Object PSObject -Property @{
+                            Timestamp = $colltime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
+                            Metric = (ConvertFrom-Json $_)[0].metricname
+                            Result=$postres1
+                            AzureSubscription = $subscriptionname
+                            }
+       }
+ 
+    	If ($postres1 -ge 200 -and $postres1 -lt 300)
+	{
+		Write-Output " Succesfully uploaded $($invVMs.count) vm inventory   to OMS"
+	}
+	Else
+	{
+		Write-Warning " Failed to upload  $($invVMs.count) vm inventory   to OMS"
+	}
+
+
+ }
+
+
+
+
+
+
+
+<#
 
 $jsonvmpool = ConvertTo-Json -InputObject $invVMs
 $jsonvmtags = ConvertTo-Json -InputObject $invTags
@@ -2177,6 +2191,15 @@ $jsoninvvmSS = ConvertTo-Json -InputObject $invvmSS
 
 
 If($jsonvmpool){$postres1=Post-OMSData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonvmpool)) -logType $logname}
+
+
+$hash['PostDataResults']= New-Object PSObject -Property @{
+                            Timestamp = $colltime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
+                            Metric = 'VMInventory';
+                            Result=$postres1
+                            AzureSubscription = $subscriptionname
+                            }
+
 
 
 	If ($postres1 -ge 200 -and $postres1 -lt 300)
@@ -2280,6 +2303,9 @@ If($jsoninvvmSS){$postres9=Post-OMSData -customerId $customerId -sharedKey $shar
 	{
 		Write-Warning " Failed to upload  $($jsoninvvmSS.count) vm inventory   to OMS"
 	}
+
+#>
+
 
 
 }
@@ -2391,8 +2417,11 @@ IF($warningarray.count -gt 0)
 	Write-Output -InputObject $warningarray
 }
 
+IF($debug)
+{
+Write-Output $hash['PostDataResults']
 
-
+}
 
 
 
