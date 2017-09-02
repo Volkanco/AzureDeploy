@@ -392,7 +392,7 @@ $hash['TotalVHDCount']=0
 $hash['TotalNSGCount']=0
 $hash['TotalEndPointCount']=0
 $hash['TotalExtensionCount']=0
-
+$hash['TotalVMScaleSetCount']=0
 
 
 $SAInfo=@()
@@ -1766,6 +1766,256 @@ $invServiceQuota+=$cu
 
 
 
+
+
+#add scale sets 
+
+$vmSSList=@()
+$invvmSS=@()
+$vmSS=@()
+
+$vmScaleSetPrv=$providers|where {$_.resourcetype -eq 'virtualMachineScaleSets'}
+
+Foreach ($prvitem in $vmScaleSetPrv)
+{
+
+$uri="https://management.azure.com"+$prvitem.id+"/$($prvitem.Resourcetype)?api-version=$($prvitem.apiversion)"
+
+$resultarm = Invoke-WebRequest -Method GET -Uri $uri -Headers $headers -UseBasicParsing
+$content=$resultarm.Content
+$content= ConvertFrom-Json -InputObject $resultarm.Content
+$vmSSList+=$content.value
+
+
+    IF(![string]::IsNullOrEmpty($content.nextLink))
+    {
+        do 
+        {
+            $uri2=$content.nextLink
+            $content=$null
+             $resultarm = Invoke-WebRequest -Method GET -Uri $uri2 -Headers $headers -UseBasicParsing
+	            $content=$resultarm.Content
+	            $content= ConvertFrom-Json -InputObject $resultarm.Content
+	           $vmSSList+=$content.value
+
+        $uri2=$null
+        }While (![string]::IsNullOrEmpty($content.nextLink))
+    }
+
+
+
+
+}
+
+Foreach ($ss in $vmsslist)
+{
+
+
+        $cuss = New-Object PSObject -Property @{
+                            Timestamp = $colltime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
+                            MetricName = 'ScaleSetInventory';
+                            ResourceGroup=$ss.id.split('/')[4]
+                            Location=$ss.location
+                            Name=$ss.Name
+                            Sku=$ss.sku.name
+                            Tier=$ss.sku.tier
+                            Capacity=$ss.sku.capacity
+                            upgradePolicy=$ss.properties.upgradePolicy.mode
+                            overprovision=$ss.properties.overprovision
+                            uniqueId=$ss.properties.uniqueId
+                            computerNamePrefix=$ss.properties.virtualMachineProfile.osProfile.computerNamePrefix
+                            imageReference=$ss.properties.virtualMachineProfile.storageProfile.imageReference.offer+ "/"+$ss.properties.virtualMachineProfile.storageProfile.imageReference.sku
+                            diskname=$ss.properties.virtualMachineProfile.storageProfile.osDisk.name
+                            networkInterfaceConfigurations=$ss.properties.virtualMachineProfile.networkProfile.networkInterfaceConfigurations[0].name
+                            VNet=$ss.properties.virtualMachineProfile.networkProfile.networkInterfaceConfigurations[0].properties.ipConfigurations.properties.subnet.id.split('/')[8]
+                            subnetid=$ss.properties.virtualMachineProfile.networkProfile.networkInterfaceConfigurations[0].properties.ipConfigurations.properties.subnet.id
+                            ID=$ss.id
+                            DeploymentType='ARM'                                       
+                           	SubscriptionId = $subscriptionID
+                            AzureSubscription = $subscriptionname
+		                    ShowinDesigner=1
+      
+                            }
+
+                         
+
+
+ 
+#GET VMs
+
+$uri="https://management.azure.com"+$ss.id+"/virtualMachines?api-version=$($prvitem.apiversion)"
+$resultarm = Invoke-WebRequest -Method GET -Uri $uri -Headers $headers -UseBasicParsing
+$content=$resultarm.Content
+$content= ConvertFrom-Json -InputObject $resultarm.Content
+$vmSS+=$content.value
+
+
+    IF(![string]::IsNullOrEmpty($content.nextLink))
+    {
+        do 
+        {
+            $uri2=$content.nextLink
+            $content=$null
+             $resultarm = Invoke-WebRequest -Method GET -Uri $uri2 -Headers $headers -UseBasicParsing
+	            $content=$resultarm.Content
+	            $content= ConvertFrom-Json -InputObject $resultarm.Content
+	            $vmss+=$content.value
+
+        $uri2=$null
+        }While (![string]::IsNullOrEmpty($content.nextLink))
+    }
+
+
+$cuss|Add-Member -MemberType NoteProperty -Name RunningVMs -Value $vmSS.count
+
+#subnets
+
+$prvforresource=$providers|where {$_.namespace -match $cuss.subnetid.split('/')[6] -and $_.resourcetype -match $cuss.subnetid.split('/')[7]}
+
+
+$uri="https://management.azure.com"+$cuss.subnetid+"?api-version=$($prvforresource.Apiversion)"
+$resultarm = Invoke-WebRequest -Method GET -Uri $uri -Headers $headers -UseBasicParsing 
+$content=$resultarm.Content
+$content= ConvertFrom-Json -InputObject $resultarm.Content
+
+
+$cuss|Add-Member -MemberType NoteProperty -Name SubnetAddressSpace -Value $content.properties.addressPrefix -force
+
+
+#get load balancer 
+
+$lb=$ss.properties.virtualMachineProfile.networkProfile.networkInterfaceConfigurations.properties.ipConfigurations.properties.loadBalancerBackendAddressPools.id
+
+$cuss|Add-Member -MemberType NoteProperty -Name LoadBalancer -Value $lb.split('/')[8] -force
+
+#/subscriptions/2de20a16-20c6-41af-82cd-bceb39195d1c/resourceGroups/VMScaleRG/providers/Microsoft.Network/loadBalancers/scaledemo1Lb
+
+$lbprv=$providers|where {$_.resourcetype -match 'loadbalancers'}
+
+
+$uri="https://management.azure.com/"+$subscriptionId+"/resourceGroups/"+$cuss.ResourceGroup+"/providers/Microsoft.Network/loadBalancers/"+$cuss.loadbalancer+"?api-version=$($lbprv.Apiversion)"
+$resultarm = Invoke-WebRequest -Method GET -Uri $uri -Headers $headers -UseBasicParsing 
+$content=$resultarm.Content
+$content= ConvertFrom-Json -InputObject $resultarm.Content
+
+$pipid=$content.properties.frontendIPConfigurations.properties.publicIPAddress.id
+
+
+$uri="https://management.azure.com/"+$pipid+"?api-version=$($lbprv.Apiversion)"
+$resultarm = Invoke-WebRequest -Method GET -Uri $uri -Headers $headers -UseBasicParsing 
+$pipcontent= ConvertFrom-Json -InputObject $resultarm.Content
+
+
+$publicIP=$pipcontent.properties.ipAddress
+$ipallocation=$pipcontent.properties.publicIPAllocationMethod
+$fqdn=$pipcontent.properties.dnsSettings.fqdn
+
+
+$cuss|Add-Member -MemberType NoteProperty -Name publicIP -Value $publicip -force
+$cuss|Add-Member -MemberType NoteProperty -Name IPAllocationType -Value $ipallocation -force
+$cuss|Add-Member -MemberType NoteProperty -Name fqdn -Value $fqdn -force
+
+
+#get NEtworkinterfaces
+
+
+$prvforresource=$uri=$resultarm=$content=$null
+
+$pipprv=$providers|where {$_.resourcetype -match 'virtualMachineScaleSets/publicIPAddresses'}
+
+$uri="https://management.azure.com"+$ss.id+"/publicIPAddresses?api-version=$($pipprv.Apiversion)"
+$resultarm = Invoke-WebRequest -Method GET -Uri $uri -Headers $headers -UseBasicParsing
+$content=$resultarm.Content
+$content= ConvertFrom-Json -InputObject $resultarm.Content
+
+
+
+    IF(![string]::IsNullOrEmpty($content.nextLink))
+    {
+        do 
+        {
+            $uri2=$content.nextLink
+            $content=$null
+             $resultarm = Invoke-WebRequest -Method GET -Uri $uri2 -Headers $headers -UseBasicParsing
+	            $content=$resultarm.Content
+	            $content= ConvertFrom-Json -InputObject $resultarm.Content
+	            $vmss+=$content.value
+
+        $uri2=$null
+        }While (![string]::IsNullOrEmpty($content.nextLink))
+    }
+
+
+
+
+$prvforresource=$uri=$resultarm=$content=$null
+
+$nwprv=$providers|where {$_.resourcetype -match 'virtualMachineScaleSets/networkInterfaces'}
+
+$uri="https://management.azure.com"+$ss.id+"/networkInterfaces?api-version=$($nwprv.Apiversion)"
+$resultarm = Invoke-WebRequest -Method GET -Uri $uri -Headers $headers -UseBasicParsing
+$content=$resultarm.Content
+$content= ConvertFrom-Json -InputObject $resultarm.Content
+
+
+
+    IF(![string]::IsNullOrEmpty($content.nextLink))
+    {
+        do 
+        {
+            $uri2=$content.nextLink
+            $content=$null
+             $resultarm = Invoke-WebRequest -Method GET -Uri $uri2 -Headers $headers -UseBasicParsing
+	            $content=$resultarm.Content
+	            $content= ConvertFrom-Json -InputObject $resultarm.Content
+	            $vmss+=$content.value
+
+        $uri2=$null
+        }While (![string]::IsNullOrEmpty($content.nextLink))
+    }
+
+
+
+
+
+    
+
+$prvforresource=$uri=$resultarm=$content=$null
+
+$pipprv=$providers|where {$_.resourcetype -match 'virtualMachineScaleSets/publicIPAddresses'}
+
+$uri="https://management.azure.com"+$ss.id+"/publicIPAddresses?api-version=$($pipprv.Apiversion)"
+$resultarm = Invoke-WebRequest -Method GET -Uri $uri -Headers $headers -UseBasicParsing
+$content=$resultarm.Content
+$content= ConvertFrom-Json -InputObject $resultarm.Content
+
+
+
+    IF(![string]::IsNullOrEmpty($content.nextLink))
+    {
+        do 
+        {
+            $uri2=$content.nextLink
+            $content=$null
+             $resultarm = Invoke-WebRequest -Method GET -Uri $uri2 -Headers $headers -UseBasicParsing
+	            $content=$resultarm.Content
+	            $content= ConvertFrom-Json -InputObject $resultarm.Content
+	            $vmss+=$content.value
+
+        $uri2=$null
+        }While (![string]::IsNullOrEmpty($content.nextLink))
+    }
+
+
+
+
+      $invvmSS+=$cuSS 
+}
+
+
+
+
+
 #populate  No resource found messages  for empty collections so OMS views does not generate erro msg 
 
  $hash['TotalVMCount']+=$invVMs.count
@@ -1773,6 +2023,7 @@ $invServiceQuota+=$cu
      $hash['TotalNSGCount']+=$invNSGs.count
       $hash['TotalEndPointCount']+=$invEndpoints.count
        $hash['TotalExtensionCount']+=$invExtensions.count
+       $hash['TotalVMScaleSetCount']+=$invvmSS.count
 
 
 if($invVMs.count -eq 0)
@@ -1884,247 +2135,23 @@ if($invExtensions.count -eq 0)
 
 
 
-<#
-#add sclae sets 
-
-$vmSSList=@()
-$invvmSS=@()
-$vmSS=@(
-
-$vmScaleSetPrv=$providers|where {$_.resourcetype -eq 'virtualMachineScaleSets'}
-
-Foreach ($prvitem in $vmScaleSetPrv)
+IF($invvmSS.count -eq 0)
 {
 
-$uri="https://management.azure.com"+$prvitem.id+"/$($prvitem.Resourcetype)?api-version=$($prvitem.apiversion)"
-
-$resultarm = Invoke-WebRequest -Method GET -Uri $uri -Headers $headers -UseBasicParsing
-$content=$resultarm.Content
-$content= ConvertFrom-Json -InputObject $resultarm.Content
-$vmSSList+=$content.value
-
-
-    IF(![string]::IsNullOrEmpty($content.nextLink))
-    {
-        do 
-        {
-            $uri2=$content.nextLink
-            $content=$null
-             $resultarm = Invoke-WebRequest -Method GET -Uri $uri2 -Headers $headers -UseBasicParsing
-	            $content=$resultarm.Content
-	            $content= ConvertFrom-Json -InputObject $resultarm.Content
-	           $vmSSList+=$content.value
-
-        $uri2=$null
-        }While (![string]::IsNullOrEmpty($content.nextLink))
-    }
-
-
-
-
-}
-
-Foreach ($ss in $vmsslist)
-{
-
-
-        $cuss = New-Object PSObject -Property @{
+     $invvmSS+= New-Object PSObject -Property @{
                             Timestamp = $colltime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
-                            MetricName = 'VMInventory';
-                            ResourceGroup=$ss.id.split('/')[4]
-                            Location=$ss.location
-                            Name=$ss.Name
-                            Sku=$ss.sku.name
-                            Tier=$ss.sku.tier
-                            Capacity=$ss.sku.capacity
-                            upgradePolicy=$ss.properties.upgradePolicy.mode
-                            overprovision=$ss.properties.overprovision
-                            uniqueId=$ss.properties.uniqueId
-                            computerNamePrefix=$ss.properties.virtualMachineProfile.osProfile.computerNamePrefix
-                            imageReference=$ss.properties.virtualMachineProfile.storageProfile.imageReference.offer+ "/"+$ss.properties.virtualMachineProfile.storageProfile.imageReference.sku
-                            diskname=$ss.properties.virtualMachineProfile.storageProfile.osDisk.name
-                            networkInterfaceConfigurations=$ss.properties.virtualMachineProfile.networkProfile.networkInterfaceConfigurations[0].name
-                            VNet=$ss.properties.virtualMachineProfile.networkProfile.networkInterfaceConfigurations[0].properties.ipConfigurations.properties.subnet.id.split('/')[8]
-                            subnetid=$ss.properties.virtualMachineProfile.networkProfile.networkInterfaceConfigurations[0].properties.ipConfigurations.properties.subnet.id
-                            ID=$ss.id
-                            DeploymentType='ARM'                                       
-                           	SubscriptionId = $subscriptionID
-                            AzureSubscription = $subscriptionname
-		                    ShowinDesigner=1
+                            MetricName = 'ScaleSetInventory';
+                             Name="NO RESOURCE FOUND"
+                                         SubscriptionId = $subscriptionID
+                             AzureSubscription = $subscriptionname
+                             ShowinDesigner=0
       
                             }
 
-                         
 
-
- 
-#GET VMs
-
-$uri="https://management.azure.com"+$ss.id+"/virtualMachines?api-version=$($prvitem.apiversion)"
-$resultarm = Invoke-WebRequest -Method GET -Uri $uri -Headers $headers -UseBasicParsing
-$content=$resultarm.Content
-$content= ConvertFrom-Json -InputObject $resultarm.Content
-$vmSS+=$content.value
-
-
-    IF(![string]::IsNullOrEmpty($content.nextLink))
-    {
-        do 
-        {
-            $uri2=$content.nextLink
-            $content=$null
-             $resultarm = Invoke-WebRequest -Method GET -Uri $uri2 -Headers $headers -UseBasicParsing
-	            $content=$resultarm.Content
-	            $content= ConvertFrom-Json -InputObject $resultarm.Content
-	            $vmss+=$content.value
-
-        $uri2=$null
-        }While (![string]::IsNullOrEmpty($content.nextLink))
-    }
-
-
-$cuss|Add-Member -MemberType NoteProperty -Name RunningVMs -Value $vmSS.count
-
-#subnets
-
-$prvforresource=$providers|where {$_.namespace -match $cuss.subnetid.split('/')[6] -and $_.resourcetype -match $cuss.subnetid.split('/')[7]}
-
-
-$uri="https://management.azure.com"+$cuss.subnetid+"?api-version=$($prvforresource.Apiversion)"
-$resultarm = Invoke-WebRequest -Method GET -Uri $uri -Headers $headers -UseBasicParsing 
-$content=$resultarm.Content
-$content= ConvertFrom-Json -InputObject $resultarm.Content
-
-
-$cuss|Add-Member -MemberType NoteProperty -Name SubnetAddressSpace -Value $content.properties.addressPrefix -force
-
-
-#get load balancer 
-
-$lb=$ss.properties.virtualMachineProfile.networkProfile.networkInterfaceConfigurations.properties.ipConfigurations.properties.loadBalancerBackendAddressPools.id
-
-$cuss|Add-Member -MemberType NoteProperty -Name LoadBalancer -Value $lb.split('/')[8] -force
-
-#/subscriptions/2de20a16-20c6-41af-82cd-bceb39195d1c/resourceGroups/VMScaleRG/providers/Microsoft.Network/loadBalancers/scaledemo1Lb
-
-
-
-
-
-
-
-#get NEtworkinterfaces
-
-
-$prvforresource=$uri=$resultarm=$content=$null
-
-$pipprv=$providers|where {$_.resourcetype -match 'virtualMachineScaleSets/publicIPAddresses'}
-
-$uri="https://management.azure.com"+$ss.id+"/publicIPAddresses?api-version=$($pipprv.Apiversion)"
-$resultarm = Invoke-WebRequest -Method GET -Uri $uri -Headers $headers -UseBasicParsing
-$content=$resultarm.Content
-$content= ConvertFrom-Json -InputObject $resultarm.Content
-
-
-
-    IF(![string]::IsNullOrEmpty($content.nextLink))
-    {
-        do 
-        {
-            $uri2=$content.nextLink
-            $content=$null
-             $resultarm = Invoke-WebRequest -Method GET -Uri $uri2 -Headers $headers -UseBasicParsing
-	            $content=$resultarm.Content
-	            $content= ConvertFrom-Json -InputObject $resultarm.Content
-	            $vmss+=$content.value
-
-        $uri2=$null
-        }While (![string]::IsNullOrEmpty($content.nextLink))
-    }
-
-
-
-
-$prvforresource=$uri=$resultarm=$content=$null
-
-$nwprv=$providers|where {$_.resourcetype -match 'virtualMachineScaleSets/networkInterfaces'}
-
-$uri="https://management.azure.com"+$ss.id+"/networkInterfaces?api-version=$($nwprv.Apiversion)"
-$resultarm = Invoke-WebRequest -Method GET -Uri $uri -Headers $headers -UseBasicParsing
-$content=$resultarm.Content
-$content= ConvertFrom-Json -InputObject $resultarm.Content
-
-
-
-    IF(![string]::IsNullOrEmpty($content.nextLink))
-    {
-        do 
-        {
-            $uri2=$content.nextLink
-            $content=$null
-             $resultarm = Invoke-WebRequest -Method GET -Uri $uri2 -Headers $headers -UseBasicParsing
-	            $content=$resultarm.Content
-	            $content= ConvertFrom-Json -InputObject $resultarm.Content
-	            $vmss+=$content.value
-
-        $uri2=$null
-        }While (![string]::IsNullOrEmpty($content.nextLink))
-    }
-
-
-
-
-
-
-
-#GET Publicip 
-
-
-
-# /subscriptions/2de20a16-20c6-41af-82cd-bceb39195d1c/resourceGroups/VMScaleRG/providers/Microsoft.Network/publicIPAddresses/Scaleseppip
-
-
-
-
-$prvforresource=$uri=$resultarm=$content=$null
-
-$pipprv=$providers|where {$_.resourcetype -match 'virtualMachineScaleSets/publicIPAddresses'}
-
-$uri="https://management.azure.com"+$ss.id+"/publicIPAddresses?api-version=$($pipprv.Apiversion)"
-$resultarm = Invoke-WebRequest -Method GET -Uri $uri -Headers $headers -UseBasicParsing
-$content=$resultarm.Content
-$content= ConvertFrom-Json -InputObject $resultarm.Content
-
-
-
-    IF(![string]::IsNullOrEmpty($content.nextLink))
-    {
-        do 
-        {
-            $uri2=$content.nextLink
-            $content=$null
-             $resultarm = Invoke-WebRequest -Method GET -Uri $uri2 -Headers $headers -UseBasicParsing
-	            $content=$resultarm.Content
-	            $content= ConvertFrom-Json -InputObject $resultarm.Content
-	            $vmss+=$content.value
-
-        $uri2=$null
-        }While (![string]::IsNullOrEmpty($content.nextLink))
-    }
-
-
-
-
-      $invvmSS+=$cuSS 
 }
 
 
-
-
-
-
-
-#>
 
 
 
@@ -2134,14 +2161,16 @@ $content= ConvertFrom-Json -InputObject $resultarm.Content
 
 
 
- $jsonvmpool = ConvertTo-Json -InputObject $invVMs
-  $jsonvmtags = ConvertTo-Json -InputObject $invTags
-  $jsonVHDData= ConvertTo-Json -InputObject $invVHDs
-    $jsonallvmusage = ConvertTo-Json -InputObject $invServiceQuota
-  $jsoninvnic = ConvertTo-Json -InputObject $invNics
+$jsonvmpool = ConvertTo-Json -InputObject $invVMs
+$jsonvmtags = ConvertTo-Json -InputObject $invTags
+$jsonVHDData= ConvertTo-Json -InputObject $invVHDs
+$jsonallvmusage = ConvertTo-Json -InputObject $invServiceQuota
+$jsoninvnic = ConvertTo-Json -InputObject $invNics
 $jsoninvnsg = ConvertTo-Json -InputObject $invNSGs
 $jsoninvendpoint = ConvertTo-Json -InputObject $invEndpoints
 $jsoninveextensions = ConvertTo-Json -InputObject $invExtensions
+$jsoninvvmSS = ConvertTo-Json -InputObject $invvmSS
+
 
 
  Write-output "$(get-date) - Uploading all data to OMS , Final memory  $([System.gc]::gettotalmemory('forcefullcollection') /1MB) "
@@ -2238,15 +2267,26 @@ If($jsoninveextensions){$postres8=Post-OMSData -customerId $customerId -sharedKe
 	{
 		Write-Warning " Failed to upload  $($invEndpoints.count) extensions  to OMS"
 	}
-#endregion
 
 
+If($jsoninvvmSS){$postres9=Post-OMSData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonvmpool)) -logType $logname}
 
 
-
+	If ($postres9 -ge 200 -and $postres9 -lt 300)
+	{
+		#Write-Output " Succesfully uploaded $($invVMs.count) vm inventory   to OMS"
+	}
+	Else
+	{
+		Write-Warning " Failed to upload  $($jsoninvvmSS.count) vm inventory   to OMS"
+	}
 
 
 }
+
+
+#endregion
+
 
 
 Write-Output "After Runspace creation  $([System.gc]::gettotalmemory('forcefullcollection') /1MB) MB"
@@ -2334,12 +2374,11 @@ $s++
 
 } While ( @($jobs.result.iscompleted|where{$_  -match 'False'}).count -gt 0)
 
-$msg= "All jobs completed! {5} subscriptions scanned. VMCount = {4}, VHD Count= {3} , NSG={2} ,Endpoints ={1} , Extensions ={0}  " -f $hash['TotalExtensionCount'],$hash['TotalEndPointCount'],$hash['TotalNSGCount'],$hash['TotalVHDCount'],$hash['TotalVMCount'],$hash['SubscriptionCount']
+$msg= "All jobs completed! {6} subscriptions scanned. VMCount = {5}, VHD Count= {4} , NSG={3} ,Endpoints ={2} , Extensions ={1} , VMScaleSets ={0}  " -f $hash['TotalVMScaleSetCount'],$hash['TotalExtensionCount'],$hash['TotalEndPointCount'],$hash['TotalNSGCount'],$hash['TotalVHDCount'],$hash['TotalVMCount'],$hash['SubscriptionCount']
 Write-output $msg
 $rbend=get-date
 Write-Output "Runbook total run time  $([math]::Round(($rbend-$rbstart).TotalMinutes,0)) minutes "
 Write-Output "##############################################################################"
-Write-Output " $($warningarray.count)  warnings , $($errorarray.count) errors  found in jobs; "
 IF($errorarray.count -gt 0)
 {
 	Write-Output "########### ERRORS #############"
