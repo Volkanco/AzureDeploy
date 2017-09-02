@@ -1797,7 +1797,7 @@ Foreach ($ss in $vmsslist)
                             subnetid=$ss.properties.virtualMachineProfile.networkProfile.networkInterfaceConfigurations[0].properties.ipConfigurations.properties.subnet.id
                             ID=$ss.id
                             DeploymentType='ARM'                                       
-                           	SubscriptionId = $subscriptionID
+                           	SubscriptionId = $ss.id.split('/')[2]
                             AzureSubscription = $subscriptionname
 		                    ShowinDesigner=1
       

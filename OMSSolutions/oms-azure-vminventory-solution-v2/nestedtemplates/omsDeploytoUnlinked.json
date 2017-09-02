@@ -1161,7 +1161,145 @@
                     "NavigationQuery": "{selected item}"
                   }
                 }
-              }
+              },
+                            {
+                                "Id": "SingleQueryDonutBuilderBladeV1",
+                                "Type": "Blade",
+                                "Version": 0,
+                                "Configuration": {
+                                    "General": {
+                                        "title": "Scale Set Inventory",
+                                        "newGroup": false,
+                                        "icon": "",
+                                        "useIcon": false
+                                    },
+                                    "Header": {
+                                        "Title": "Scale Sets Per Subscription",
+                                        "Subtitle": ""
+                                    },
+                                    "Donut": {
+                                        "Query": "Type=AzureVMInventory_CL MetricName_s=ScaleSetInventory ShowinDesigner_d=1 |measure countdistinct(ID_s) by AzureSubscription_s",
+                                        "CenterLegend": {
+                                            "Text": "Total",
+                                            "Operation": "Sum",
+                                            "ArcsToSelect": []
+                                        },
+                                        "Options": {
+                                            "colors": [
+                                                "#0072c6",
+                                                "#009e49",
+                                                "#fcd116"
+                                            ],
+                                            "valueColorMapping": []
+                                        }
+                                    },
+                                    "List": {
+                                        "Query": "Type=AzureVMInventory_CL MetricName_s=ScaleSetInventory ShowinDesigner_d=1 |measure countdistinct(ID_s) by AzureSubscription_s",
+                                        "HideGraph": false,
+                                        "enableSparklines": false,
+                                        "operation": "Summary",
+                                        "ColumnsTitle": {
+                                            "Name": "Subscription",
+                                            "Value": "ScaleSetCount"
+                                        },
+                                        "Color": "#0072c6",
+                                        "thresholds": {
+                                            "isEnabled": false,
+                                            "values": [
+                                                {
+                                                    "name": "Normal",
+                                                    "threshold": "Default",
+                                                    "color": "#009e49",
+                                                    "isDefault": true
+                                                },
+                                                {
+                                                    "name": "Warning",
+                                                    "threshold": "60",
+                                                    "color": "#fcd116",
+                                                    "isDefault": false
+                                                },
+                                                {
+                                                    "name": "Error",
+                                                    "threshold": "90",
+                                                    "color": "#ba141a",
+                                                    "isDefault": false
+                                                }
+                                            ]
+                                        },
+                                        "NameDSVSeparator": "",
+                                        "NavigationQuery": "{selected item}"
+                                    }
+                                }
+                            },
+                            {
+                                "Id": "SingleQueryDonutBuilderBladeV1",
+                                "Type": "Blade",
+                                "Version": 0,
+                                "Configuration": {
+                                    "General": {
+                                        "title": "Total VMs in Scale Set",
+                                        "newGroup": false,
+                                        "icon": "",
+                                        "useIcon": false
+                                    },
+                                    "Header": {
+                                        "Title": "Running VMs",
+                                        "Subtitle": ""
+                                    },
+                                    "Donut": {
+                                        "Query": "[concat('Type=AzureVMInventory_CL MetricName_s=ScaleSetInventory ShowinDesigner_d=1 TimeGenerated>NOW-', parameters('omsDataIngestionFrequency'),'Minutes |measure avg(RunningVMs_d) as RunningVMs by AzureSubscription_s)]",
+                                        "CenterLegend": {
+                                            "Text": "Total",
+                                            "Operation": "Sum",
+                                            "ArcsToSelect": []
+                                        },
+                                        "Options": {
+                                            "colors": [
+                                                "#0072c6",
+                                                "#009e49",
+                                                "#ffb900"
+                                            ],
+                                            "valueColorMapping": []
+                                        }
+                                    },
+                                    "List": {
+                                        "Query": "[concat('Type=AzureVMInventory_CL MetricName_s=ScaleSetInventory ShowinDesigner_d=1 TimeGenerated>NOW-', parameters('omsDataIngestionFrequency'),'Minutes |measure avg(RunningVMs_d) as RunningVMs by Name_s)]",
+                                       "HideGraph": false,
+                                        "enableSparklines": false,
+                                        "operation": "Summary",
+                                        "ColumnsTitle": {
+                                            "Name": "Scale Set",
+                                            "Value": "VMCount"
+                                        },
+                                        "Color": "#0072c6",
+                                        "thresholds": {
+                                            "isEnabled": false,
+                                            "values": [
+                                                {
+                                                    "name": "Normal",
+                                                    "threshold": "Default",
+                                                    "color": "#009e49",
+                                                    "isDefault": true
+                                                },
+                                                {
+                                                    "name": "Warning",
+                                                    "threshold": "60",
+                                                    "color": "#fcd116",
+                                                    "isDefault": false
+                                                },
+                                                {
+                                                    "name": "Error",
+                                                    "threshold": "90",
+                                                    "color": "#ba141a",
+                                                    "isDefault": false
+                                                }
+                                            ]
+                                        },
+                                        "NameDSVSeparator": "",
+                                        "NavigationQuery": "{selected item}"
+                                    }
+                                }
+                            }
             ],
             "OverviewTile": {
               "Id": "LineChartCalloutBuilderTile",
