@@ -3,8 +3,8 @@ param(
     [Parameter(Mandatory=$false)] [int] $apireadlimit=7500,
     [Parameter(Mandatory=$false)] [bool] $getarmvmstatus=$true,
     [Parameter(Mandatory=$false)] [bool] $getNICandNSG=$true,
-    [Parameter(Mandatory=$false)] [bool] $getDiskInfo=$true
-    
+    [Parameter(Mandatory=$false)] [bool] $getDiskInfo=$true,
+    [Parameter(Mandatory=$false)] [bool] $debug=$false
     )
 
 #region Variables definition
@@ -380,7 +380,7 @@ $hash['apiverVM']=$apiverVM
 $hash['AAAccount']=$AAAccount
 $hash['AAResourceGroup']=$AAResourceGroup
 
-$hash['debuglog']=$true
+$hash['debug']=$debug
 
 $hash['apireadlimit']=$apireadlimit
 $hash['getarmvmstatus']=$getarmvmstatus
@@ -445,7 +445,7 @@ $getNICandNSG=$hash.'getNICandNSG'
 $getDiskInfo=$hash.'getDiskInfo'
 $VMstates=$hash.VMstates
 $vmiolimits=$hash.vmiolimits
-
+$debug=$hash.debug
 
 
 #endregion
