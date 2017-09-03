@@ -1260,7 +1260,7 @@
                                         "Subtitle": ""
                                     },
                                     "Donut": {
-                                        "Query": "[concat('Type=AzureVMInventory_CL MetricName_s=ScaleSetInventory ShowinDesigner_d=1 TimeGenerated>NOW-', parameters('omsDataIngestionFrequency'),'Minutes |measure avg(RunningVMs_d) as RunningVMs by AzureSubscription_s')]",
+                                        "Query": "[concat('Type=AzureVMInventory_CL MetricName_s=ScaleSetInventory ShowinDesigner_d=1 TimeGenerated>NOW-', parameters('omsDataIngestionFrequency'),'Minutes |measure sum(RunningVMs_d) as RunningVMs by AzureSubscription_s,SubscriptionId')]",
                                         "CenterLegend": {
                                             "Text": "Total",
                                             "Operation": "Sum",
@@ -1276,7 +1276,76 @@
                                         }
                                     },
                                     "List": {
-                                        "Query": "[concat('Type=AzureVMInventory_CL MetricName_s=ScaleSetInventory ShowinDesigner_d=1 TimeGenerated>NOW-', parameters('omsDataIngestionFrequency'),'Minutes |measure avg(RunningVMs_d) as RunningVMs by Name_s')]",
+                                        "Query": "[concat('Type=AzureVMInventory_CL MetricName_s=ScaleSetInventory ShowinDesigner_d=1 TimeGenerated>NOW-', parameters('omsDataIngestionFrequency'),'Minutes |measure sum(RunningVMs_d) as RunningVMs by Name_s')]",
+                                       "HideGraph": false,
+                                        "enableSparklines": false,
+                                        "operation": "Summary",
+                                        "ColumnsTitle": {
+                                            "Name": "Scale Set",
+                                            "Value": "VMCount"
+                                        },
+                                        "Color": "#0072c6",
+                                        "thresholds": {
+                                            "isEnabled": false,
+                                            "values": [
+                                                {
+                                                    "name": "Normal",
+                                                    "threshold": "Default",
+                                                    "color": "#009e49",
+                                                    "isDefault": true
+                                                },
+                                                {
+                                                    "name": "Warning",
+                                                    "threshold": "60",
+                                                    "color": "#fcd116",
+                                                    "isDefault": false
+                                                },
+                                                {
+                                                    "name": "Error",
+                                                    "threshold": "90",
+                                                    "color": "#ba141a",
+                                                    "isDefault": false
+                                                }
+                                            ]
+                                        },
+                                        "NameDSVSeparator": "",
+                                        "NavigationQuery": "{selected item}"
+                                    }
+                                }
+                            },
+                            {
+                                "Id": "SingleQueryDonutBuilderBladeV1",
+                                "Type": "Blade",
+                                "Version": 0,
+                                "Configuration": {
+                                    "General": {
+                                        "title": "FQDN and PublicIP",
+                                        "newGroup": false,
+                                        "icon": "",
+                                        "useIcon": false
+                                    },
+                                    "Header": {
+                                        "Title": "Running VMs for FQDN",
+                                        "Subtitle": ""
+                                    },
+                                    "Donut": {
+                                        "Query": "[concat('Type=AzureVMInventory_CL MetricName_s=ScaleSetInventory ShowinDesigner_d=1 TimeGenerated>NOW-', parameters('omsDataIngestionFrequency'),'Minutes |measure sum(RunningVMs_d) as RunningVMs by fqdn_s')]",
+                                        "CenterLegend": {
+                                            "Text": "Total",
+                                            "Operation": "Sum",
+                                            "ArcsToSelect": []
+                                        },
+                                        "Options": {
+                                            "colors": [
+                                                "#0072c6",
+                                                "#009e49",
+                                                "#ffb900"
+                                            ],
+                                            "valueColorMapping": []
+                                        }
+                                    },
+                                    "List": {
+                                        "Query": "[concat('Type=AzureVMInventory_CL MetricName_s=ScaleSetInventory ShowinDesigner_d=1 TimeGenerated>NOW-', parameters('omsDataIngestionFrequency'),'Minutes |measure sum(RunningVMs_d) as RunningVMs by fqdn_s,publicIP_s')]",
                                        "HideGraph": false,
                                         "enableSparklines": false,
                                         "operation": "Summary",
