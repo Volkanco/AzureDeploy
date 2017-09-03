@@ -338,8 +338,7 @@ $hash['TotalExtensionCount']=0
 $hash['TotalVMScaleSetCount']=0
 $hash['PostDataResults']=@()
 
-$S
-AInfo=@()
+$SAInfo=@()
 $hash.'SAInfo'=$sainfo
 $Throttle = [int][System.Environment]::ProcessorCount+1  #threads
 $sessionstate = [system.management.automation.runspaces.initialsessionstate]::CreateDefault()
