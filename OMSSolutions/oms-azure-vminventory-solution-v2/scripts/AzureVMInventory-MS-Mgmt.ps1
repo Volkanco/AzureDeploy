@@ -445,7 +445,7 @@ $getNICandNSG=$hash.'getNICandNSG'
 $getDiskInfo=$hash.'getDiskInfo'
 $VMstates=$hash.VMstates
 $vmiolimits=$hash.vmiolimits
-$debug=$hash.debug
+$debugrs=$hash.debug
 
 
 #endregion
@@ -1803,13 +1803,10 @@ Foreach ($ss in $vmsslist)
       
                             }
 
-                         
 
-
- 
 #GET VMs
 
-$uri="https://management.azure.com"+$ss.id+"/virtualMachines?api-version=$($prvitem.apiversion)"
+$uri="https://management.azure.com"+$ss.id+"/virtualMachines?api-version=$($vmScaleSetPrv[0].apiversion)"
 $resultarm = Invoke-WebRequest -Method GET -Uri $uri -Headers $headers -UseBasicParsing
 $content=$resultarm.Content
 $content= ConvertFrom-Json -InputObject $resultarm.Content
@@ -1847,6 +1844,61 @@ $content= ConvertFrom-Json -InputObject $resultarm.Content
 
 $cuss|Add-Member -MemberType NoteProperty -Name SubnetAddressSpace -Value $content.properties.addressPrefix -force
 
+$nsgforss=$content.properties.networkSecurityGroup.id
+
+#get NSG 
+If(![string]::IsNullOrEmpty($nsgforss))
+{
+
+#https://management.azure.com/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Network/networkSecurityGroups/{networkSecurityGroupName}?api-version=2017-08-01
+
+
+$nsgprv=$providers|where {$_.resourcetype -match 'networkSecurityGroups' -and $_.namespace -eq  'Microsoft.Network'}
+
+$uri="https://management.azure.com"+$nsgforss+"?api-version=$($nsgprv[0].apiversion)"
+$resultarm = Invoke-WebRequest -Method GET -Uri $uri -Headers $headers -UseBasicParsing 
+$content=$resultarm.Content
+$content= ConvertFrom-Json -InputObject $resultarm.Content
+
+If(![string]::IsNullOrEmpty($content.properties.securityRules))
+{
+
+
+     foreach($rule in $content.properties.securityRules)
+                    {
+
+                      $invNSGs+= New-Object PSObject -Property @{
+                            Timestamp = $colltime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
+                            MetricName = 'VMNSGrule';
+                            ScaleSetName=$ss.name
+                            ID=$content.id
+                            NSGName=$content.name
+                            Subnet=$cuss.subnetid
+                            ResourceGroup=$cuss.ResourceGroup
+                            Location=$cuss.Location
+                            RuleName=$rule.name
+                            protocol=$rule.properties.protocol
+                            sourcePortRange=$rule.properties.sourcePortRange
+                            destinationPortRange=$rule.properties.destinationPortRange
+                            sourceAddressPrefix=$rule.properties.sourceAddressPrefix
+                            destinationAddressPrefix=$rule.properties.destinationAddressPrefix
+                            access=$rule.properties.access
+                            priority=$rule.properties.priority
+                            direction=$rule.properties.direction
+                             	SubscriptionId = $subscriptionID
+                             AzureSubscription = $subscriptionname
+							 ShowinDesigner=1
+      
+                            } 
+                    }
+
+}
+
+
+}
+
+$nsgforss=$content=$resultarm=$null
+
 
 #get load balancer 
 
@@ -1854,7 +1906,6 @@ $lb=$ss.properties.virtualMachineProfile.networkProfile.networkInterfaceConfigur
 
 $cuss|Add-Member -MemberType NoteProperty -Name LoadBalancer -Value $lb.split('/')[8] -force
 
-#/subscriptions/2de20a16-20c6-41af-82cd-bceb39195d1c/resourceGroups/VMScaleRG/providers/Microsoft.Network/loadBalancers/scaledemo1Lb
 
 $lbprv=$providers|where {$_.resourcetype -match 'loadbalancers'}
 
@@ -1882,95 +1933,38 @@ $cuss|Add-Member -MemberType NoteProperty -Name IPAllocationType -Value $ipalloc
 $cuss|Add-Member -MemberType NoteProperty -Name fqdn -Value $fqdn -force
 
 
-#get NEtworkinterfaces
 
 
-$prvforresource=$uri=$resultarm=$content=$null
 
-$pipprv=$providers|where {$_.resourcetype -match 'virtualMachineScaleSets/publicIPAddresses'}
+#get inbound nat rules 
 
-$uri="https://management.azure.com"+$ss.id+"/publicIPAddresses?api-version=$($pipprv.Apiversion)"
-$resultarm = Invoke-WebRequest -Method GET -Uri $uri -Headers $headers -UseBasicParsing
+
+
+<#
+
+https://management.azure.com/subscriptions/{subscriptionId}/resourceGroups/{resourceGroup}/providers/Microsoft.Compute
+/VirtualMachineScaleSets/{vmScaleSet}/publicip/publicipaddresses?api-version={api-version}
+
+$uri="https://management.azure.com"+$subscriptionId+"/resourceGroups/"+$cuss.ResourceGroup+"/providers/Microsoft.Compute/VirtualMachineScaleSets/"+$ss.name+"/publicip/publicipaddresses?api-version=$($vmScaleSetPrv[0].apiversion)"
+$resultarm = Invoke-WebRequest -Method GET -Uri $uri -Headers $headers -UseBasicParsing 
 $content=$resultarm.Content
 $content= ConvertFrom-Json -InputObject $resultarm.Content
 
 
+https://management.azure.com/subscriptions/{subscriptionId}/resourceGroups/{resourceGroup}/providers/Microsoft.Compute
+/VirtualMachineScaleSets/{vmScaleSet}/networkInterfaces?api-version={apiVersion}
 
-    IF(![string]::IsNullOrEmpty($content.nextLink))
-    {
-        do 
-        {
-            $uri2=$content.nextLink
-            $content=$null
-             $resultarm = Invoke-WebRequest -Method GET -Uri $uri2 -Headers $headers -UseBasicParsing
-	            $content=$resultarm.Content
-	            $content= ConvertFrom-Json -InputObject $resultarm.Content
-	            $vmss+=$content.value
+https://management.azure.com/subscriptions/{subscriptionId}/resourceGroups/{resourceGroup}/providers/Microsoft.Network
+/VirtualMachineScaleSets/{vmScaleSet}/networkSecurityGroups?api-version={apiVersion}
 
-        $uri2=$null
-        }While (![string]::IsNullOrEmpty($content.nextLink))
-    }
+
+https://management.azure.com/subscriptions/{subscriptionId}/resourceGroups/{resourceGroup}/providers/Microsoft.Compute
+/VirtualMachineScaleSets/{vmScaleSet}/virtualMachines?$expand=instanceView&$select=instanceView&api-version={apiVersion}
+#>
 
 
 
 
-$prvforresource=$uri=$resultarm=$content=$null
-
-$nwprv=$providers|where {$_.resourcetype -match 'virtualMachineScaleSets/networkInterfaces'}
-
-$uri="https://management.azure.com"+$ss.id+"/networkInterfaces?api-version=$($nwprv.Apiversion)"
-$resultarm = Invoke-WebRequest -Method GET -Uri $uri -Headers $headers -UseBasicParsing
-$content=$resultarm.Content
-$content= ConvertFrom-Json -InputObject $resultarm.Content
-
-
-
-    IF(![string]::IsNullOrEmpty($content.nextLink))
-    {
-        do 
-        {
-            $uri2=$content.nextLink
-            $content=$null
-             $resultarm = Invoke-WebRequest -Method GET -Uri $uri2 -Headers $headers -UseBasicParsing
-	            $content=$resultarm.Content
-	            $content= ConvertFrom-Json -InputObject $resultarm.Content
-	            $vmss+=$content.value
-
-        $uri2=$null
-        }While (![string]::IsNullOrEmpty($content.nextLink))
-    }
-
-
-
-
-
-    
-
-$prvforresource=$uri=$resultarm=$content=$null
-
-$pipprv=$providers|where {$_.resourcetype -match 'virtualMachineScaleSets/publicIPAddresses'}
-
-$uri="https://management.azure.com"+$ss.id+"/publicIPAddresses?api-version=$($pipprv.Apiversion)"
-$resultarm = Invoke-WebRequest -Method GET -Uri $uri -Headers $headers -UseBasicParsing
-$content=$resultarm.Content
-$content= ConvertFrom-Json -InputObject $resultarm.Content
-
-
-
-    IF(![string]::IsNullOrEmpty($content.nextLink))
-    {
-        do 
-        {
-            $uri2=$content.nextLink
-            $content=$null
-             $resultarm = Invoke-WebRequest -Method GET -Uri $uri2 -Headers $headers -UseBasicParsing
-	            $content=$resultarm.Content
-	            $content= ConvertFrom-Json -InputObject $resultarm.Content
-	            $vmss+=$content.value
-
-        $uri2=$null
-        }While (![string]::IsNullOrEmpty($content.nextLink))
-    }
 
 
 
@@ -2145,7 +2139,7 @@ $omsdata+=ConvertTo-Json -InputObject $invvmSS
  
  $postres1=Post-OMSData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($_)) -logType $logname
  
-    IF($debug)
+    IF($debugrs)
     {
     $hash['PostDataResults']+= New-Object PSObject -Property @{
                             Timestamp = $colltime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
