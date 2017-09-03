@@ -1178,7 +1178,7 @@
                                         "Subtitle": ""
                                     },
                                     "Donut": {
-                                        "Query": "Type=AzureVMInventory_CL MetricName_s=ScaleSetInventory ShowinDesigner_d=1 |measure countdistinct(ID_s) by AzureSubscription_s",
+                                        "Query": "Type=AzureVMInventory_CL MetricName_s=ScaleSetInventory ShowinDesigner_d=1 |measure countdistinct(ID_s) by SubscriptionId",
                                         "CenterLegend": {
                                             "Text": "Total",
                                             "Operation": "Sum",
@@ -1194,7 +1194,7 @@
                                         }
                                     },
                                     "List": {
-                                        "Query": "Type=AzureVMInventory_CL MetricName_s=ScaleSetInventory ShowinDesigner_d=1 |measure countdistinct(ID_s) by AzureSubscription_s",
+                                        "Query": "Type=AzureVMInventory_CL MetricName_s=ScaleSetInventory ShowinDesigner_d=1 |measure countdistinct(ID_s) by AzureSubscription_s,SubscriptionId",
                                         "HideGraph": false,
                                         "enableSparklines": false,
                                         "operation": "Summary",
@@ -1247,7 +1247,7 @@
                                         "Subtitle": ""
                                     },
                                     "Donut": {
-                                        "Query": "[concat('Type=AzureVMInventory_CL MetricName_s=ScaleSetInventory ShowinDesigner_d=1 TimeGenerated>NOW-', parameters('omsDataIngestionFrequency'),'Minutes |measure sum(RunningVMs_d) as RunningVMs by AzureSubscription_s,SubscriptionId')]",
+                                        "Query": "[concat('Type=AzureVMInventory_CL MetricName_s=ScaleSetInventory ShowinDesigner_d=1 TimeGenerated>NOW-', parameters('omsDataIngestionFrequency'),'Minutes |measure sum(RunningVMs_d) as RunningVMs by SubscriptionId')]",
                                         "CenterLegend": {
                                             "Text": "Total",
                                             "Operation": "Sum",
