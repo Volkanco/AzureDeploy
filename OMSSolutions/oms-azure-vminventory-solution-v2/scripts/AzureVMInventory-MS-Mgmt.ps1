@@ -2139,11 +2139,12 @@ $omsdata+=ConvertTo-Json -InputObject $invvmSS
  
  $postres1=Post-OMSData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($_)) -logType $logname
  
+    $metric=(ConvertFrom-Json $_)[0].metricname
     IF($debugrs)
     {
     $hash['PostDataResults']+= New-Object PSObject -Property @{
                             Timestamp = $colltime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
-                            Metric = (ConvertFrom-Json $_)[0].metricname
+                            Metric = $metric
                             Result=$postres1
                             AzureSubscription = $subscriptionname
                             }
@@ -2151,13 +2152,14 @@ $omsdata+=ConvertTo-Json -InputObject $invvmSS
  
     	If ($postres1 -ge 200 -and $postres1 -lt 300)
 	{
-		Write-Output " Succesfully uploaded $($invVMs.count) vm inventory   to OMS"
+		Write-Output " Succesfully uploaded $($_.count) $metric inventory   to OMS"
 	}
 	Else
 	{
-		Write-Warning " Failed to upload  $($invVMs.count) vm inventory   to OMS"
+		Write-Warning " Failed to upload  $($_.count) $metric  inventory   to OMS"
 	}
 
+    $metric=$null
 
  }
 
