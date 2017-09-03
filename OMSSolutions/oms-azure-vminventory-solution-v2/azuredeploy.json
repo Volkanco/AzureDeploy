@@ -162,6 +162,9 @@
                     },
                     "linkedWorkspaceSKU": {
                         "value": "[parameters('linkedWorkspaceSKU')]"
+                    },
+                    "omsDataIngestionFrequency": {
+                        "value": "[parameters('omsDataIngestionFrequency')]"
                     }
                 }
             }
@@ -196,6 +199,9 @@
                     },
                     "omsWorkspaceType": {
                         "value": "[parameters('omsWorkspaceType')]"
+                    },
+                    "omsDataIngestionFrequency": {
+                        "value": "[parameters('omsDataIngestionFrequency')]"
                     }
                 }
             }
