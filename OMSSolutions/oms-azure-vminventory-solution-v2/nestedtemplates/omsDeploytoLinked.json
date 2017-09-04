@@ -137,11 +137,11 @@
         "schedulerRunbookUri": "[concat(parameters('_artifactsLocation'),'/scripts/AzureVMInventory-Schedules-MS-Mgmt.ps1', parameters('_artifactsLocationSasToken'))]",
         "omsSolutions": {
             "customSolution": {
-                "name": "Azure VM Inventory v2",
-                "solutionName": "[concat('AzureVMInventoryv2', '[', parameters('omsLogAnalyticsWorkspaceName'), ']')]",
+                "name": "Azure VM Inventory",
+                "solutionName": "[concat('AzureVMInventory', '[', parameters('omsLogAnalyticsWorkspaceName'), ']')]",
                 "publisher": "volkanc@microsoft.com",
-                "displayName": "Azure VM Inventory v2",
-                "description": "Monitor Azure VMs deployed across subscriptions",
+                "displayName": "Azure VM Inventory",
+                "description": "Monitor Azure VMs and Sclae Sets  deployed across subscriptions",
                 "author": "volkanc@microsoft.com"
             }
         },
