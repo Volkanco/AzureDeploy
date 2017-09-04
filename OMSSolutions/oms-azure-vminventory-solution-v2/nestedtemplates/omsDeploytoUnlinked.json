@@ -280,46 +280,47 @@
                                 }
                             },
                             {
-                                "Id": "SingleQueryDonutBuilderBladeV1",
+                                "Id": "LineChartCalloutBuilderBlade",
                                 "Type": "Blade",
                                 "Version": 0,
                                 "Configuration": {
                                     "General": {
-                                        "title": "VMs Running in Scale Sets",
+                                        "title": "VMs in Scale Sets",
                                         "newGroup": false,
                                         "icon": "",
                                         "useIcon": false
                                     },
                                     "Header": {
-                                        "Title": "Running VMs by Subscription",
+                                        "Title": "Running VMs Over Time",
                                         "Subtitle": ""
                                     },
-                                    "Donut": {
-                                        "Query": "Type=AzureVMInventory_CL MetricName_s=ScaleSetInventory ShowinDesigner_d=1 TimeGenerated>NOW-30Minutes |measure sum(RunningVMs_d) as RunningVMs by SubscriptionId",
-                                        "CenterLegend": {
-                                            "Text": "Total",
-                                            "Operation": "Sum",
-                                            "ArcsToSelect": []
+                                    "LineChart": {
+                                      "Query": "[concat('Type=AzureVMInventory_CL MetricName_s=ScaleSetInventory ShowinDesigner_d=1  |measure sum(RunningVMs_d) as RunningVMs by SubscriptionId interval ', parameters('omsDataIngestionFrequency'),'Minutes')]",
+                                        "Callout": {
+                                            "Title": "VM Count",
+                                            "Series": "",
+                                            "Operation": "Last Sample"
                                         },
-                                        "Options": {
-                                            "colors": [
-                                                "#00bcf2",
-                                                "#009e49",
-                                                "#ffb900"
-                                            ],
-                                            "valueColorMapping": []
+                                        "yAxis": {
+                                            "isLogarithmic": false,
+                                            "units": {
+                                                "baseUnitType": "",
+                                                "baseUnit": "",
+                                                "displayUnit": ""
+                                            },
+                                            "customLabel": ""
                                         }
                                     },
                                     "List": {
                                         "Query": "Type=AzureVMInventory_CL MetricName_s=ScaleSetInventory ShowinDesigner_d=1 |measure countdistinct(ID_s) by AzureSubscription_s,SubscriptionId",
                                         "HideGraph": false,
                                         "enableSparklines": false,
-                                        "operation": "Summary",
                                         "ColumnsTitle": {
                                             "Name": "Subscription",
                                             "Value": "ScaleSetCount"
                                         },
                                         "Color": "#009e49",
+                                        "operation": "Summary",
                                         "thresholds": {
                                             "isEnabled": false,
                                             "values": [
