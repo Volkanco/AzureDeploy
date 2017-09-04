@@ -350,6 +350,7 @@ $runspacepool.Open()
 $scriptBlock={
 	Param ($hash,$rsid,$subscriptionID,$subscriptionname)
 
+    Write-Output "Collecting data for $subscriptionname with ID $subscriptionID "
 	$ArmConn=$hash.ArmConn
 	$headers=$hash.headers
 	$AsmConn=$hash.AsmConn
@@ -379,7 +380,7 @@ $scriptBlock={
 	$VMstates=$hash.VMstates
 	$vmiolimits=$hash.vmiolimits
 	$debugrs=$hash.debuglog
-#endregion
+
 
 #region Define Required Functions
 	Function Build-tableSignature ($customerId, $sharedKey, $date,  $method,  $resource,$uri)
@@ -1738,7 +1739,9 @@ $i=1
 $Starttimer=get-date
 IF($Subscriptions.count -eq 1)
 {
-	invoke-command -ScriptBlock $scriptBlock -ArgumentList $hash,$i,$Subscriptions[0].id,$Subscriptions[0].displayNameDisplayname
+
+  
+	invoke-command -ScriptBlock $scriptBlock -ArgumentList $hash,$i,$Subscriptions[0].id,$Subscriptions[0].Displayname
 }
 Else
 {
