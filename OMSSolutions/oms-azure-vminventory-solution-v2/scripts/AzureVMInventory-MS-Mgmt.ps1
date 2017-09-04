@@ -1811,16 +1811,23 @@ Else
 
 	Write-Output "Runbook total run time  $([math]::Round(($rbend-$rbstart).TotalMinutes,0)) minutes "
 	Write-Output "##############################################################################"
-	IF($errorarray.count -gt 0)
-	{
-		Write-Output "########### ERRORS #############"
-		Write-Output -InputObject $errorarray
-	}
-	IF($warningarray.count -gt 0)
-	{
-		Write-Output "########### WARNINGS #############"
-		Write-Output -InputObject $warningarray
-	}
+	
+    $errorarray|foreach{
+
+        Write-Output "########### ERRORS #############"
+        $_.subscriptionId
+
+        $_.errortext
+    }
+
+        $warningarray|foreach{
+
+        Write-Output "########### WARNINGS #############"
+        $_.subscriptionId
+
+        $_.Warningtext
+    }
+
 	IF($debuglog)
 	{
 		Write-Output $hash['PostDataResults']
