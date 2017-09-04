@@ -294,7 +294,7 @@ Function Post-OMSData($customerId, $sharedKey, $body, $logType)
 }
 #endregion
 
-$timestamp=(get-date).ToUniversalTime().ToString("yyyy-MM-ddT$($hour):$($min):00.000Z")
+$timestamp=$StartTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:MM:00.000Z")
 
 #get all subscriptions
 $SubscriptionsURI="https://management.azure.com/subscriptions?api-version=2016-06-01" 
