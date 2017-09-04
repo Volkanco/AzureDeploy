@@ -349,7 +349,7 @@ $runspacepool.Open()
 
 $scriptBlock={
 	Param ($hash,$rsid,$subscriptionID,$subscriptionname)
-	"test123"
+
 	$ArmConn=$hash.ArmConn
 	$headers=$hash.headers
 	$AsmConn=$hash.AsmConn
@@ -694,7 +694,7 @@ $scriptBlock={
 	{
 		$rg=$sa.id.Split('/')[4]
 		$tier=$null
-# array  wth SAName,ReouceGroup,Prikey,Tier 
+
 		If( $sa.properties.accountType -notmatch 'premium')
 		{
 			$tier='Standard'
