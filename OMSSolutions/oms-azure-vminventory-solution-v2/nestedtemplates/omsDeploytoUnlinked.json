@@ -222,7 +222,7 @@
                                         "useIcon": false
                                     },
                                     "Header": {
-                                        "Title": "VM Count",
+                                        "Title": "IAAS VM Count",
                                         "Subtitle": ""
                                     },
                                     "Donut": {
