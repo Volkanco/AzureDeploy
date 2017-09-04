@@ -131,8 +131,7 @@ Scale Sets View
 ![alt text](images/scalesets.png "Azure VM Scale Sets View")
 
 
-
- Solution collects and visualizes ;
+Solution collects and visualizes ;
 
 **VM Inventory Data**
 Subnet
