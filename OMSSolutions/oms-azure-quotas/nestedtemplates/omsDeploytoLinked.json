@@ -69,6 +69,26 @@
         "description": "Specify the Azure Region for your OMS Automation Account"
       }
     },
+     "linkedWorkspaceSKU": {
+            "type": "array",
+            "defaultValue": [
+                "pernode",
+                "OMS"
+            ],
+            "allowedValues": [
+                [
+                    "pernode",
+                    "OMS"
+                ],
+                [
+                    "free",
+                    "free"
+                ]
+            ],
+            "metadata": {
+                "description": "Choose the SKU for linked workspace  , only valid  if omsWorkspaceType is Linked otherwise ignored."
+            }
+        },
 	    "omsDataIngestionFrequency": {
       "type": "int",
       "defaultValue": 30,
@@ -93,13 +113,6 @@
       "defaultValue": "",
       "metadata": {
         "description": "The sasToken required to access _artifactsLocation.  When the template is deployed using the accompanying scripts, a sasToken will be automatically generated."
-      }
-    },
-    "ingestSchedulerGuid": {
-      "type": "string",
-      "defaultValue": "275c1e24-4769-4cdc-863e-debe4994650a",
-      "metadata": {
-        "description": "GUID for the schedule creation - create a unique before deploy"
       }
     }
   },
@@ -132,7 +145,7 @@
         "author": "volkanc@microsoft.com"
       }
     },
-    "ingestSchedulerGuid": "[guid(uniqueString(resourceGroup().id, deployment().name))]",
+     "ingestSchedulerGuid": "[guid(uniqueString(resourceGroup().id, deployment().name))]",
     "opsInsightWorkspaceID": "AzureVMInventory-OPSINSIGHTS_WS_ID",
     "opsInsightWorkspaceIDType": "string",
     "opsInsightWorkspaceIDDescription": "Value of the user's omsWorkspaceId",
@@ -191,9 +204,9 @@
       "apiVersion": "2015-11-01-preview",
       "location": "[parameters('omsLogAnalyticsRegion')]",
       "properties": {
-        "sku": {
-          "name": "[parameters('omsLogAnalyticsSku')]"
-        }
+                "sku": {
+                    "name": "[first(parameters('linkedWorkspaceSKU'))]"
+                }
       },
       "resources": [
         {
@@ -210,7 +223,7 @@
             "Description": "[variables('omsSolutions').customSolution.description]",
             "Author": "[variables('omsSolutions').customSolution.author]",
             "Source": "Local",
-            "Dashboard": [
+                  "Dashboard": [
               {
                 "Id": "SingleQueryDonutBuilderBladeV1",
                 "Type": "Blade",
@@ -711,7 +724,7 @@
                     }
                   },
                   "List": {
-                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMEndpoint ShowinDesigner_d!=0| measure countdistinct(VmName_s) by endpointName_s",
+                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMEndpoint ShowinDesigner_d!=0| measure countdistinct(VmName_s) by endpointName_s,privatePort_d",
                     "HideGraph": false,
                     "enableSparklines": false,
                     "ColumnsTitle": {
@@ -1413,9 +1426,9 @@
       "name": "[parameters('omsAutomationAccountName')]",
       "type": "Microsoft.Automation/automationAccounts",
       "properties": {
-        "sku": {
-          "name": "Basic"
-        }
+                "sku": {
+                    "name": "[last(parameters('linkedWorkspaceSKU'))]"
+                }
       },
       "resources": [
         {
@@ -1563,6 +1576,7 @@
               "getNICandNSG": "[variables('collectNICandNSGInventory')]",
               "getDiskInfo": "[variables('collectDiskInventory')]",
               "getarmvmstatus": "[variables('collectArmVMStatus')]"
+
             }
           }
         }
@@ -1605,7 +1619,7 @@
         "containedResources": [
           "[resourceId('Microsoft.OperationalInsights/workspaces/views/', parameters('omsLogAnalyticsWorkspaceName'), variables('omsSolutions').customSolution.name)]",
           "[resourceId('Microsoft.Automation/automationAccounts/runbooks/', parameters('omsAutomationAccountName'), variables('runbooks').ingestSchedulerRunbook.name)]",
-          "[resourceId('Microsoft.Automation/automationAccounts/runbooks/', parameters('omsAutomationAccountName'), variables('runbooks').ingestParentRunbook.name)]",          
+          "[resourceId('Microsoft.Automation/automationAccounts/runbooks/', parameters('omsAutomationAccountName'), variables('runbooks').ingestParentRunbook.name)]",
           "[resourceId('Microsoft.Automation/automationAccounts/variables/', parameters('omsAutomationAccountName'), variables('opsInsightWorkspaceID'))]",
           "[resourceId('Microsoft.Automation/automationAccounts/variables/', parameters('omsAutomationAccountName'), variables('opsInsightWorkspaceKey'))]",
           "[resourceId('Microsoft.Automation/automationAccounts/variables/', parameters('omsAutomationAccountName'), variables('createScheduleAutomationAccountName'))]",

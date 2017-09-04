@@ -976,9 +976,6 @@ $scriptBlock={
 					}
 				}
 				
-
-                $cudisk|Add-Member -MemberType NoteProperty -Name DiskIOPs -Value [string]$cudisk.MaxDiskIO+"IOPs" 
-
 				$invVHDs+=$cudisk
 			}
 #check data disks 

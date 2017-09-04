@@ -711,7 +711,7 @@
                     }
                   },
                   "List": {
-                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMEndpoint ShowinDesigner_d!=0| measure countdistinct(VmName_s) by endpointName_s",
+                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMEndpoint ShowinDesigner_d!=0| measure countdistinct(VmName_s) by endpointName_s,privatePort_d",
                     "HideGraph": false,
                     "enableSparklines": false,
                     "ColumnsTitle": {
