@@ -1,9 +1,7 @@
 {
     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
     "contentVersion": "1.0.0.0",
-  "parameters": {
-
-    
+  "parameters": { 
     "deploymentNameSuffix": {
       "value": "GEN-UNIQUE-20"
     },
@@ -22,11 +20,23 @@
     "omsAutomationRegion": {
       "value": "eastus2"
     },
+    "omsAutomationSku": {
+      "value": "basic"
+    },
+    "omsWorkspaceType": {
+      "value": "Unlinked"
+    },
+    "linkedWorkspaceSKU": {
+      "value": [
+                "pernode",
+                "OMS"
+            ]
+    },
     "omsDataIngestionFrequency": {
       "value": 30
     },
     "_artifactsLocation": {
-      "value": "https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/oms-azure-vminventory-solution"
+      "value": "https://raw.githubusercontent.com/Volkanco/AzureDeploy/master/OMSSolutions/oms-azure-vminventory-solution-v2"
     },
     "ingestSchedulerGuid": {
       "value": "ddaca131-061b-4d9e-8fb1-1d93c0442547"
