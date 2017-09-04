@@ -65,6 +65,18 @@
                 "description": "Specify the Azure Region for your OMS Automation Account"
             }
         },
+         "omsAutomationSku": {
+            "type": "string",
+            "defaultValue": "basic",
+            "allowedValues": [
+                "free",
+                "basic"
+            ],
+            "metadata": {
+                "description": "Specify the SKU for Unlinked Automation Account"
+            }
+        }        
+        ,
         "omsWorkspaceType": {
             "type": "string",
             "allowedValues": [
@@ -196,6 +208,9 @@
                     },
                     "omsAutomationRegion": {
                         "value": "[parameters('omsAutomationRegion')]"
+                    },
+                    "omsAutomationSku": {
+                        "value": "[parameters('omsAutomationSku')]"
                     },
                     "omsWorkspaceType": {
                         "value": "[parameters('omsWorkspaceType')]"

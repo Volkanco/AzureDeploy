@@ -59,6 +59,17 @@
                 "description": "Specify the Azure Region for your OMS Automation Account"
             }
         },
+         "omsAutomationSku": {
+            "type": "string",
+            "defaultValue": "basic",
+            "allowedValues": [
+                "free",
+                "basic"
+            ],
+            "metadata": {
+                "description": "Specify the SKU for Unlinked Automation Account"
+            }
+        },
         "omsWorkspaceType": {
             "type": "string",
             "allowedValues": [
@@ -145,7 +156,6 @@
         "createScheduleResourceGroupName": "AzureVMInventory-AzureAutomationResourceGroup-MS-Mgmt",
         "createScheduleResourceGroupType": "string",
         "createScheduleResourceGroupDescription": "The name of the resource group",
-        "omsAutomationSku": "basic",
         "ingestInterval": "1",
         "ingestFrequency": "hour",
         "ingestScheduleName": "AzureVMInventory-Scheduler-Hourly",
@@ -1481,7 +1491,7 @@
             "type": "Microsoft.Automation/automationAccounts",
             "properties": {
                 "sku": {
-                    "name": "Basic"
+                    "name": "[parameters('omsAutomationSku')]"
                 }
             },
             "resources": [
