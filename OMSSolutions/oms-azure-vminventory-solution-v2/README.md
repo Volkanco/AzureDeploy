@@ -5,7 +5,7 @@
     <img src="http://armviz.io/visualizebutton.png"/>
 </a>
 
->[AZURE.NOTE]This is preliminary documentation for Azure VM Inventory , a management solution you can deploy into OMS that will provide insights of virtual machines across subscriptions. 
+>[AZURE.NOTE]This is preliminary documentation for Azure VM Inventory , a management solution you can deploy into OMS that will provide insights of virtual machines and virtual machine scale sets across subscriptions. 
 
 
 Azure VM Inventory  Solution collects and visualizes inventory information of a virtual machine along with ;
@@ -13,9 +13,10 @@ Azure VM Inventory  Solution collects and visualizes inventory information of a 
 * input endpoints for Classic VMs
 * NSG Rules for ARM VMs
 * VM Extensions
-* Virtual Network,Subnet, internal and public IP information. 
+* Virtual Network,Subnet, internal and public IP 
+* Virtual Machine Scale Sets information. 
 
-Solution also collects overall core usage and other subscription level limits .. This solution leverages Azure Automation, the Log Analytics Ingestion API, together with Log Analytics views to present data about all your virtual machines from different subscriptions  in a single  workspace. 
+Solution also collects overall core usage and other subscription level limits . This solution leverages Azure Automation, the Log Analytics Ingestion API, together with Log Analytics views to present data about all your virtual machines from different subscriptions  in a single  workspace. 
 
 ![alt text](images/vminventory_solution.png "Overview")
 
@@ -172,33 +173,39 @@ VMs in Stopped State  and Azure Subscription Quota Reaching %90  . Additional al
 
 ### Troubleshooting 
 
-Solution relies on Automation Account with Runas Accounts  configured. Both SPN and Classic Certificate is used by the Storage REST API calls.  
+Solution relies on Automation Account with Runas Accounts  configured.  
 
 ![alt text](images/runasaccounts.PNG "Azure Automation Runas Accounts")
 
 General Troubleshooting steps ;
-* Make sure you specify a new Guid each time template is deployed
-* Check if automation account can start  the runbooks
-* Check if Runas Accounts configured properly and has permission to query subscription details and can access storage keys  
-* Check if AzureStorageIngestion.......  Automation Schedules are enabled
-* Navigate to Resource group , delete AzureVMInventory[workspaceName] solution and redeploy template with a new Guid
+* If deployment fails , navigate to Resource Group and Delete the AzureVMInventory[workspaceName] solution. This will delete the solution and all associated automation artifacts.  After deletion you can redeploy the solution. When redeploying please make sure you use a unique string for deploymentnamesuffix parameter  as this parameter is used to calculate guids in automation schedules.
+
+* Check if automation account can start  the runbooks. You may need to switch your automation sku to basic if you run out of free minutes in free sku.
+* Check if Runas Accounts configured properly and has permission to read Azure Compute, Storage and Networking providers. 
+* Check if there is any schedule associated with AzureVMInventory-MS-Mgmt-v2 runbook , if there is no schedule re-run AzureVMInventory-Schedules-MS-Mgmt-v2 runbook and all required schedules will be created.
 
 
-## Adding Additional Subscriptions | Partial Deployment 
+## Adding Additional Subscriptions
 
-Deploying all resources in a single resource group is the prefferred way for deploying the solution. But if you have your OMS workspace and Automation account in different resource groups  you can use the partial templates to deploy the solution. 
+You can enable data collection from multiple subscriptions by assigning read permission to  resources under Microsoft.Compute Microsoft.Storage and Microsoft.Networking to Automation SPN account. To get the SPN details from the portal. 
 
-First deploy the OMS Solution Views by following the link below 
+* Navigate the Automation Account used in VMInventory solution
+* Select RunAs Accounts 
+* Select Azure Run As Account
+* Copy ApplicationID 
+![alt text](images/automationspn.png "Automation SPN")
 
-[![Deploy OMS Views](http://azuredeploy.net/deploybutton.png)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure%2Fazure-quickstart-templates%2Fmaster%2Foms-azure-vminventory-solution%2Fazuredeployonlyloganalytics.json) 
+
+You will use this ApplicationID to provide access to additional subscriptions . 
+Logon to the subscription you want to delegate access navigate to Subscriptions Blade and use Access Control to provide Reader  Role to youe Automation SPN. 
+Solution will enumerate all subscription where it has access rights and  collect data from them. 
+
+![alt text](images/rbacdelegation.png "Delegate Access to SPN")
 
 
 
-Second use the link below to deploy the automation components to an existing automation account.
 
-This second template also used to onboard additional subscriptions to the solution !
 
-[![Deploy Automation/ Add Subscriptions](http://azuredeploy.net/deploybutton.png)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure%2Fazure-quickstart-templates%2Fmaster%2Foms-azure-vminventory-solution%2Fazuredeployonlyautomation.json) 
 
-Template requires OMS Log Analytics workspace ID and Key  from the  workspace where solution is already deployed. Navigate to Log Analytics Portal / Settings / Connected Sources  to get worspace Id and Key.
-This solution will deploy only the automation components used in data collection and push data to existing log analytics workspace. 
+
+
