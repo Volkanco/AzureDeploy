@@ -217,6 +217,8 @@ You can enable data collection from multiple subscriptions by assigning read per
 * Select RunAs Accounts 
 * Select Azure Run As Account
 * Copy ApplicationID 
+
+
 ![alt text](images/automationspn.png "Automation SPN")
 
 
