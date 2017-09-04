@@ -34,7 +34,7 @@ $VMstates = @{
 	"StoppedVM" ="Stopped";
 	"PowerState/running" ="Running"}
 
-	#Define VMSizes - Fetch from variable but failback to hardcoded if needed 
+#Define VMSizes - Fetch from variable but failback to hardcoded if needed 
 $vmiolimits = Get-AutomationVariable -Name 'VMinfo_-IOPSLimits'  -ea 0 
 IF(!$vmiolimits)
 {
@@ -349,7 +349,7 @@ $runspacepool.Open()
 
 $scriptBlock={
 	Param ($hash,$rsid,$subscriptionID,$subscriptionname)
-	
+	"test123"
 	$ArmConn=$hash.ArmConn
 	$headers=$hash.headers
 	$AsmConn=$hash.AsmConn
@@ -977,7 +977,7 @@ $scriptBlock={
 				}
 				
 
-                $cudisk|Add-Member -MemberType NoteProperty -Name DiskIOPs -Value [string]$cudisk.MaxDiskIO+"IOPs" 
+				$cudisk|Add-Member -MemberType NoteProperty -Name DiskIOPs -Value [string]$($cudisk.MaxDiskIO)+"IOPs"
 
 				$invVHDs+=$cudisk
 			}
@@ -1030,6 +1030,8 @@ $scriptBlock={
 								$cudisk|Add-Member -MemberType NoteProperty -Name MaxDiskIO -Value 5000
 							}
 						}
+
+						$cudisk|Add-Member -MemberType NoteProperty -Name DiskIOPs -Value $([string]$($cudisk.MaxDiskIO)+"IOPs" )
 						$invVHDs+=$cudisk    
 					}
 				}
@@ -1198,7 +1200,7 @@ $scriptBlock={
 					$cutag=$null
 					$cutag=New-Object PSObject
 					$cuVM.psobject.Properties|foreach-object  {
-					$cutag|Add-Member -MemberType NoteProperty -Name  $_.Name   -Value $_.value -Force
+						$cutag|Add-Member -MemberType NoteProperty -Name  $_.Name   -Value $_.value -Force
 					}
 					$cutag|Add-Member -MemberType NoteProperty -Name Tag  -Value "$name : $value"
 				}
@@ -1261,6 +1263,8 @@ $scriptBlock={
 						$cudisk|Add-Member -MemberType NoteProperty -Name MaxDiskIO -Value 5000
 					}
 				}
+
+				$cudisk|Add-Member -MemberType NoteProperty -Name DiskIOPs -Value $([string]$($cudisk.MaxDiskIO)+"IOPs" )
 				$invVHDs+=$cudisk    
 				
 			}
@@ -1292,6 +1296,7 @@ $scriptBlock={
 					$cudisk|Add-Member -MemberType NoteProperty -Name MaxDiskIO -Value 500
 					$cudisk|Add-Member -MemberType NoteProperty -Name DiskIOType -Value 'Premium'
 				}
+				$cudisk|Add-Member -MemberType NoteProperty -Name DiskIOPs -Value $([string]$($cudisk.MaxDiskIO)+"IOPs" )
 				$invVHDs+=$cudisk
 			}
 			
@@ -1347,7 +1352,7 @@ $scriptBlock={
 								$cudisk|Add-Member -MemberType NoteProperty -Name MaxDiskIO -Value 5000
 							}
 						}
-						
+						$cudisk|Add-Member -MemberType NoteProperty -Name DiskIOPs -Value $([string]$($cudisk.MaxDiskIO)+"IOPs" )
 						$invVHDs+=$cudisk
 					}
 					Else
@@ -1363,7 +1368,7 @@ $scriptBlock={
 							Uri="https://management.azure.com/{0}" -f $disk.manageddisk.id
 							StorageAccount=$disk.managedDisk.id
 							SubscriptionId = $subscriptionID.Split('/')[2]
-							AzureSubscription = $subscriptionnamee
+							AzureSubscription = $subscriptionname
 							SizeinGB=$disk.diskSizeGB
 							ShowinDesigner=1
 						} -ea 0
@@ -1386,6 +1391,7 @@ $scriptBlock={
 								$cudisk|Add-Member -MemberType NoteProperty -Name MaxDiskIO -Value 5000
 							}
 						}
+						$cudisk|Add-Member -MemberType NoteProperty -Name DiskIOPs -Value $([string]$($cudisk.MaxDiskIO)+"IOPs" )
 						$invVHDs+=$cudisk
 					}
 				}
@@ -1714,81 +1720,90 @@ write-output "$($Subscriptions.count) objects will be processed "
 
 $i=1 
 $Starttimer=get-date
-$Subscriptions|foreach{
-	$Subscription =$null
-	$Subscription=$_
-	$Job = [powershell]::Create().AddScript($ScriptBlock).AddArgument($hash).Addargument($i).AddArgument($Subscription.id).AddArgument($Subscription.Displayname)
-	$Job.RunspacePool = $RunspacePool
-	$Jobs += New-Object PSObject -Property @{
-		RunNum = $i
-		subscriptionId=$_.subscriptionId
-		Pipe = $Job
-		Result = $Job.BeginInvoke()
-	}
-	
-	$i++
+IF($Subscriptions.count -eq 1)
+{
+	invoke-command -ScriptBlock $scriptBlock -ArgumentList $hash,$i,$Subscriptions[0].id,$Subscriptions[0].displayNameDisplayname
 }
-write-output  "$(get-date)  , started $($i-1) Runspaces "
-Write-verbose "After dispatching runspaces $([System.gc]::gettotalmemory('forcefullcollection') /1MB) MB"
+Else
+{
 
-$jobsClone=$jobs.clone()
+#multiple subscriptions found , we will use runspaces 
+	$Subscriptions|foreach{
+		$Subscription =$null
+		$Subscription=$_
+		$Job = [powershell]::Create().AddScript($ScriptBlock).AddArgument($hash).Addargument($i).AddArgument($Subscription.id).AddArgument($Subscription.Displayname)
+		$Job.RunspacePool = $RunspacePool
+		$Jobs += New-Object PSObject -Property @{
+			RunNum = $i
+			subscriptionId=$_.subscriptionId
+			Pipe = $Job
+			Result = $Job.BeginInvoke()
+		}
+		
+		$i++
+	}
+	write-output  "$(get-date)  , started $($i-1) Runspaces "
+	Write-verbose "After dispatching runspaces $([System.gc]::gettotalmemory('forcefullcollection') /1MB) MB"
 
-Write-Output "Waiting.."
+	$jobsClone=$jobs.clone()
+
+	Write-Output "Waiting.."
 
 #create variables to collect any errors warnings from runspaces
-$errorarray=@()
-$warningarray=@()
-$s=1
-Do {
-	Write-Output "  $(@($jobs.result.iscompleted|where{$_  -match 'False'}).count)  jobs remaining"
-	foreach ($jobobj in $JobsClone)
-	{
-		if ($Jobobj.result.IsCompleted -eq $true)
+	$errorarray=@()
+	$warningarray=@()
+	$s=1
+	Do {
+		Write-Output "  $(@($jobs.result.iscompleted|where{$_  -match 'False'}).count)  jobs remaining"
+		foreach ($jobobj in $JobsClone)
 		{
-			$errorarray+=New-Object PSObject -Property @{
-				subscriptionId=$Jobobj.subscriptionId
-				errortext=$Jobobj.pipe.Streams.Error
+			if ($Jobobj.result.IsCompleted -eq $true)
+			{
+				$errorarray+=New-Object PSObject -Property @{
+					subscriptionId=$Jobobj.subscriptionId
+					errortext=$Jobobj.pipe.Streams.Error
+				}
+				$warningarray+=New-Object PSObject -Property @{
+					subscriptionId=$Jobobj.subscriptionId
+					Warningtext=$Jobobj.pipe.Streams.Warning
+				}
+				$jobobj.Pipe.Endinvoke($jobobj.Result)
+				$jobobj.pipe.dispose()
+				$jobs.Remove($jobobj)
 			}
-			$warningarray+=New-Object PSObject -Property @{
-				subscriptionId=$Jobobj.subscriptionId
-				Warningtext=$Jobobj.pipe.Streams.Warning
-			}
-			$jobobj.Pipe.Endinvoke($jobobj.Result)
-			$jobobj.pipe.dispose()
-			$jobs.Remove($jobobj)
 		}
-	}
-	IF($([System.gc]::gettotalmemory('forcefullcollection') /1MB) -gt 200)
+		IF($([System.gc]::gettotalmemory('forcefullcollection') /1MB) -gt 200)
+		{
+			[gc]::Collect()
+		}
+		IF($s%10 -eq 0) 
+		{
+			Write-Output "Job $s - Mem: $([System.gc]::gettotalmemory('forcefullcollection') /1MB) MB"
+		}  
+		$s++
+		
+		Start-Sleep -Seconds 15
+	} While ( @($jobs.result.iscompleted|where{$_  -match 'False'}).count -gt 0)
+	$msg= "All jobs completed! {6} subscriptions scanned. VMCount = {5}, VHD Count= {4} , NSG={3} ,Endpoints ={2} , Extensions ={1} , VMScaleSets ={0}  " -f $hash['TotalVMScaleSetCount'],$hash['TotalExtensionCount'],$hash['TotalEndPointCount'],$hash['TotalNSGCount'],$hash['TotalVHDCount'],$hash['TotalVMCount'],$hash['SubscriptionCount']
+
+	Write-output $msg
+
+	$rbend=get-date
+
+	Write-Output "Runbook total run time  $([math]::Round(($rbend-$rbstart).TotalMinutes,0)) minutes "
+	Write-Output "##############################################################################"
+	IF($errorarray.count -gt 0)
 	{
-		[gc]::Collect()
+		Write-Output "########### ERRORS #############"
+		Write-Output -InputObject $errorarray
 	}
-	IF($s%10 -eq 0) 
+	IF($warningarray.count -gt 0)
 	{
-		Write-Output "Job $s - Mem: $([System.gc]::gettotalmemory('forcefullcollection') /1MB) MB"
-	}  
-	$s++
-	
-	Start-Sleep -Seconds 15
-} While ( @($jobs.result.iscompleted|where{$_  -match 'False'}).count -gt 0)
-$msg= "All jobs completed! {6} subscriptions scanned. VMCount = {5}, VHD Count= {4} , NSG={3} ,Endpoints ={2} , Extensions ={1} , VMScaleSets ={0}  " -f $hash['TotalVMScaleSetCount'],$hash['TotalExtensionCount'],$hash['TotalEndPointCount'],$hash['TotalNSGCount'],$hash['TotalVHDCount'],$hash['TotalVMCount'],$hash['SubscriptionCount']
-
-Write-output $msg
-
-$rbend=get-date
-
-Write-Output "Runbook total run time  $([math]::Round(($rbend-$rbstart).TotalMinutes,0)) minutes "
-Write-Output "##############################################################################"
-IF($errorarray.count -gt 0)
-{
-	Write-Output "########### ERRORS #############"
-	Write-Output -InputObject $errorarray
-}
-IF($warningarray.count -gt 0)
-{
-	Write-Output "########### WARNINGS #############"
-	Write-Output -InputObject $warningarray
-}
-IF($debuglog)
-{
-	Write-Output $hash['PostDataResults']
+		Write-Output "########### WARNINGS #############"
+		Write-Output -InputObject $warningarray
+	}
+	IF($debuglog)
+	{
+		Write-Output $hash['PostDataResults']
+	}
 }
