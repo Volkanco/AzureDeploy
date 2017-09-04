@@ -971,7 +971,7 @@
                     "Subtitle": ""
                   },
                   "Donut": {
-                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMDisk ShowinDesigner_d!=0 | measure countdistinct(VHDUri_s) by MaxDiskIO_d",
+                    "Query": "Type=AzureVMInventory_CL MetricName_s=VMDisk ShowinDesigner_d!=0 | measure countdistinct(VHDUri_s) by DiskIOPs_s",
                     "CenterLegend": {
                       "Text": "Total",
                       "Operation": "Sum",
