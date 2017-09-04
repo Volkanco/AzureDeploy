@@ -63,6 +63,10 @@ Ensure that the parameters reflects your setup so that you are deploying this in
 
 #### Parameters
 
+* Deployment Name Suffix 
+
+Specify any conbinamtion of characters or numbers . This random text is used to calculate guid for automation schedules.
+
 * OMS Log Analytics Workspace Name
 
 Specify the name of the workspace you want to deploy this solution to
@@ -70,6 +74,10 @@ Specify the name of the workspace you want to deploy this solution to
 * OMS Log Analytics Region
 
 Select the Azure Region where your existing workspace is located
+
+* OMS Log Analytics SKU
+
+Select the Log Analytics SKU . IF you select linked workspace LinkedWorkspace SKU is used and this parameter is ignored.
 
 * OMS Automation Account Name
 
@@ -79,11 +87,22 @@ Specify the name of the automation account you created earlier
 
 Select the Azure Region where your automation account is located
 
+* OMS Automation SKU
 
-You should also change the values for the *Ingest Scheduler Guid* and *Ingest Cleanup Guid*. You can generate your own using PowerShell with the following cmdlet:
+Select the Automation Account  SKU . IF you select linked workspace LinkedWorkspace SKU is used and this parameter is ignored.
 
+* OMS Workspace Type
 
-![alt text](images/knguid.png "guid")
+Select if the workspace   is linked to automation account 
+
+* Linked Workspace SKU 
+
+Select the SKU for Linked Workspace and Automation Account.
+
+* OMS Data Ingestion Frequency 
+
+Specify  how often to query for VM data , Choose 15 - 30 or 60 minutes.
+
 
 Once you have customized all the parameters, click *Create*
 
@@ -105,7 +124,13 @@ In the Resource Group where you deployed the template, you should see the soluti
 
 The views for Azure VM Inventory   will give you an overview of all the VMs  within your Azure Subscription.  Multiple subscriptions can be added to provide overview for all.
 
-![alt text](images/vminventory_inv1.png "Azure VM Inventory view")
+![alt text](images/vminventory_inv1.png "Azure VM Inventory View")
+
+Scale Sets View 
+
+![alt text](images/scalesets.png "Azure VM Scale Sets View")
+
+
 
  Solution collects and visualizes ;
 
