@@ -172,6 +172,7 @@
         {
             "condition": "[equals(parameters('omsWorkspaceType'), 'Unlinked')]",
             "type": "Microsoft.Resources/deployments",
+             "apiVersion": "2016-02-01",
             "name": "[concat('deployToWorkspaceAnalyticsOnly-',parameters('deploymentNameSuffix'))]",
             "properties": {
                 "mode": "Incremental",
