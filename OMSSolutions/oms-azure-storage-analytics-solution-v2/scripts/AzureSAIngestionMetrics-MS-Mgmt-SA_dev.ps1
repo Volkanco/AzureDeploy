@@ -477,16 +477,10 @@ $body=$null
 $HTTPVerb="GET"
 $subscriptionInfoUri = "https://management.azure.com/subscriptions/"+$subscriptionid+"?api-version=2016-02-01"
 $subscriptionInfo = Invoke-RestMethod -Uri $subscriptionInfoUri -Headers $headers -Method Get -UseBasicParsing
-$subscriptionInfo=$subscriptionInfo.value
-$SubscriptionId =$subscriptionInfo.subscriptionId
 
 IF($subscriptionInfo)
 {
 	"Successfully connected to Azure ARM REST"
-}Else
-{
-write-warning "Coulnd.t connect to Azure ARM REst API. Please make sure  the Runas Account for the Automation Account exist and has at least read permissions in subscription! "
-
 }
 
 
@@ -527,29 +521,27 @@ $Subscriptions =  @((ConvertFrom-Json -InputObject $Subscriptions.Content).value
 
 #>
 
-$Subscriptions = Invoke-RestMethod -Uri  $SubscriptionsURI -Method GET  -Headers $headers -UseBasicParsing 
-$Subscriptions=@($Subscriptions.value)
 
-Write-Output "$($Subscriptions.count) Subscription found"
+Write-Output "$($Subscriptions.count)  subscrptions found"
 #endregion
 
 
 #region Get Storage account list
 
-"$(GEt-date) - Get ARM storage Accounts "
+"$(GEt-date)  Get ARM storage Accounts "
 
 $Uri="https://management.azure.com/subscriptions/{1}/providers/Microsoft.Storage/storageAccounts?api-version={0}"   -f  $ApiVerSaArm,$SubscriptionId 
-$armresp=Invoke-RestMethod -Uri $uri -Method GET  -Headers $headers -UseBasicParsing
-$saArmList=$armresp.Value
+$armresp=Invoke-WebRequest -Uri $uri -Method GET  -Headers $headers -UseBasicParsing
+$saArmList=(ConvertFrom-Json -InputObject $armresp.Content).Value
+
 "$(GEt-date)  $($saArmList.count) storage accounts found"
 
 #get Classic SA
 "$(GEt-date)  Get Classic storage Accounts "
 
 $Uri="https://management.azure.com/subscriptions/{1}/providers/Microsoft.ClassicStorage/storageAccounts?api-version={0}"   -f  $ApiVerSaAsm,$SubscriptionId 
-
-$asmresp=Invoke-RestMethod -Uri $uri -Method GET  -Headers $headers -UseBasicParsing
-$saAsmList=$asmresp.value
+$asmresp=Invoke-WebRequest -Uri $uri -Method GET  -Headers $headers -UseBasicParsing
+$saAsmList=(ConvertFrom-Json -InputObject $asmresp.Content).value
 
 "$(GEt-date)  $($saAsmList.count) storage accounts found"
 #endregion
@@ -591,8 +583,6 @@ foreach($sa in $saAsmList|where{$_.properties.accounttype -notmatch 'Premium'})
 }
 
 #clean up variables which is not needed 
-#rem ????
-
 Remove-Variable -Name  saAsmList
 Remove-Variable -Name  saArmList
 Remove-Variable -Name  asmresp
@@ -607,10 +597,6 @@ Write-Output "Core Count  $([System.Environment]::ProcessorCount)"
 $sa=$null
 $logTracker=@()
 $blobdate=(Get-date).AddHours(-1).ToUniversalTime().ToString("yyyy/MM/dd/HH00")
-
-
-
-# Using powershell runspaces to cache  all storage account keys 
 
 #region parallel with RS 
 
@@ -657,7 +643,7 @@ $runspacepool.Open()
 
 #script to get storage account keys
 # Script populates  $hash.SAInfo  with all storage account list and keys
-$scriptBlockGetKeys={
+$scriptBlock={
 
 Param ($hash,[array]$Sa,$rsid)
 
@@ -923,6 +909,130 @@ IF($download)
 	}
 }
 }
+#get blob file size in gb 
+
+function Get-BlobSize ($bloburi,$storageaccount,$rg,$type)
+{
+
+	If($type -eq 'ARM')
+	{
+		$Uri="https://management.azure.com/subscriptions/{3}/resourceGroups/{2}/providers/Microsoft.Storage/storageAccounts/{1}/listKeys?api-version={0}"   -f  $ApiVerSaArm, $storageaccount,$rg,$SubscriptionId 
+		$keyresp=Invoke-WebRequest -Uri $uri -Method POST  -Headers $headers -UseBasicParsing
+		$keys=ConvertFrom-Json -InputObject $keyresp.Content
+		$prikey=$keys.keys[0].value
+	}Elseif($type -eq 'Classic')
+	{
+		$Uri="https://management.azure.com/subscriptions/{3}/resourceGroups/{2}/providers/Microsoft.ClassicStorage/storageAccounts/{1}/listKeys?api-version={0}"   -f  $ApiVerSaAsm,$storageaccount,$rg,$SubscriptionId 
+		$keyresp=Invoke-WebRequest -Uri $uri -Method POST  -Headers $headers -UseBasicParsing
+		$keys=ConvertFrom-Json -InputObject $keyresp.Content
+		$prikey=$keys.primaryKey
+	}Else
+	{
+		"Could not detect storage account type, $storageaccount will not be processed"
+		Continue
+	}
+
+
+
+
+
+$vhdblob=invoke-StorageREST -sharedKey $prikey -method HEAD -resource $storageaccount -uri $bloburi
+	
+Return [math]::round($vhdblob.Headers.'Content-Length'/1024/1024/1024,0)
+
+
+
+}		
+# Create the function to create the authorization signature
+Function Build-OMSSignature ($customerId, $sharedKey, $date, $contentLength, $method, $contentType, $resource)
+{
+	$xHeaders = "x-ms-date:" + $date
+	$stringToHash = $method + "`n" + $contentLength + "`n" + $contentType + "`n" + $xHeaders + "`n" + $resource
+	$bytesToHash = [Text.Encoding]::UTF8.GetBytes($stringToHash)
+	$keyBytes = [Convert]::FromBase64String($sharedKey)
+	$sha256 = New-Object System.Security.Cryptography.HMACSHA256
+	$sha256.Key = $keyBytes
+	$calculatedHash = $sha256.ComputeHash($bytesToHash)
+	$encodedHash = [Convert]::ToBase64String($calculatedHash)
+	$authorization = 'SharedKey {0}:{1}' -f $customerId,$encodedHash
+	return $authorization
+}
+# Create the function to create and post the request
+Function Post-OMSData($customerId, $sharedKey, $body, $logType)
+{
+	$method = "POST"
+	$contentType = "application/json"
+	$resource = "/api/logs"
+	$rfc1123date = [DateTime]::UtcNow.ToString("r")
+	$contentLength = $body.Length
+	$signature = Build-OMSSignature `
+	-customerId $customerId `
+	-sharedKey $sharedKey `
+	-date $rfc1123date `
+	-contentLength $contentLength `
+	-fileName $fileName `
+	-method $method `
+	-contentType $contentType `
+	-resource $resource
+	$uri = "https://" + $customerId + ".ods.opinsights.azure.com" + $resource + "?api-version=2016-04-01"
+	$OMSheaders = @{
+		"Authorization" = $signature;
+		"Log-Type" = $logType;
+		"x-ms-date" = $rfc1123date;
+		"time-generated-field" = $TimeStampField;
+	}
+#write-output "OMS parameters"
+#$OMSheaders
+	Try{
+		$response = Invoke-WebRequest -Uri $uri -Method POST  -ContentType $contentType -Headers $OMSheaders -Body $body -UseBasicParsing
+	}
+	Catch
+	{
+		$_.MEssage
+	}
+	return $response.StatusCode
+	#write-output $response.StatusCode
+	Write-error $error[0]
+}
+
+Function Post-OMSIntData($customerId, $sharedKey, $body, $logType)
+{
+	$method = "POST"
+	$contentType = "application/json"
+	$resource = "/api/logs"
+	$rfc1123date = [DateTime]::UtcNow.ToString("r")
+	$contentLength = $body.Length
+	$signature = Build-OMSSignature `
+	-customerId $customerId `
+	-sharedKey $sharedKey `
+	-date $rfc1123date `
+	-contentLength $contentLength `
+	-fileName $fileName `
+	-method $method `
+	-contentType $contentType `
+	-resource $resource
+	$uri = "https://" + $customerId + ".ods.int2.microsoftatlanta-int.com" + $resource + "?api-version=2016-04-01"
+	$OMSheaders = @{
+		"Authorization" = $signature;
+		"Log-Type" = $logType;
+		"x-ms-date" = $rfc1123date;
+		"time-generated-field" = $TimeStampField;
+	}
+#write-output "OMS parameters"
+#$OMSheaders
+	Try{
+		$response = Invoke-WebRequest -Uri $uri -Method POST  -ContentType $contentType -Headers $OMSheaders -Body $body -UseBasicParsing
+	}
+	Catch
+	{
+		$_.MEssage
+	}
+	return $response.StatusCode
+	#write-output $response.StatusCode
+	Write-error $error[0]
+}
+
+
 
 #endregion
 
@@ -939,16 +1049,17 @@ IF($download)
 	If($type -eq 'ARM')
 	{
 		$Uri="https://management.azure.com/subscriptions/{3}/resourceGroups/{2}/providers/Microsoft.Storage/storageAccounts/{1}/listKeys?api-version={0}"   -f  $ApiVerSaArm, $storageaccount,$rg,$SubscriptionId 
-		$keyresp=Invoke-RestMethod -Uri $uri -Method POST  -Headers $headers -UseBasicParsing
-		$prikey=$keyresp.keys[0].value
+		$keyresp=Invoke-WebRequest -Uri $uri -Method POST  -Headers $headers -UseBasicParsing
+		$keys=ConvertFrom-Json -InputObject $keyresp.Content
+		$prikey=$keys.keys[0].value
 
 
 	}Elseif($type -eq 'Classic')
 	{
-		$uri=$keyresp=$null
-        $Uri="https://management.azure.com/subscriptions/{3}/resourceGroups/{2}/providers/Microsoft.ClassicStorage/storageAccounts/{1}/listKeys?api-version={0}"   -f  $ApiVerSaAsm,$storageaccount,$rg,$SubscriptionId 
-		$keyresp=Invoke-RestMethod -Uri $uri -Method POST  -Headers $headers -UseBasicParsing
-		$prikey=$keyresp.primaryKey
+		$Uri="https://management.azure.com/subscriptions/{3}/resourceGroups/{2}/providers/Microsoft.ClassicStorage/storageAccounts/{1}/listKeys?api-version={0}"   -f  $ApiVerSaAsm,$storageaccount,$rg,$SubscriptionId 
+		$keyresp=Invoke-WebRequest -Uri $uri -Method POST  -Headers $headers -UseBasicParsing
+		$keys=ConvertFrom-Json -InputObject $keyresp.Content
+		$prikey=$keys.primaryKey
 
 
 	}Else
@@ -960,7 +1071,7 @@ IF($download)
 
 	}
 
-#check if metrics are enabled
+check if metrics are enabled
 IF ($kind -eq 'BlobStorage')
 {
 $svclist=@('blob','table')
@@ -1033,7 +1144,7 @@ $colParamsforChild|foreach{
  
         $splitmetrics=$null
         $splitmetrics=$_
-        $Job = [powershell]::Create().AddScript($scriptBlockGetKeys).AddArgument($hash).AddArgument($splitmetrics).Addargument($i)
+        $Job = [powershell]::Create().AddScript($ScriptBlock).AddArgument($hash).AddArgument($splitmetrics).Addargument($i)
         $Job.RunspacePool = $RunspacePool
         $Jobs += New-Object PSObject -Property @{
           RunNum = $i
@@ -1100,7 +1211,7 @@ $runspacepool.Close()
 
 #Will save all variables created till this point  to be able to clean up unnecessary varibles to save memory
 
-$startupVariables=""
+$startupVariables=””
 
 new-variable -force -name startupVariables -value ( Get-Variable |
 
@@ -1111,7 +1222,7 @@ Write-Output "After Initial pool for keys : $([System.gc]::gettotalmemory('force
 
 # Will utilize runspace pool to collect all metrics for each storage account
 
-$scriptBlockGetMetrics={
+$scriptBlock2={
 
 
 Param ($hash,$Sa,$rsid)
@@ -1847,7 +1958,7 @@ IF($tier -notmatch 'premium' -and $kind -ne 'BlobStorage')
 		
             IF($Xmlresp)
             {       
-                $cuf|Add-Member -MemberType NoteProperty -Name  ShareUsedGB -Value $([int]$Xmlresp.ShareStats.ShareUsage)
+                $cuf|Add-Member -MemberType NoteProperty -Name  ShareUsedGB -Value [int]$Xmlresp.ShareStats.ShareUsage
             } 
            
            $hash['fileInventory']+=$cuf
@@ -1983,7 +2094,7 @@ $Starttimer=get-date
  
         $splitmetrics=$null
         $splitmetrics=$_
-        $Job = [powershell]::Create().AddScript($scriptBlockGetMetrics).AddArgument($hash).AddArgument($splitmetrics).Addargument($i)
+        $Job = [powershell]::Create().AddScript($ScriptBlock2).AddArgument($hash).AddArgument($splitmetrics).Addargument($i)
         $Job.RunspacePool = $RunspacePool
         $Jobs += New-Object PSObject -Property @{
           RunNum = $i
@@ -2387,6 +2498,7 @@ If($hash.saTransactionsMetrics)
 
 $uploadToOms=$null
 
+" Mem: $([System.gc]::gettotalmemory('forcefullcollection') /1MB) MB"
 If($hash.saCapacityMetrics)
 {
 
@@ -2421,7 +2533,7 @@ If($hash.saCapacityMetrics)
 }
 
 $uploadToOms=$null
-
+" Mem: $([System.gc]::gettotalmemory('forcefullcollection') /1MB) MB"
 If($hash.tableInventory)
 {
 
@@ -2455,8 +2567,7 @@ If($hash.tableInventory)
 }
 
 $uploadToOms=$null
-
-
+" Mem: $([System.gc]::gettotalmemory('forcefullcollection') /1MB) MB"
 If($hash.queueInventory)
 {
 
@@ -2490,7 +2601,7 @@ If($hash.queueInventory)
 }
 
 $uploadToOms=$null
-
+" Mem: $([System.gc]::gettotalmemory('forcefullcollection') /1MB) MB"
 If($hash.fileInventory)
 {
 

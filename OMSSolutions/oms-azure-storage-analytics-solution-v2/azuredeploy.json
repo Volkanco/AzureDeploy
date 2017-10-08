@@ -2,6 +2,12 @@
     "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json",
     "contentVersion": "1.0.0.0",
     "parameters": {
+        "deploymentNameSuffix": {
+            "type": "string",
+            "metadata": {
+                "description": "Provide an unique deployment names for each deployment  subsequent deployments"
+            }
+        },
         "omsLogAnalyticsWorkspaceName": {
             "type": "string",
             "defaultValue": "",
@@ -127,7 +133,7 @@
             "condition": "[equals(parameters('collectAuditLogs'), 'Enabled')]",
             "type": "Microsoft.Resources/deployments",
             "apiVersion": "2016-02-01",
-            "name": "omsDeployWithAuditLogs",
+            "name": "[concat('omsDeployWithAuditLogs-',parameters('deploymentNameSuffix'))]",
             "dependsOn": [],
             "properties": {
                 "mode": "Incremental",
@@ -136,6 +142,10 @@
                     "contentVersion": "1.0.0.0"
                 },
                 "parameters": {
+
+                    "deploymentNameSuffix": {
+                         "value": "[parameters('deploymentNameSuffix')]"
+                     },
                     "omsLogAnalyticsWorkspaceName": {
                         "value": "[parameters('omsLogAnalyticsWorkspaceName')]"
                     },
@@ -167,7 +177,7 @@
             "condition": "[equals(parameters('collectAuditLogs'), 'Disabled')]",
             "type": "Microsoft.Resources/deployments",
             "apiVersion": "2016-02-01",
-            "name": "omsDeployStorageAnalyticsOnly",
+            "name": "[concat('omsDeployStorageAnalyticsOnly-',parameters('deploymentNameSuffix'))]",
             "dependsOn": [],
             "properties": {
                 "mode": "Incremental",
@@ -176,6 +186,9 @@
                     "contentVersion": "1.0.0.0"
                 },
                 "parameters": {
+                    "deploymentNameSuffix": {
+                         "value": "[parameters('deploymentNameSuffix')]"
+                     },
                     "omsLogAnalyticsWorkspaceName": {
                         "value": "[parameters('omsLogAnalyticsWorkspaceName')]"
                     },
