@@ -1,4 +1,9 @@
-﻿#region Variables definition
+﻿#Param($blobMetrics,$tableMEtrics,$queueMetrics,$fileMetrics)
+$ErrorActionPreference= "Stop"
+
+Write-Output "RB Initial Memory  : $([System.gc]::gettotalmemory('forcefullcollection') /1MB) MB" 
+
+#region Variables definition
 # Variables definition
 # Common  variables  accross solution 
 
@@ -8,28 +13,43 @@ $Timestampfield = "Timestamp"
 #will use exact time for all inventory 
 $timestamp=$StartTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:45:00.000Z")
 
+
 #Update customer Id to your Operational Insights workspace ID
 $customerID = Get-AutomationVariable -Name 'AzureSAIngestion-OPSINSIGHTS_WS_ID-MS-Mgmt-SA'
 
 #For shared key use either the primary or seconday Connected Sources client authentication key   
 $sharedKey = Get-AutomationVariable -Name 'AzureSAIngestion-OPSINSIGHTS_WS_KEY-MS-Mgmt-SA'
-
 #define API Versions for REST API  Calls
+
+
 $ApiVerSaAsm = '2016-04-01'
 $ApiVerSaArm = '2016-01-01'
 $ApiStorage='2016-05-31'
 
+
 # Automation Account and Resource group for automation
+
 $AAAccount = Get-AutomationVariable -Name 'AzureSAIngestion-AzureAutomationAccount-MS-Mgmt-SA'
+
 $AAResourceGroup = Get-AutomationVariable -Name 'AzureSAIngestion-AzureAutomationResourceGroup-MS-Mgmt-SA'
 
 # OMS log analytics custom log name
+
 $logname='AzureStorage'
 
-#Variable to track runbook time taken
-$Starttimer=get-date
+# Runbook specific variables 
 
+$childrunbook="AzureSAIngestionChild-MS-Mgmt-SA"
+$schedulename="AzureStorageIngestionChild-Schedule-MS-Mgmt-SA"
+
+
+#Variable to sync between runspaces
+
+$hash = [hashtable]::New(@{})
+
+$Starttimer=get-date
 #endregion
+
 
 
 #region Define Required Functions
@@ -344,42 +364,6 @@ Function Post-OMSData($customerId, $sharedKey, $body, $logType)
 	Write-error $error[0]
 }
 
-Function Post-OMSIntData($customerId, $sharedKey, $body, $logType)
-{
-	$method = "POST"
-	$contentType = "application/json"
-	$resource = "/api/logs"
-	$rfc1123date = [DateTime]::UtcNow.ToString("r")
-	$contentLength = $body.Length
-	$signature = Build-OMSSignature `
-	-customerId $customerId `
-	-sharedKey $sharedKey `
-	-date $rfc1123date `
-	-contentLength $contentLength `
-	-fileName $fileName `
-	-method $method `
-	-contentType $contentType `
-	-resource $resource
-	$uri = "https://" + $customerId + ".ods.int2.microsoftatlanta-int.com" + $resource + "?api-version=2016-04-01"
-	$OMSheaders = @{
-		"Authorization" = $signature;
-		"Log-Type" = $logType;
-		"x-ms-date" = $rfc1123date;
-		"time-generated-field" = $TimeStampField;
-	}
-#write-output "OMS parameters"
-#$OMSheaders
-	Try{
-		$response = Invoke-WebRequest -Uri $uri -Method POST  -ContentType $contentType -Headers $OMSheaders -Body $body -UseBasicParsing
-	}
-	Catch
-	{
-		$_.MEssage
-	}
-	return $response.StatusCode
-	#write-output $response.StatusCode
-	Write-error $error[0]
-}
 
 function Cleanup-Variables {
 
@@ -394,11 +378,10 @@ function Cleanup-Variables {
 
 #endregion
 
-Write-Output "Memory Usate at RB Start  : $([System.gc]::gettotalmemory('forcefullcollection') /1MB) MB" 
 
-#region Login to Azure 
-#Authenticate to Azure Using both ARM , ASM and Storage REST
 
+#region Login to Azure Using both ARM , ASM and REST
+#Authenticate to Azure with SPN section
 "Logging in to Azure..."
 $ArmConn = Get-AutomationConnection -Name AzureRunAsConnection 
 $AsmConn = Get-AutomationConnection -Name AzureClassicRunAsConnection  
@@ -477,16 +460,10 @@ $body=$null
 $HTTPVerb="GET"
 $subscriptionInfoUri = "https://management.azure.com/subscriptions/"+$subscriptionid+"?api-version=2016-02-01"
 $subscriptionInfo = Invoke-RestMethod -Uri $subscriptionInfoUri -Headers $headers -Method Get -UseBasicParsing
-$subscriptionInfo=$subscriptionInfo.value
-$SubscriptionId =$subscriptionInfo.subscriptionId
 
 IF($subscriptionInfo)
 {
 	"Successfully connected to Azure ARM REST"
-}Else
-{
-write-warning "Coulnd.t connect to Azure ARM REst API. Please make sure  the Runas Account for the Automation Account exist and has at least read permissions in subscription! "
-
 }
 
 
@@ -514,18 +491,10 @@ Select-AzureSubscription -SubscriptionId $AsmConn.SubscriptionId
 #finally create the headers for ASM REST 
 $headerasm = @{"x-ms-version"="2013-08-01"}
 
-$timestamp=$StartTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:MM:00.000Z")
-
-#get all subscriptions, if multiple subscription found we will do parellel processing
-#for multiple subscriptions Azure Automation SPN needs delegation on subscriptions 
 
 
 $SubscriptionsURI="https://management.azure.com/subscriptions?api-version=2016-06-01" 
-<#
-$Subscriptions = Invoke-WebRequest -Uri  $SubscriptionsURI -Method GET  -Headers $headers -UseBasicParsing 
-$Subscriptions =  @((ConvertFrom-Json -InputObject $Subscriptions.Content).value)
 
-#>
 
 $Subscriptions = Invoke-RestMethod -Uri  $SubscriptionsURI -Method GET  -Headers $headers -UseBasicParsing 
 $Subscriptions=@($Subscriptions.value)
@@ -541,7 +510,7 @@ Write-Output "$($Subscriptions.count) Subscription found"
 $Uri="https://management.azure.com/subscriptions/{1}/providers/Microsoft.Storage/storageAccounts?api-version={0}"   -f  $ApiVerSaArm,$SubscriptionId 
 $armresp=Invoke-RestMethod -Uri $uri -Method GET  -Headers $headers -UseBasicParsing
 $saArmList=$armresp.Value
-"$(GEt-date)  $($saArmList.count) storage accounts found"
+"$(GEt-date)  $($saArmList.count) classic storage accounts found"
 
 #get Classic SA
 "$(GEt-date)  Get Classic storage Accounts "
@@ -591,14 +560,6 @@ foreach($sa in $saAsmList|where{$_.properties.accounttype -notmatch 'Premium'})
 }
 
 #clean up variables which is not needed 
-#rem ????
-
-Remove-Variable -Name  saAsmList
-Remove-Variable -Name  saArmList
-Remove-Variable -Name  asmresp
-Remove-Variable -Name  armresp
-
-Write-Output "Memory usage after variable removal : $([System.gc]::gettotalmemory('forcefullcollection') /1MB) MB"
 Write-Output "Core Count  $([System.Environment]::ProcessorCount)"
 #endregion
 
@@ -2561,3 +2522,6 @@ If($hash.vhdinventory)
 " Final Memory Consumption: $([System.gc]::gettotalmemory('forcefullcollection') /1MB) MB"
 
 #upload done
+
+
+
