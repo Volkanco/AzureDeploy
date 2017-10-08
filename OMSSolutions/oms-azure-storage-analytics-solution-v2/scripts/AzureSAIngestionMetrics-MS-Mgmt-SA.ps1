@@ -1424,42 +1424,7 @@ Function Post-OMSData($customerId, $sharedKey, $body, $logType)
 	Write-error $error[0]
 }
 
-Function Post-OMSIntData($customerId, $sharedKey, $body, $logType)
-{
-	$method = "POST"
-	$contentType = "application/json"
-	$resource = "/api/logs"
-	$rfc1123date = [DateTime]::UtcNow.ToString("r")
-	$contentLength = $body.Length
-	$signature = Build-OMSSignature `
-	-customerId $customerId `
-	-sharedKey $sharedKey `
-	-date $rfc1123date `
-	-contentLength $contentLength `
-	-fileName $fileName `
-	-method $method `
-	-contentType $contentType `
-	-resource $resource
-	$uri = "https://" + $customerId + ".ods.int2.microsoftatlanta-int.com" + $resource + "?api-version=2016-04-01"
-	$OMSheaders = @{
-		"Authorization" = $signature;
-		"Log-Type" = $logType;
-		"x-ms-date" = $rfc1123date;
-		"time-generated-field" = $TimeStampField;
-	}
-#write-output "OMS parameters"
-#$OMSheaders
-	Try{
-		$response = Invoke-WebRequest -Uri $uri -Method POST  -ContentType $contentType -Headers $OMSheaders -Body $body -UseBasicParsing
-	}
-	Catch
-	{
-		$_.MEssage
-	}
-	return $response.StatusCode
-	#write-output $response.StatusCode
-	Write-error $error[0]
-}
+
 
 
 
@@ -2019,11 +1984,7 @@ If($hash.saTransactionsMetrics)
         $splitLogs=$null
         $splitLogs=$_
           $jsonlogs= ConvertTo-Json -InputObject $splitLogs
-         Post-OMSIntData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
-  
-        $customerID2='1079dd51-120e-481a-bd1d-874434e9c0cd'
-        $sharedKey2='pfgJIQqccGlAcFsKRcDwjLNaJPXmK0e3QwBdcG5ZMdp8JhUy224v3uwDQWJX+gG+20XTmhjPSvc5I28pU1hLiQ=='
-        Post-OMSData -customerId $customerId2 -sharedKey $sharedKey2 -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
+         Post-OMSData -customerId $customerId2 -sharedKey $sharedKey2 -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
    
      }
 
@@ -2033,9 +1994,6 @@ If($hash.saTransactionsMetrics)
 
     $jsonlogs= ConvertTo-Json -InputObject $uploadToOms
 
-    Post-OMSIntData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
-          $customerID2='1079dd51-120e-481a-bd1d-874434e9c0cd'
-        $sharedKey2='pfgJIQqccGlAcFsKRcDwjLNaJPXmK0e3QwBdcG5ZMdp8JhUy224v3uwDQWJX+gG+20XTmhjPSvc5I28pU1hLiQ=='
         Post-OMSData -customerId $customerId2 -sharedKey $sharedKey2 -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
   
   
@@ -2066,11 +2024,7 @@ If($hash.saCapacityMetrics)
         $splitLogs=$null
         $splitLogs=$_
           $jsonlogs= ConvertTo-Json -InputObject $splitLogs
-         Post-OMSIntData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
-         
-               $customerID2='1079dd51-120e-481a-bd1d-874434e9c0cd'
-        $sharedKey2='pfgJIQqccGlAcFsKRcDwjLNaJPXmK0e3QwBdcG5ZMdp8JhUy224v3uwDQWJX+gG+20XTmhjPSvc5I28pU1hLiQ=='
-        Post-OMSData -customerId $customerId2 -sharedKey $sharedKey2 -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
+          Post-OMSData -customerId $customerId2 -sharedKey $sharedKey2 -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
   
      }
 
@@ -2080,11 +2034,7 @@ If($hash.saCapacityMetrics)
 
     $jsonlogs= ConvertTo-Json -InputObject $uploadToOms
 
-    Post-OMSIntData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
-  
-        $customerID2='1079dd51-120e-481a-bd1d-874434e9c0cd'
-        $sharedKey2='pfgJIQqccGlAcFsKRcDwjLNaJPXmK0e3QwBdcG5ZMdp8JhUy224v3uwDQWJX+gG+20XTmhjPSvc5I28pU1hLiQ=='
-        Post-OMSData -customerId $customerId2 -sharedKey $sharedKey2 -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
+       Post-OMSData -customerId $customerId2 -sharedKey $sharedKey2 -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
   
     }
      Remove-Variable uploadToOms -Force -Scope Global  -ErrorAction SilentlyContinue
@@ -2113,11 +2063,7 @@ If($hash.tableInventory)
         $splitLogs=$null
         $splitLogs=$_
           $jsonlogs= ConvertTo-Json -InputObject $splitLogs
-         Post-OMSIntData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
-  
-               $customerID2='1079dd51-120e-481a-bd1d-874434e9c0cd'
-        $sharedKey2='pfgJIQqccGlAcFsKRcDwjLNaJPXmK0e3QwBdcG5ZMdp8JhUy224v3uwDQWJX+gG+20XTmhjPSvc5I28pU1hLiQ=='
-        Post-OMSData -customerId $customerId2 -sharedKey $sharedKey2 -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
+           Post-OMSData -customerId $customerId2 -sharedKey $sharedKey2 -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
   
      }
 
@@ -2127,11 +2073,7 @@ If($hash.tableInventory)
 
     $jsonlogs= ConvertTo-Json -InputObject $uploadToOms
 
-    Post-OMSIntData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
-  
-        $customerID2='1079dd51-120e-481a-bd1d-874434e9c0cd'
-        $sharedKey2='pfgJIQqccGlAcFsKRcDwjLNaJPXmK0e3QwBdcG5ZMdp8JhUy224v3uwDQWJX+gG+20XTmhjPSvc5I28pU1hLiQ=='
-        Post-OMSData -customerId $customerId2 -sharedKey $sharedKey2 -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
+      Post-OMSData -customerId $customerId2 -sharedKey $sharedKey2 -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
   
     }
      Remove-Variable uploadToOms -Force -Scope Global -ErrorAction SilentlyContinue
@@ -2160,10 +2102,6 @@ If($hash.queueInventory)
         $splitLogs=$null
         $splitLogs=$_
           $jsonlogs= ConvertTo-Json -InputObject $splitLogs
-         Post-OMSIntData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
-  
-        $customerID2='1079dd51-120e-481a-bd1d-874434e9c0cd'
-        $sharedKey2='pfgJIQqccGlAcFsKRcDwjLNaJPXmK0e3QwBdcG5ZMdp8JhUy224v3uwDQWJX+gG+20XTmhjPSvc5I28pU1hLiQ=='
         Post-OMSData -customerId $customerId2 -sharedKey $sharedKey2 -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
   
      }
@@ -2174,11 +2112,7 @@ If($hash.queueInventory)
 
     $jsonlogs= ConvertTo-Json -InputObject $uploadToOms
 
-    Post-OMSIntData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
-  
-        $customerID2='1079dd51-120e-481a-bd1d-874434e9c0cd'
-        $sharedKey2='pfgJIQqccGlAcFsKRcDwjLNaJPXmK0e3QwBdcG5ZMdp8JhUy224v3uwDQWJX+gG+20XTmhjPSvc5I28pU1hLiQ=='
-        Post-OMSData -customerId $customerId2 -sharedKey $sharedKey2 -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
+      Post-OMSData -customerId $customerId2 -sharedKey $sharedKey2 -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
   
     }
      Remove-Variable uploadToOms -Force -Scope Global  -ErrorAction SilentlyContinue
@@ -2206,10 +2140,7 @@ If($hash.fileInventory)
         $splitLogs=$null
         $splitLogs=$_
           $jsonlogs= ConvertTo-Json -InputObject $splitLogs
-         Post-OMSIntData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
-  
-        $customerID2='1079dd51-120e-481a-bd1d-874434e9c0cd'
-        $sharedKey2='pfgJIQqccGlAcFsKRcDwjLNaJPXmK0e3QwBdcG5ZMdp8JhUy224v3uwDQWJX+gG+20XTmhjPSvc5I28pU1hLiQ=='
+ 
         Post-OMSData -customerId $customerId2 -sharedKey $sharedKey2 -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
   
      }
@@ -2220,10 +2151,7 @@ If($hash.fileInventory)
 
     $jsonlogs= ConvertTo-Json -InputObject $uploadToOms
 
-    Post-OMSIntData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
-  
-        $customerID2='1079dd51-120e-481a-bd1d-874434e9c0cd'
-        $sharedKey2='pfgJIQqccGlAcFsKRcDwjLNaJPXmK0e3QwBdcG5ZMdp8JhUy224v3uwDQWJX+gG+20XTmhjPSvc5I28pU1hLiQ=='
+
         Post-OMSData -customerId $customerId2 -sharedKey $sharedKey2 -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
   
     }
@@ -2240,6 +2168,25 @@ If($hash.vhdinventory)
     $uploadToOms=$hash.vhdinventory
     $hash.vhdinventory=@()
 
+}Else
+{
+
+
+		$hash.vhdinventory+= New-Object PSObject -Property @{
+			Timestamp = $colltime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
+			MetricName = 'ScaleSetInventory';
+			Name="NO RESOURCE FOUND"
+            RunningVMs="NO RESOURCE FOUND"
+            fqdn="NO RESOURCE FOUND"
+            publicIP="NO RESOURCE FOUND"
+			SubscriptionId = $subscriptionID
+			AzureSubscription = $subscriptionname
+			ShowinDesigner=0
+			
+
+	}
+}
+
 
     
     If($uploadToOms.count -gt $splitSize)
@@ -2255,10 +2202,7 @@ If($hash.vhdinventory)
         $splitLogs=$null
         $splitLogs=$_
           $jsonlogs= ConvertTo-Json -InputObject $splitLogs
-         Post-OMSIntData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
-  
-        $customerID2='1079dd51-120e-481a-bd1d-874434e9c0cd'
-        $sharedKey2='pfgJIQqccGlAcFsKRcDwjLNaJPXmK0e3QwBdcG5ZMdp8JhUy224v3uwDQWJX+gG+20XTmhjPSvc5I28pU1hLiQ=='
+
         Post-OMSData -customerId $customerId2 -sharedKey $sharedKey2 -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
   
      }
@@ -2269,11 +2213,7 @@ If($hash.vhdinventory)
 
     $jsonlogs= ConvertTo-Json -InputObject $uploadToOms
 
-    Post-OMSIntData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
-    
-        $customerID2='1079dd51-120e-481a-bd1d-874434e9c0cd'
-        $sharedKey2='pfgJIQqccGlAcFsKRcDwjLNaJPXmK0e3QwBdcG5ZMdp8JhUy224v3uwDQWJX+gG+20XTmhjPSvc5I28pU1hLiQ=='
-        Post-OMSData -customerId $customerId2 -sharedKey $sharedKey2 -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
+         Post-OMSData -customerId $customerId2 -sharedKey $sharedKey2 -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
     
     
     }
@@ -2282,7 +2222,6 @@ If($hash.vhdinventory)
       Remove-Variable spltlist -Force -Scope Global -ErrorAction SilentlyContinue
       [System.gc]::Collect()
 
-}
      
 
 }
