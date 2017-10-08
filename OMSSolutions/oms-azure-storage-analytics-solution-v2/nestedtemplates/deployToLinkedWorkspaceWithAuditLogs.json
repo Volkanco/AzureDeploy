@@ -152,7 +152,7 @@
             },
             "customSolution2": {
                 "name": "Azure Storage Audit Logs",
-                "solutionName": "[concat('AzureStorageAudit', '[', parameters('omsLogAnalyticsWorkspaceName'), ']')]",
+                "solutionName": "[concat('AzureStorageAuditLogs', '[', parameters('omsLogAnalyticsWorkspaceName'), ']')]",
                 "publisher": "volkanc@microsoft.com",
                 "displayName": "Azure Storage Audit Logs",
                 "description": "Monitor and analyze Azure Storage Account Audit Logs",
