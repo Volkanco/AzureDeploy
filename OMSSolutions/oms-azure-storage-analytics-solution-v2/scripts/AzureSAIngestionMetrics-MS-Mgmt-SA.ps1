@@ -1872,6 +1872,10 @@ IF($tier -notmatch 'premium')
 #endregion
 
 #region  collect VHD inventory 
+# we will do blob scan only every 4 hour 
+
+     if ((get-date).hour -in (1,5,9,13,17,21) -and   (get-date).minute -in (1..16)   )
+     {
 
 	[uri]$uriListC= "https://{0}.blob.core.windows.net/?comp=list" -f $storageaccount
 	
@@ -1922,7 +1926,7 @@ IF($tier -notmatch 'premium')
 		}
 	}
 
-
+    }
 #endregion
 
 }
