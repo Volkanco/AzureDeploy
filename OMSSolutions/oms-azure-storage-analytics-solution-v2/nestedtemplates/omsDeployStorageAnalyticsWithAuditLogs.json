@@ -133,7 +133,7 @@
             "condition": "[equals(parameters('omsWorkspaceType'), 'Linked')]",
             "type": "Microsoft.Resources/deployments",
             "apiVersion": "2016-02-01",
-            "name": "DeployToLinkedWorkspaceWithAuditLogs",
+            "name": "[concat('DeployToLinkedWorkspaceWithAuditLogs-',parameters('deploymentNameSuffix'))]",
             "dependsOn": [],
             "properties": {
                 "mode": "Incremental",
@@ -170,7 +170,7 @@
             "condition": "[equals(parameters('omsWorkspaceType'), 'Unlinked')]",
             "type": "Microsoft.Resources/deployments",
             "apiVersion": "2016-02-01",
-            "name": "deployToWorkspaceWithAuditLogs",
+            "name": "[concat('deployToWorkspaceWithAuditLogs-',parameters('deploymentNameSuffix'))]",
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
