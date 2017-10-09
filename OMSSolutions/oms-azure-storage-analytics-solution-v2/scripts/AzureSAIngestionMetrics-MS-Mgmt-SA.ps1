@@ -37,11 +37,6 @@ $AAResourceGroup = Get-AutomationVariable -Name 'AzureSAIngestion-AzureAutomatio
 
 $logname='AzureStorage'
 
-# Runbook specific variables 
-
-$childrunbook="AzureSAIngestionChild-MS-Mgmt-SA"
-$schedulename="AzureStorageIngestionChild-Schedule-MS-Mgmt-SA"
-
 
 #Variable to sync between runspaces
 
@@ -49,8 +44,6 @@ $hash = [hashtable]::New(@{})
 
 $Starttimer=get-date
 #endregion
-
-
 
 #region Define Required Functions
 
@@ -378,13 +371,13 @@ function Cleanup-Variables {
 
 #endregion
 
-
-
 #region Login to Azure Using both ARM , ASM and REST
 #Authenticate to Azure with SPN section
 "Logging in to Azure..."
 $ArmConn = Get-AutomationConnection -Name AzureRunAsConnection 
 $AsmConn = Get-AutomationConnection -Name AzureClassicRunAsConnection  
+
+$subscriptionid=$ArmConn.SubscriptionId
 
 
 # retry
@@ -412,8 +405,6 @@ $SelectedAzureSub = Select-AzureRmSubscription -SubscriptionId $ArmConn.Subscrip
 
 
 #Creating headers for REST ARM Interface
-
-$subscriptionid=$ArmConn.SubscriptionId
 
 "Azure rm profile path  $((get-module -Name AzureRM.Profile).path) "
 
@@ -492,16 +483,14 @@ Select-AzureSubscription -SubscriptionId $AsmConn.SubscriptionId
 $headerasm = @{"x-ms-version"="2013-08-01"}
 
 
+#get subscriptionlist
 
 $SubscriptionsURI="https://management.azure.com/subscriptions?api-version=2016-06-01" 
-
-
 $Subscriptions = Invoke-RestMethod -Uri  $SubscriptionsURI -Method GET  -Headers $headers -UseBasicParsing 
 $Subscriptions=@($Subscriptions.value)
 
 Write-Output "$($Subscriptions.count) Subscription found"
 #endregion
-
 
 #region Get Storage account list
 
@@ -563,16 +552,14 @@ foreach($sa in $saAsmList|where{$_.properties.accounttype -notmatch 'Premium'})
 Write-Output "Core Count  $([System.Environment]::ProcessorCount)"
 #endregion
 
+#populate Storage Account inventory 
 
+#populate Storgae Account Quota Usage 
 
-$sa=$null
-$logTracker=@()
-$blobdate=(Get-date).AddHours(-1).ToUniversalTime().ToString("yyyy/MM/dd/HH00")
 
 
 
 # Using powershell runspaces to cache  all storage account keys 
-
 #region parallel with RS 
 
 # Will use runspace pool with  to cache all storage account keys 
@@ -616,6 +603,8 @@ $runspacepool = [runspacefactory]::CreateRunspacePool(1, $Throttle, $sessionstat
 $runspacepool.Open() 
 [System.Collections.ArrayList]$Jobs = @()
 
+#endregion
+
 #script to get storage account keys
 # Script populates  $hash.SAInfo  with all storage account list and keys
 $scriptBlockGetKeys={
@@ -654,7 +643,7 @@ $varQueueList="AzureSAIngestion-List-Queues"
 $varFilesList="AzureSAIngestion-List-Files"
 
 $subscriptionId=$subscriptionInfo.subscriptionId
-#endregion
+
 
 
 
@@ -888,7 +877,7 @@ IF($download)
 #endregion
 
 
-
+#initialize the variables 
     $prikey=$storageaccount=$rg=$type=$null
 	$storageaccount =$sa.Split(';')[0]
 	$rg=$sa.Split(';')[1]
@@ -1011,7 +1000,6 @@ Write-Output "After dispatching runspaces $([System.gc]::gettotalmemory('forcefu
 $jobsClone=$jobs.clone()
 Write-Output "Waiting.."
 
-
 # Wait untill all keys are collected 
 
 $s=1
@@ -1048,7 +1036,6 @@ $s++
 
 } While ( @($jobs.result.iscompleted|where{$_  -match 'False'}).count -gt 0)
 Write-output "All jobs completed!"
-
 
 #Clean up  runspace jobs and reclaim memory
 $jobs|foreach{$_.Pipe.Dispose()}
@@ -1106,10 +1093,7 @@ $debuglog=$hash.deguglog
 #Inventory variables
 $varQueueList="AzureSAIngestion-List-Queues"
 $varFilesList="AzureSAIngestion-List-Files"
-
 $subscriptionId=$subscriptionInfo.subscriptionId
-#endregion
-
 
 
 #region Define Required Functions
@@ -1430,8 +1414,6 @@ Function Post-OMSData($customerId, $sharedKey, $body, $logType)
 
 #endregion
 
-
-
     $prikey=$sa.key
 	$storageaccount =$sa.StorageAccount
 	$rg=$sa.rg
@@ -1439,7 +1421,6 @@ Function Post-OMSData($customerId, $sharedKey, $body, $logType)
     $tier=$sa.Tier
     $kind=$sa.Kind
  
-
 $colltime=Get-Date
 
 If($colltime.Minute -in 0..15)
@@ -1463,12 +1444,10 @@ Else
 	$MetricColendTime=$colltime.ToUniversalTime().ToString("yyyyMMdd'T'HH45")
 }
 
-
 #Log Timestamp will be based on  metric end date 
 $hour=$MetricColEndTime.substring($MetricColEndTime.Length-4,4).Substring(0,2)
 $min=$MetricColEndTime.substring($MetricColEndTime.Length-4,4).Substring(2,2)
 $timestamp=(get-date).ToUniversalTime().ToString("yyyy-MM-ddT$($hour):$($min):00.000Z")
-
 
 #region Get Storage account keys to query Metrics
 
@@ -1480,21 +1459,17 @@ $storcapacity=@()
 $fltr1='?$filter='+"PartitionKey%20ge%20'"+$MetricColstartTime+"'%20and%20PartitionKey%20le%20'"+$MetricColendTime+"'%20and%20RowKey%20eq%20'user;All'"
 $slct1='&$select=PartitionKey,TotalRequests,TotalBillableRequests,TotalIngress,TotalEgress,AverageE2ELatency,AverageServerLatency,PercentSuccess,Availability,PercentThrottlingError,PercentNetworkError,PercentTimeoutError,SASAuthorizationError,PercentAuthorizationError,PercentClientOtherError,PercentServerOtherError'
 
-$debuglog=$true
 
 $sa=$null
 $vhdinventory=@()
 $allContainers=@()
-
 $queueinventory=@()
 $queuearr=@()
 $queueMetrics=@()
-
 $Fileinventory=@()
 $filearr=@()
 $invFS=@()
 $fileshareinventory=@()
-
 $tableinventory=@()
 $tablearr=@{}
 
@@ -1782,7 +1757,6 @@ IF($tier -notmatch 'premium' -and $kind -ne 'BlobStorage')
 	}
 }
 
-
 #endregion
 
 #region Collect Table Inventory
@@ -1893,130 +1867,6 @@ IF($tier -notmatch 'premium')
 
     }
 #endregion
-
-
-
-
-#region collect Storage account inventory 
-$SAInventory=@()
-foreach($sa in $saArmList)
-{
-	$rg=$sa.id.Split('/')[4]
-	$cu=$null
-	$cu = New-Object PSObject -Property @{
-		Timestamp = $timestamp
-		MetricName = 'Inventory';
-		InventoryType='StorageAccount'
-		StorageAccount=$sa.name
-		Uri="https://management.azure.com"+$sa.id
-		DeploymentType='ARM'
-		Location=$sa.location
-		Kind=$sa.kind
-		ResourceGroup=$rg
-		Sku=$sa.sku.name
-		Tier=$sa.sku.tier
-		
-		SubscriptionId = $ArmConn.SubscriptionId;
-		AzureSubscription = $subscriptionInfo.displayName
-	}
-	
-	IF ($sa.properties.creationTime){$cu|Add-Member -MemberType NoteProperty -Name CreationTime -Value $sa.properties.creationTime}
-	IF ($sa.properties.primaryLocation){$cu|Add-Member -MemberType NoteProperty -Name PrimaryLocation -Value $sa.properties.primaryLocation}
-	IF ($sa.properties.secondaryLocation){$cu|Add-Member -MemberType NoteProperty -Name secondaryLocation-Value $sa.properties.secondaryLocation}
-	IF ($sa.properties.statusOfPrimary){$cu|Add-Member -MemberType NoteProperty -Name statusOfPrimary -Value $sa.properties.statusOfPrimary}
-	IF ($sa.properties.statusOfSecondary){$cu|Add-Member -MemberType NoteProperty -Name statusOfSecondary -Value $sa.properties.statusOfSecondary}
-	IF ($sa.kind -eq 'BlobStorage'){$cu|Add-Member -MemberType NoteProperty -Name accessTier -Value $sa.properties.accessTier}
-	$SAInventory+=$cu
-}
-#Add Classic SA
-foreach($sa in $saAsmList)
-{
-	$rg=$sa.id.Split('/')[4]
-	$cu=$iotype=$null
-	IF($sa.properties.accountType -like 'Standard*')
-	{$iotype='Standard'}Else{{$iotype='Premium'}}
-	$cu = New-Object PSObject -Property @{
-		Timestamp = $timestamp
-		MetricName = 'Inventory'
-		InventoryType='StorageAccount'
-		StorageAccount=$sa.name
-		Uri="https://management.azure.com"+$sa.id
-		DeploymentType='Classic'
-		Location=$sa.location
-		Kind='Storage'
-		ResourceGroup=$rg
-		Sku=$sa.properties.accountType
-		Tier=$iotype
-		SubscriptionId = $ArmConn.SubscriptionId;
-		AzureSubscription = $subscriptionInfo.displayName
-	}
-	
-	IF ($sa.properties.creationTime){$cu|Add-Member -MemberType NoteProperty -Name CreationTime -Value $sa.properties.creationTime}
-	IF ($sa.properties.geoPrimaryRegion){$cu|Add-Member -MemberType NoteProperty -Name PrimaryLocation -Value $sa.properties.geoPrimaryRegion.Replace(' ','')}
-	IF ($sa.properties.geoSecondaryRegion ){$cu|Add-Member -MemberType NoteProperty -Name SecondaryLocation-Value $sa.properties.geoSecondaryRegion.Replace(' ','')}
-	IF ($sa.properties.statusOfPrimaryRegion){$cu|Add-Member -MemberType NoteProperty -Name statusOfPrimary -Value $sa.properties.statusOfPrimaryRegion}
-	IF ($sa.properties.statusOfSecondaryRegion){$cu|Add-Member -MemberType NoteProperty -Name statusOfSecondary -Value $sa.properties.statusOfSecondaryRegion}
-	
-	$SAInventory+=$cu
-}
-
-$jsonSAInventory = ConvertTo-Json -InputObject $SAInventory
-If($jsonSAInventory){Post-OMSData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonSAInventory)) -logType $logname}
-"$(get-date)  - SA Inventory  data  uploaded"
-#endregion
-
-
-#region get Storage Quota Consumption
-$quotas=@()
-$uri="https://management.core.windows.net/$subscriptionId"
-$qresp=Invoke-WebRequest -Uri $uri -Method GET  -Headers $headerasm -UseBasicParsing -Certificate $AzureCert
-[xml]$qres=$qresp.Content
-[int]$SAMAX=$qres.Subscription.MaxStorageAccounts
-[int]$SACurrent=$qres.Subscription.CurrentStorageAccounts
-$Quotapct=$qres.Subscription.CurrentStorageAccounts/$qres.Subscription.MaxStorageAccounts*100  
-$quotas+= New-Object PSObject -Property @{
-	Timestamp = $timestamp
-	MetricName = 'StorageQuotas';
-	QuotaType="Classic"
-	SAMAX=$samax
-	SACurrent=$SACurrent
-	Quotapct=$Quotapct     
-	SubscriptionId = $ArmConn.SubscriptionId;
-	AzureSubscription = $subscriptionInfo.displayName;
-	
-}
-$SAMAX=$SACurrent=$SAquotapct=$null
-$usageuri="https://management.azure.com/subscriptions/"+$subscriptionid+"/providers/Microsoft.Storage/usages?api-version=2016-05-01"
-$usageapi = Invoke-WebRequest -Uri $usageuri -Method GET -Headers $Headers  -UseBasicParsing
-$usagecontent= ConvertFrom-Json -InputObject $usageapi.Content
-$usagecontent.value.limit
-$usagecontent.value.currentValue
-$SAquotapct=$usagecontent.value.currentValue/$usagecontent.value.Limit*100
-[int]$SAMAX=$usagecontent.value.limit
-[int]$SACurrent=$usagecontent.value.currentValue
-
-$quotas+= New-Object PSObject -Property @{
-	Timestamp = $timestamp
-	MetricName = 'StorageQuotas';
-	QuotaType="ARM"
-	SAMAX=$SAMAX
-	SACurrent=$SACurrent
-	Quotapct=$SAquotapct     
-	SubscriptionId = $ArmConn.SubscriptionId;
-	AzureSubscription = $subscriptionInfo.displayName;
-	
-}
-#submit data to oms
-$jsonquotas = ConvertTo-Json -InputObject $quotas
-If($jsonquotas){Post-OMSData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonquotas)) -logType $logname}
-"$(get-date)  - Quota info uploaded"
-#endregion
-
-
-
-
-
-
 
 }
 
