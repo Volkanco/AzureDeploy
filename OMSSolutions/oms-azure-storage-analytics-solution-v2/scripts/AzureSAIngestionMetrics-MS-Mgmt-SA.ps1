@@ -454,8 +454,8 @@ $headers = @{"Authorization"=$header;"Accept"="application/json"}
 $body=$null
 $HTTPVerb="GET"
 $subscriptionInfoUri = "https://management.azure.com/subscriptions/"+$subscriptionid+"?api-version=2016-02-01"
-$subscriptionInfo = Invoke-RestMethod -Uri $subscriptionInfoUri -Headers $headers -Method Get -UseBasicParsing
-$subscriptionInfo=$subscriptionInfo.value
+$subscriptionInfo = Invoke-RestMethod -Uri $subscriptionInfoUri -Headers $headers -Method Get -UseBasicParsing # -ContentType "application/xml"
+#$subscriptionInfo=$subscriptionInfo.value
 IF($subscriptionInfo)
 {
 	"Successfully connected to Azure ARM REST"
@@ -2102,6 +2102,7 @@ $splitSize=5000
 If($hash.saTransactionsMetrics)
 {
 
+    write-output  "Uploading  $($hash.saTransactionsMetrics.count) transaction metrics"
     $uploadToOms=$hash.saTransactionsMetrics
     $hash.saTransactionsMetrics=@()
     
