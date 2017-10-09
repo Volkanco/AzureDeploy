@@ -576,6 +576,14 @@ foreach($sa in $saAsmList|where{$_.properties.accounttype -notmatch 'Premium'})
 Write-Output "Core Count  $([System.Environment]::ProcessorCount)"
 #endregion
 
+#check if there are Storage accounts to process if not  then exit
+if($colParamsforChild.count -eq 0)
+{
+    Write-Output " No Storage account found under subscription $subscriptionid , please note that Premium storage does not support metrics and excluded from the collection!"
+    exit
+}
+
+
 #populate Storage Account inventory 
 
 #region collect Storage account inventory 
@@ -1175,10 +1183,12 @@ Write-output "All jobs completed!"
 
 #Clean up  runspace jobs and reclaim memory
 $jobs|foreach{$_.Pipe.Dispose()}
-Remove-Variable Jobs -Force -Scope Global
-Remove-Variable Job -Force -Scope Global
-Remove-Variable Jobobj -Force -Scope Global
-Remove-Variable Jobsclone -Force -Scope Global
+
+
+if(Get-Variable -Name Jobs ){Remove-Variable Jobs -Force -Scope Global }
+if(Get-Variable -Name Job ){Remove-Variable Job -Force -Scope Global }
+if(Get-Variable -Name Jobobj ){Remove-Variable Jobobj -Force -Scope Global }
+if(Get-Variable -Name Jobsclone ){Remove-Variable Jobsclone -Force -Scope Global }
 $runspacepool.Close()
 [gc]::Collect()
 

@@ -592,6 +592,12 @@ foreach($sa in $saAsmList|where{$_.properties.accounttype -notmatch 'Premium'})
 Write-Output "Core Count  $([System.Environment]::ProcessorCount)"
 #endregion
 
+#check if there are Storage accounts to process if not  then exit
+if($colParamsforChild.count -eq 0)
+{
+    Write-Output " No Storage account found under subscription $subscriptionid , please note that Premium storage does not support metrics and excluded from the collection!"
+    exit
+}
 
 
 $sa=$null
