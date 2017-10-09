@@ -2050,8 +2050,7 @@
       "type": "Microsoft.Automation/automationAccounts",
       "properties": {
         "sku": {
-          //need to double check this 
-          "name": "basic"
+           "name": "basic"
         }
       },
       "resources": [
