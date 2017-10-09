@@ -2067,12 +2067,36 @@ foreach ($jobobj in $JobsClone)
        Write-Output " Mem: $([System.gc]::gettotalmemory('forcefullcollection') /1MB) MB"
    }  
 $s++
-    
-#need to handle memory pressure  
-IF($([System.gc]::gettotalmemory('forcefullcollection') /1MB) -gt 150)
-{
+  
+   Start-Sleep -Seconds 15
 
-#post OMS Data
+
+} While ( @($jobs.result.iscompleted|where{$_  -match 'False'}).count -gt 0)
+Write-output "All jobs completed!"
+
+
+# Clean up variables
+
+$jobs|foreach{$_.Pipe.Dispose()}
+Remove-Variable Jobs -Force -Scope Global
+Remove-Variable Job -Force -Scope Global
+Remove-Variable Jobobj -Force -Scope Global
+Remove-Variable Jobsclone -Force -Scope Global
+$runspacepool.Close()
+
+$([System.gc]::gettotalmemory('forcefullcollection') /1MB)
+
+
+$Endtimer=get-date
+
+Write-Output "All jobs completed in $(($Endtimer-$starttimer).TotalMinutes) minutes"
+
+
+#region Upload all collected metrics to OMS
+# Will split metrics into batches of 5000 to avoid hitting any limits 
+
+Write-Output "Uploading to OMS ..."
+
 $splitSize=5000
 
 If($hash.saTransactionsMetrics)
@@ -2361,245 +2385,7 @@ If(!$hash.vhdinventory)
       Remove-Variable spltlist -Force -Scope Global -ErrorAction SilentlyContinue
       [System.gc]::Collect()
 
-     
-
-}
-   Start-Sleep -Seconds 15
-
-
-} While ( @($jobs.result.iscompleted|where{$_  -match 'False'}).count -gt 0)
-Write-output "All jobs completed!"
-
-
-# Clean up variables
-
-$jobs|foreach{$_.Pipe.Dispose()}
-Remove-Variable Jobs -Force -Scope Global
-Remove-Variable Job -Force -Scope Global
-Remove-Variable Jobobj -Force -Scope Global
-Remove-Variable Jobsclone -Force -Scope Global
-$runspacepool.Close()
-
-$([System.gc]::gettotalmemory('forcefullcollection') /1MB)
-
-
-$Endtimer=get-date
-
-Write-Output "All jobs completed in $(($Endtimer-$starttimer).TotalMinutes) minutes"
-
-
-# Upload all collected metrics to OMS
-# Will split metrics into batches of 5000 to avoid hitting any limits 
-
-Write-Output "Uploading to OMS ..."
-$splitSize=5000
-
-If($hash.saTransactionsMetrics)
-{
-
-    $uploadToOms=$hash.saTransactionsMetrics
-    
-    If($uploadToOms.count -gt $splitSize)
-    {
-        $spltlist=@()
-        $spltlist+=for ($Index = 0; $Index -lt $uploadToOms.count; $Index += $splitSize)
-	{
-		,($uploadToOms[$index..($index+$splitSize-1)])
-	}
-	
-     
-	  $spltlist|foreach{
-        $splitLogs=$null
-        $splitLogs=$_
-        $jsonlogs= ConvertTo-Json -InputObject $splitLogs
-        Post-OMSData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
-   
-     }
-
-
-
-    }Else{
-
-    $jsonlogs= ConvertTo-Json -InputObject $uploadToOms
-
-    Post-OMSData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
-     
-  
-    }
-}
-
-$uploadToOms=$null
-
-If($hash.saCapacityMetrics)
-{
-
-    $uploadToOms=$hash.saCapacityMetrics
-    
-    If($uploadToOms.count -gt $splitSize)
-    {
-        $spltlist=@()
-        $spltlist+=for ($Index = 0; $Index -lt $uploadToOms.count; $Index += $splitSize)
-	{
-		,($uploadToOms[$index..($index+$splitSize-1)])
-	}
-	
-     
-	  $spltlist|foreach{
-        $splitLogs=$null
-        $splitLogs=$_
-          $jsonlogs= ConvertTo-Json -InputObject $splitLogs
-        Post-OMSData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
-   
-     }
-
-
-
-    }Else{
-
-    $jsonlogs= ConvertTo-Json -InputObject $uploadToOms
-
-    Post-OMSData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
-   
-    }
-}
-
-$uploadToOms=$null
-
-If($hash.tableInventory)
-{
-
-    $uploadToOms=$hash.tableInventory
-    
-    If($uploadToOms.count -gt $splitSize)
-    {
-        $spltlist=@()
-        $spltlist+=for ($Index = 0; $Index -lt $uploadToOms.count; $Index += $splitSize)
-	{
-		,($uploadToOms[$index..($index+$splitSize-1)])
-	}
-	
-     
-	  $spltlist|foreach{
-        $splitLogs=$null
-        $splitLogs=$_
-        $jsonlogs= ConvertTo-Json -InputObject $splitLogs
-        Post-OMSData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
-   
-     }
-
-
-
-    }Else{
-
-    $jsonlogs= ConvertTo-Json -InputObject $uploadToOms
-    Post-OMSData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
-   
-    }
-}
-
-$uploadToOms=$null
-
-
-If($hash.queueInventory)
-{
-
-    $uploadToOms=$hash.queueInventory
-    
-    If($uploadToOms.count -gt $splitSize)
-    {
-        $spltlist=@()
-        $spltlist+=for ($Index = 0; $Index -lt $uploadToOms.count; $Index += $splitSize)
-	{
-		,($uploadToOms[$index..($index+$splitSize-1)])
-	}
-	
-     
-	  $spltlist|foreach{
-        $splitLogs=$null
-        $splitLogs=$_
-        $jsonlogs= ConvertTo-Json -InputObject $splitLogs
-        Post-OMSData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
-   
-     }
-
-
-
-    }Else{
-
-    $jsonlogs= ConvertTo-Json -InputObject $uploadToOms
-    Post-OMSData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
-   
-    }
-}
-
-$uploadToOms=$null
-
-If($hash.fileInventory)
-{
-
-    $uploadToOms=$hash.fileInventory
-    
-    If($uploadToOms.count -gt $splitSize)
-    {
-        $spltlist=@()
-        $spltlist+=for ($Index = 0; $Index -lt $uploadToOms.count; $Index += $splitSize)
-	{
-		,($uploadToOms[$index..($index+$splitSize-1)])
-	}
-	
-     
-	  $spltlist|foreach{
-        $splitLogs=$null
-        $splitLogs=$_
-        $jsonlogs= ConvertTo-Json -InputObject $splitLogs
-        Post-OMSData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
-   
-     }
-
-
-
-    }Else{
-
-    $jsonlogs= ConvertTo-Json -InputObject $uploadToOms
-    Post-OMSData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
-   
-    }
-}
-
-$uploadToOms=$null
-" Mem: $([System.gc]::gettotalmemory('forcefullcollection') /1MB) MB"
-If($hash.vhdinventory)
-{
-
-    $uploadToOms=$hash.vhdinventory
-    
-    If($uploadToOms.count -gt $splitSize)
-    {
-        $spltlist=@()
-        $spltlist+=for ($Index = 0; $Index -lt $uploadToOms.count; $Index += $splitSize)
-	{
-		,($uploadToOms[$index..($index+$splitSize-1)])
-	}
-	
-     
-	  $spltlist|foreach{
-        $splitLogs=$null
-        $splitLogs=$_
-        $jsonlogs= ConvertTo-Json -InputObject $splitLogs
-        Post-OMSData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
-   
-     }
-
-
-
-    }Else{
-
-    $jsonlogs= ConvertTo-Json -InputObject $uploadToOms
-    Post-OMSData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
-   
-    
-    }
-}
+#endregion
 
 " Final Memory Consumption: $([System.gc]::gettotalmemory('forcefullcollection') /1MB) MB"
 
