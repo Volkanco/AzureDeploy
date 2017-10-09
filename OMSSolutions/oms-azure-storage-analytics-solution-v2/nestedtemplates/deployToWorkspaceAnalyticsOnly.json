@@ -180,7 +180,7 @@
         "searchName": "Azure Storage Account IO Throttling Limit",
         "description": "Each standard storage account is capped to 20.000 IOPs . This alert is indicator that one of your storage accounts is at the risk of throttling and IO might be capped.",
         "severity": "Critical",
-        "query": "Type=AzureStorage_CL   MetricName_s=Inventory  InventoryType_s=VHDFile StorageAccount_s in   {Type=AzureStorage_CL MetricName_s=Inventory InventoryType_s=StorageAccount Tier_s=Standard|measure count() by StorageAccount_s}| measure sum(MaxDiskIO_d) as TotalIO by StorageAccount_s  |where TotalIO > 20000 ",
+        "query": "Type=AzureStorage_CL   ShowinDesigner_d!=0   MetricName_s=Inventory    InventoryType_s=VHDFile StorageAccount_s in   {Type=AzureStorage_CL   ShowinDesigner_d!=0 MetricName_s=Inventory InventoryType_s=StorageAccount Tier_s=Standard|measure count() by StorageAccount_s}| measure sum(MaxDiskIO_d) as TotalIO by StorageAccount_s  |where TotalIO > 20000 ",
         "alertTresholdValue": 0,
         "operator": "gt",
         "alertThrottleInMinutes": 60,
@@ -194,7 +194,7 @@
         "searchName": "Azure Premium Storage Account NotinUse",
         "description": "Azure does not delete the vhd files associated with VMs when the VM is deleted. If the VM is suing premium storage  you will be chardged for that storage untill you  migarte the data and delete the storage account.",
         "severity": "Critical",
-        "query": "Type=AzureStorage_CL  MetricName_s=Inventory InventoryType_s=VHDFile Uri_s=NullUri TimeGenerated>NOW-1HOUR |measure count() by StorageAccount_s",
+        "query": "Type=AzureStorage_CL   ShowinDesigner_d!=0  MetricName_s=Inventory InventoryType_s=VHDFile Uri_s=NullUri TimeGenerated>NOW-1HOUR |measure count() by StorageAccount_s",
         "alertTresholdValue": 0,
         "operator": "gt",
         "alertThrottleInMinutes": 240,
@@ -210,7 +210,7 @@
         "searchName": "Azure Storage Quota Usage Critical",
         "description": "Each Azure Subscription can host certain number of storage accounts. This alert is an indicator  that  your Azure Subscription is approaching the storage account limits.",
         "severity": "Critical",
-        "query": "Type=AzureStorage_CL  MetricName_s=StorageQuotas  |measure avg(Quotapct_d) by AzureSubscription_s,QuotaType_s interval 15MINUTES",
+        "query": "Type=AzureStorage_CL    MetricName_s=StorageQuotas  |measure avg(Quotapct_d) by AzureSubscription_s,QuotaType_s interval 15MINUTES",
         "alertTresholdValue": 90,
         "operator": "gt",
         "alertThrottleInMinutes": 60,
@@ -364,7 +364,7 @@
         "searchName": "Azure File Share Quota Usage Warning",
         "description": "Each Azure Subscription can host certain number of storage accounts. This alert is an indicator  that  your Azure Subscription is approacihing the storage account limits.",
         "severity": "Warning",
-        "query": "Type=AzureStorage_CL  InventoryType_s=File | EXTEND product(div(ShareUsedGB_d,Quota_d),100)  as ShareUsage | measure avg(ShareUsage) by FileShare_s  interval 15MINUTES",
+        "query": "Type=AzureStorage_CL   ShowinDesigner_d!=0  InventoryType_s=File | EXTEND product(div(ShareUsedGB_d,Quota_d),100)  as ShareUsage | measure avg(ShareUsage) by FileShare_s  interval 15MINUTES",
         "alertTresholdValue": 80,
         "operator": "gt",
         "alertThrottleInMinutes": 60,
@@ -514,7 +514,7 @@
                     "Subtitle": ""
                   },
                   "Donut": {
-                    "Query": "Type=AzureStorage_CL    MetricName_s=Inventory AND NOT  InventoryType_s=VHDFile | measure countdistinct(Uri_s) by InventoryType_s",
+                    "Query": "Type=AzureStorage_CL   ShowinDesigner_d!=0    MetricName_s=Inventory AND NOT  InventoryType_s=VHDFile | measure countdistinct(Uri_s) by InventoryType_s",
                     "CenterLegend": {
                       "Text": "Total",
                       "Operation": "Sum",
@@ -532,7 +532,7 @@
                     }
                   },
                   "List": {
-                    "Query": "Type=AzureStorage_CL    MetricName_s=Inventory AND NOT  InventoryType_s=VHDFile | measure countdistinct(Uri_s) by InventoryType_s",
+                    "Query": "Type=AzureStorage_CL   ShowinDesigner_d!=0    MetricName_s=Inventory AND NOT  InventoryType_s=VHDFile | measure countdistinct(Uri_s) by InventoryType_s",
                     "HideGraph": false,
                     "enableSparklines": false,
                     "operation": "Summary",
@@ -585,7 +585,7 @@
                     "Subtitle": ""
                   },
                   "Donut": {
-                    "Query": "Type=AzureStorage_CL    MetricName_s=MetricsCapacity TimeGenerated>NOW-1HOUR |measure avg(Capacity_d) as UsedGB by StorageAccount_s",
+                    "Query": "Type=AzureStorage_CL     MetricName_s=MetricsCapacity TimeGenerated>NOW-1HOUR |measure avg(Capacity_d) as UsedGB by StorageAccount_s",
                     "CenterLegend": {
                       "Text": "Total",
                       "Operation": "Sum",
@@ -601,7 +601,7 @@
                     }
                   },
                   "List": {
-                    "Query": "Type=AzureStorage_CL    MetricName_s=MetricsCapacity TimeGenerated>NOW-1HOUR |measure avg(Capacity_d) as UsedGB by StorageAccount_s",
+                    "Query": "Type=AzureStorage_CL      MetricName_s=MetricsCapacity TimeGenerated>NOW-1HOUR |measure avg(Capacity_d) as UsedGB by StorageAccount_s",
                     "HideGraph": false,
                     "enableSparklines": false,
                     "operation": "Summary",
@@ -654,7 +654,7 @@
                     "Subtitle": ""
                   },
                   "Donut": {
-                    "Query": "Type=AzureStorage_CL      MetricName_s=Inventory  InventoryType_s=StorageAccount  |measure countdistinct(StorageAccount_s) by Sku_s",
+                    "Query": "Type=AzureStorage_CL   ShowinDesigner_d!=0      MetricName_s=Inventory  InventoryType_s=StorageAccount  |measure countdistinct(StorageAccount_s) by Sku_s",
                     "CenterLegend": {
                       "Text": "Total",
                       "Operation": "Sum",
@@ -670,7 +670,7 @@
                     }
                   },
                   "List": {
-                    "Query": "Type=AzureStorage_CL      MetricName_s=Inventory  InventoryType_s=StorageAccount  |measure countdistinct(StorageAccount_s) by Location_s",
+                    "Query": "Type=AzureStorage_CL   ShowinDesigner_d!=0      MetricName_s=Inventory  InventoryType_s=StorageAccount  |measure countdistinct(StorageAccount_s) by Location_s",
                     "HideGraph": false,
                     "enableSparklines": false,
                     "operation": "Summary",
@@ -861,7 +861,7 @@
                     "Subtitle": "VHD Count"
                   },
                   "Donut": {
-                    "Query": "Type=AzureStorage_CL      MetricName_s=Inventory  InventoryType_s=VHDFile LeaseState_s=leased   | measure countdistinct(Uri_s) by StorageAccount_s",
+                    "Query": "Type=AzureStorage_CL   ShowinDesigner_d!=0      MetricName_s=Inventory  InventoryType_s=VHDFile LeaseState_s=leased   | measure countdistinct(Uri_s) by StorageAccount_s",
                     "CenterLegend": {
                       "Text": "Total",
                       "Operation": "Sum",
@@ -877,7 +877,7 @@
                     }
                   },
                   "List": {
-                    "Query": "Type=AzureStorage_CL      MetricName_s=Inventory  InventoryType_s=VHDFile LeaseState_s=leased   | measure countdistinct(Uri_s) by StorageAccount_s",
+                    "Query": "Type=AzureStorage_CL   ShowinDesigner_d!=0      MetricName_s=Inventory  InventoryType_s=VHDFile LeaseState_s=leased   | measure countdistinct(Uri_s) by StorageAccount_s",
                     "HideGraph": false,
                     "enableSparklines": false,
                     "operation": "Summary",
@@ -930,7 +930,7 @@
                     "Subtitle": "Limit 20.000 IOPS Per SA"
                   },
                   "Donut": {
-                    "Query": "Type=AzureStorage_CL     MetricName_s=Inventory  InventoryType_s=VHDFile TimeGenerated>NOW-1HOUR StorageAccount_s in   {Type=AzureStorage_CL MetricName_s=Inventory InventoryType_s=StorageAccount Tier_s=Standard|measure count() by StorageAccount_s} | measure sum(MaxDiskIO_d) by StorageAccount_s",
+                    "Query": "Type=AzureStorage_CL     MetricName_s=Inventory   ShowinDesigner_d!=0  InventoryType_s=VHDFile TimeGenerated>NOW-1HOUR StorageAccount_s in   {Type=AzureStorage_CL MetricName_s=Inventory   ShowinDesigner_d!=0  InventoryType_s=StorageAccount Tier_s=Standard|measure count() by StorageAccount_s} | measure sum(MaxDiskIO_d) by StorageAccount_s",
                     "CenterLegend": {
                       "Text": "Total",
                       "Operation": "Sum",
@@ -946,7 +946,7 @@
                     }
                   },
                   "List": {
-                    "Query": "Type=AzureStorage_CL     MetricName_s=Inventory  InventoryType_s=VHDFile TimeGenerated>NOW-1HOUR StorageAccount_s in   {Type=AzureStorage_CL MetricName_s=Inventory InventoryType_s=StorageAccount Tier_s=Standard|measure count() by StorageAccount_s}| measure sum(MaxDiskIO_d) by StorageAccount_s",
+                    "Query": "Type=AzureStorage_CL     MetricName_s=Inventory   ShowinDesigner_d!=0   InventoryType_s=VHDFile TimeGenerated>NOW-1HOUR StorageAccount_s in   {Type=AzureStorage_CL MetricName_s=Inventory   ShowinDesigner_d!=0    ShowinDesigner_d!=0  InventoryType_s=StorageAccount Tier_s=Standard|measure count() by StorageAccount_s}| measure sum(MaxDiskIO_d) by StorageAccount_s",
                     "HideGraph": false,
                     "enableSparklines": false,
                     "operation": "Summary",
