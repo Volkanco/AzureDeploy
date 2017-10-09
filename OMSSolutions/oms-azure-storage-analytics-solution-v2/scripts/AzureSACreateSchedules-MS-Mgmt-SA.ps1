@@ -210,8 +210,10 @@ Do {
 		-ResourceGroupName $AAResourceGroup `
 		-StartTime (Get-Variable -Name RBStart"$i").Value
 
-        IF ([string]::IsNullOrEmpty($collectionFromAllSubscriptions))
+        IF ($collectionFromAllSubscriptions  -match 'Enabled')
         {
+             $params = @{"collectionFromAllSubscriptions" = $true}
+   
             Register-AzureRmAutomationScheduledRunbook `
 		        -AutomationAccountName $AAAccount `
 		        -ResourceGroupName  $AAResourceGroup `
@@ -254,19 +256,30 @@ New-AzureRmAutomationSchedule `
 		-ResourceGroupName $AAResourceGroup `
 		-StartTime $RunbookStartTime
 
+        IF ($collectionFromAllSubscriptions  -match 'Enabled')
+        {
+             $params = @{"collectionFromAllSubscriptions" = $true}
+            Register-AzureRmAutomationScheduledRunbook `
+		-AutomationAccountName $AAAccount `
+		-ResourceGroupName  $AAResourceGroup `
+		-RunbookName $LogsRunbookName `
+		-ScheduleName $LogsScheduleName -Parameters $Params
 
-Register-AzureRmAutomationScheduledRunbook `
+             Start-AzureRmAutomationRunbook -AutomationAccountName $AAAccount -Name $LogsRunbookName -ResourceGroupName $AAResourceGroup -Parameters $Params | out-null
+        }Else
+        {
+              Register-AzureRmAutomationScheduledRunbook `
 		-AutomationAccountName $AAAccount `
 		-ResourceGroupName  $AAResourceGroup `
 		-RunbookName $LogsRunbookName `
 		-ScheduleName $LogsScheduleName
+
+            Start-AzureRmAutomationRunbook -AutomationAccountName $AAAccount -Name $LogsRunbookName -ResourceGroupName $AAResourceGroup | out-null
+        }
+
   
 
-
-<#    $Schedule = New-AzureRmAutomationSchedule -Name $LogsScheduleName -StartTime $RunbookStartTime -HourInterval 1 -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup
-    $Sch = Register-AzureRmAutomationScheduledRunbook -RunbookName $LogsRunbookName -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup -ScheduleName $LogsScheduleName
-#>
-    Start-AzureRmAutomationRunbook -AutomationAccountName $AAAccount -Name $LogsRunbookName -ResourceGroupName $AAResourceGroup | out-null
+    
 }
 
 # Creating Schedules for enabling MEtrics

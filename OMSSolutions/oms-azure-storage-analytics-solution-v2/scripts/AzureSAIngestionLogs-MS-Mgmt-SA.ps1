@@ -1,4 +1,8 @@
-﻿#Param($blobMetrics,$tableMEtrics,$queueMetrics,$fileMetrics)
+﻿param(
+[Parameter(Mandatory=$false)] [string]$SubscriptionidFilter,
+[Parameter(Mandatory=$false)] [bool] $collectionFromAllSubscriptions=$false)
+
+
 $ErrorActionPreference= "Stop"
 
 Write-Output "RB Initial Memory  : $([System.gc]::gettotalmemory('forcefullcollection') /1MB) MB" 
@@ -386,6 +390,11 @@ function Cleanup-Variables {
 $ArmConn = Get-AutomationConnection -Name AzureRunAsConnection 
 $AsmConn = Get-AutomationConnection -Name AzureClassicRunAsConnection  
 
+if([string]::IsNullOrEmpty($SubscriptionidFilter))
+{
+$subscriptionid=$ArmConn.SubscriptionId
+}Else{$subscriptionid=$SubscriptionidFilter}
+
 
 # retry
 $retry = 6
@@ -413,7 +422,6 @@ $SelectedAzureSub = Select-AzureRmSubscription -SubscriptionId $ArmConn.Subscrip
 
 #Creating headers for REST ARM Interface
 
-$subscriptionid=$ArmConn.SubscriptionId
 
 "Azure rm profile path  $((get-module -Name AzureRM.Profile).path) "
 
@@ -491,27 +499,55 @@ Select-AzureSubscription -SubscriptionId $AsmConn.SubscriptionId
 #finally create the headers for ASM REST 
 $headerasm = @{"x-ms-version"="2013-08-01"}
 
+
+#get subscriptionlist
+
+$SubscriptionsURI="https://management.azure.com/subscriptions?api-version=2016-06-01" 
+$Subscriptions = Invoke-RestMethod -Uri  $SubscriptionsURI -Method GET  -Headers $headers -UseBasicParsing 
+$Subscriptions=@($Subscriptions.value)
+
+
+IF($collectionFromAllSubscriptions -and $Subscriptions.count -gt 1 )
+{
+    Write-Output "$($Subscriptions.count) Subscription found , additonal runbook jobs will be created to collect data "
+    $AAResourceGroup = Get-AutomationVariable -Name 'AzureSAIngestion-AzureAutomationResourceGroup-MS-Mgmt-SA'
+    $AAAccount = Get-AutomationVariable -Name 'AzureSAIngestion-AzureAutomationAccount-MS-Mgmt-SA'
+    $LogsRunbookName="AzureSAIngestionLogs-MS-Mgmt-SA"
+
+    #we will process first subscription with this runbook and  pass the rest to additional jobs
+
+    $n=$Subscriptions.count-1
+    $subslist=$Subscriptions[-$n..-1]
+    Foreach($item in $subslist)
+    {
+
+    $params1 = @{"SubscriptionidFilter"=$item.subscriptionId;"collectionFromAllSubscriptions" = $false}
+    Start-AzureRmAutomationRunbook -AutomationAccountName $AAAccount -Name $LogsRunbookName -ResourceGroupName $AAResourceGroup -Parameters $params1 | out-null
+    }
+}
+
+
+
 #endregion
 
 
 
 #region Get Storage account list
 
-"$(GEt-date)  Get ARM storage Accounts "
+"$(GEt-date) - Get ARM storage Accounts "
 
 $Uri="https://management.azure.com/subscriptions/{1}/providers/Microsoft.Storage/storageAccounts?api-version={0}"   -f  $ApiVerSaArm,$SubscriptionId 
-$armresp=Invoke-WebRequest -Uri $uri -Method GET  -Headers $headers -UseBasicParsing
-$saArmList=(ConvertFrom-Json -InputObject $armresp.Content).Value
-
-"$(GEt-date)  $($saArmList.count) storage accounts found"
+$armresp=Invoke-RestMethod -Uri $uri -Method GET  -Headers $headers -UseBasicParsing
+$saArmList=$armresp.Value
+"$(GEt-date)  $($saArmList.count) classic storage accounts found"
 
 #get Classic SA
 "$(GEt-date)  Get Classic storage Accounts "
 
 $Uri="https://management.azure.com/subscriptions/{1}/providers/Microsoft.ClassicStorage/storageAccounts?api-version={0}"   -f  $ApiVerSaAsm,$SubscriptionId 
 
-$asmresp=Invoke-WebRequest -Uri $uri -Method GET  -Headers $headers -UseBasicParsing
-$saAsmList=(ConvertFrom-Json -InputObject $asmresp.Content).value
+$asmresp=Invoke-RestMethod -Uri $uri -Method GET  -Headers $headers -UseBasicParsing
+$saAsmList=$asmresp.value
 
 "$(GEt-date)  $($saAsmList.count) storage accounts found"
 #endregion
@@ -551,13 +587,9 @@ foreach($sa in $saAsmList|where{$_.properties.accounttype -notmatch 'Premium'})
 	
 
 }
-#Write-Output "After SA collection  $([System.gc]::gettotalmemory('forcefullcollection') /1MB) MB"
-Remove-Variable -Name  saAsmList
-Remove-Variable -Name  saArmList
-Remove-Variable -Name  asmresp
-Remove-Variable -Name  armresp
 
-#Write-Output "After removing SA Vars $([System.gc]::gettotalmemory('forcefullcollection') /1MB) MB"
+#clean up variables which is not needed 
+Write-Output "Core Count  $([System.Environment]::ProcessorCount)"
 #endregion
 
 
@@ -607,6 +639,7 @@ $runspacepool = [runspacefactory]::CreateRunspacePool(1, $Throttle, $sessionstat
 $runspacepool.Open() 
 [System.Collections.ArrayList]$Jobs = @()
 
+#script to cache storage account keys 
 $scriptBlock={
 
 Param ($hash,[array]$Sa,$rsid)
@@ -643,8 +676,6 @@ $varQueueList="AzureSAIngestion-List-Queues"
 $varFilesList="AzureSAIngestion-List-Files"
 
 $subscriptionId=$subscriptionInfo.subscriptionId
-#endregion
-
 
 
 #region Define Required Functions
