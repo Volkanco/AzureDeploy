@@ -1894,6 +1894,130 @@ IF($tier -notmatch 'premium')
     }
 #endregion
 
+
+
+
+#region collect Storage account inventory 
+$SAInventory=@()
+foreach($sa in $saArmList)
+{
+	$rg=$sa.id.Split('/')[4]
+	$cu=$null
+	$cu = New-Object PSObject -Property @{
+		Timestamp = $timestamp
+		MetricName = 'Inventory';
+		InventoryType='StorageAccount'
+		StorageAccount=$sa.name
+		Uri="https://management.azure.com"+$sa.id
+		DeploymentType='ARM'
+		Location=$sa.location
+		Kind=$sa.kind
+		ResourceGroup=$rg
+		Sku=$sa.sku.name
+		Tier=$sa.sku.tier
+		
+		SubscriptionId = $ArmConn.SubscriptionId;
+		AzureSubscription = $subscriptionInfo.displayName
+	}
+	
+	IF ($sa.properties.creationTime){$cu|Add-Member -MemberType NoteProperty -Name CreationTime -Value $sa.properties.creationTime}
+	IF ($sa.properties.primaryLocation){$cu|Add-Member -MemberType NoteProperty -Name PrimaryLocation -Value $sa.properties.primaryLocation}
+	IF ($sa.properties.secondaryLocation){$cu|Add-Member -MemberType NoteProperty -Name secondaryLocation-Value $sa.properties.secondaryLocation}
+	IF ($sa.properties.statusOfPrimary){$cu|Add-Member -MemberType NoteProperty -Name statusOfPrimary -Value $sa.properties.statusOfPrimary}
+	IF ($sa.properties.statusOfSecondary){$cu|Add-Member -MemberType NoteProperty -Name statusOfSecondary -Value $sa.properties.statusOfSecondary}
+	IF ($sa.kind -eq 'BlobStorage'){$cu|Add-Member -MemberType NoteProperty -Name accessTier -Value $sa.properties.accessTier}
+	$SAInventory+=$cu
+}
+#Add Classic SA
+foreach($sa in $saAsmList)
+{
+	$rg=$sa.id.Split('/')[4]
+	$cu=$iotype=$null
+	IF($sa.properties.accountType -like 'Standard*')
+	{$iotype='Standard'}Else{{$iotype='Premium'}}
+	$cu = New-Object PSObject -Property @{
+		Timestamp = $timestamp
+		MetricName = 'Inventory'
+		InventoryType='StorageAccount'
+		StorageAccount=$sa.name
+		Uri="https://management.azure.com"+$sa.id
+		DeploymentType='Classic'
+		Location=$sa.location
+		Kind='Storage'
+		ResourceGroup=$rg
+		Sku=$sa.properties.accountType
+		Tier=$iotype
+		SubscriptionId = $ArmConn.SubscriptionId;
+		AzureSubscription = $subscriptionInfo.displayName
+	}
+	
+	IF ($sa.properties.creationTime){$cu|Add-Member -MemberType NoteProperty -Name CreationTime -Value $sa.properties.creationTime}
+	IF ($sa.properties.geoPrimaryRegion){$cu|Add-Member -MemberType NoteProperty -Name PrimaryLocation -Value $sa.properties.geoPrimaryRegion.Replace(' ','')}
+	IF ($sa.properties.geoSecondaryRegion ){$cu|Add-Member -MemberType NoteProperty -Name SecondaryLocation-Value $sa.properties.geoSecondaryRegion.Replace(' ','')}
+	IF ($sa.properties.statusOfPrimaryRegion){$cu|Add-Member -MemberType NoteProperty -Name statusOfPrimary -Value $sa.properties.statusOfPrimaryRegion}
+	IF ($sa.properties.statusOfSecondaryRegion){$cu|Add-Member -MemberType NoteProperty -Name statusOfSecondary -Value $sa.properties.statusOfSecondaryRegion}
+	
+	$SAInventory+=$cu
+}
+
+$jsonSAInventory = ConvertTo-Json -InputObject $SAInventory
+If($jsonSAInventory){Post-OMSData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonSAInventory)) -logType $logname}
+"$(get-date)  - SA Inventory  data  uploaded"
+#endregion
+
+
+#region get Storage Quota Consumption
+$quotas=@()
+$uri="https://management.core.windows.net/$subscriptionId"
+$qresp=Invoke-WebRequest -Uri $uri -Method GET  -Headers $headerasm -UseBasicParsing -Certificate $AzureCert
+[xml]$qres=$qresp.Content
+[int]$SAMAX=$qres.Subscription.MaxStorageAccounts
+[int]$SACurrent=$qres.Subscription.CurrentStorageAccounts
+$Quotapct=$qres.Subscription.CurrentStorageAccounts/$qres.Subscription.MaxStorageAccounts*100  
+$quotas+= New-Object PSObject -Property @{
+	Timestamp = $timestamp
+	MetricName = 'StorageQuotas';
+	QuotaType="Classic"
+	SAMAX=$samax
+	SACurrent=$SACurrent
+	Quotapct=$Quotapct     
+	SubscriptionId = $ArmConn.SubscriptionId;
+	AzureSubscription = $subscriptionInfo.displayName;
+	
+}
+$SAMAX=$SACurrent=$SAquotapct=$null
+$usageuri="https://management.azure.com/subscriptions/"+$subscriptionid+"/providers/Microsoft.Storage/usages?api-version=2016-05-01"
+$usageapi = Invoke-WebRequest -Uri $usageuri -Method GET -Headers $Headers  -UseBasicParsing
+$usagecontent= ConvertFrom-Json -InputObject $usageapi.Content
+$usagecontent.value.limit
+$usagecontent.value.currentValue
+$SAquotapct=$usagecontent.value.currentValue/$usagecontent.value.Limit*100
+[int]$SAMAX=$usagecontent.value.limit
+[int]$SACurrent=$usagecontent.value.currentValue
+
+$quotas+= New-Object PSObject -Property @{
+	Timestamp = $timestamp
+	MetricName = 'StorageQuotas';
+	QuotaType="ARM"
+	SAMAX=$SAMAX
+	SACurrent=$SACurrent
+	Quotapct=$SAquotapct     
+	SubscriptionId = $ArmConn.SubscriptionId;
+	AzureSubscription = $subscriptionInfo.displayName;
+	
+}
+#submit data to oms
+$jsonquotas = ConvertTo-Json -InputObject $quotas
+If($jsonquotas){Post-OMSData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonquotas)) -logType $logname}
+"$(get-date)  - Quota info uploaded"
+#endregion
+
+
+
+
+
+
+
 }
 
 #endregion
