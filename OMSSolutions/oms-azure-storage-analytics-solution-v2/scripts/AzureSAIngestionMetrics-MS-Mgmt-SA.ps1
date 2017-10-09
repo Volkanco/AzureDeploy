@@ -1,4 +1,8 @@
-﻿#Param($blobMetrics,$tableMEtrics,$queueMetrics,$fileMetrics)
+﻿param(
+[Parameter(Mandatory=$false)] [string]$SubscriptionidFilter,
+[Parameter(Mandatory=$false)] [bool] $collectionFromAllSubscriptions=$false)
+
+
 $ErrorActionPreference= "Stop"
 
 Write-Output "RB Initial Memory  : $([System.gc]::gettotalmemory('forcefullcollection') /1MB) MB" 
@@ -11,7 +15,7 @@ $StartTime = [dateTime]::Now
 $Timestampfield = "Timestamp"
 
 #will use exact time for all inventory 
-$timestamp=$StartTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:45:00.000Z")
+$timestamp=$StartTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:00.000Z")
 
 
 #Update customer Id to your Operational Insights workspace ID
@@ -377,8 +381,10 @@ function Cleanup-Variables {
 $ArmConn = Get-AutomationConnection -Name AzureRunAsConnection 
 $AsmConn = Get-AutomationConnection -Name AzureClassicRunAsConnection  
 
+if([string]::IsNullOrEmpty($SubscriptionidFilter))
+{
 $subscriptionid=$ArmConn.SubscriptionId
-
+}Else{$subscriptionid=$SubscriptionidFilter}
 
 # retry
 $retry = 6
@@ -413,8 +419,6 @@ $path=Split-Path $path
 
 $dlllist=Get-ChildItem -Path $path  -Filter Microsoft.IdentityModel.Clients.ActiveDirectory.dll  -Recurse
 $adal =  $dlllist[0].VersionInfo.FileName
-
-
 
 try
 {
@@ -451,7 +455,7 @@ $body=$null
 $HTTPVerb="GET"
 $subscriptionInfoUri = "https://management.azure.com/subscriptions/"+$subscriptionid+"?api-version=2016-02-01"
 $subscriptionInfo = Invoke-RestMethod -Uri $subscriptionInfoUri -Headers $headers -Method Get -UseBasicParsing
-
+$subscriptionInfo=$subscriptionInfo.value
 IF($subscriptionInfo)
 {
 	"Successfully connected to Azure ARM REST"
@@ -489,7 +493,27 @@ $SubscriptionsURI="https://management.azure.com/subscriptions?api-version=2016-0
 $Subscriptions = Invoke-RestMethod -Uri  $SubscriptionsURI -Method GET  -Headers $headers -UseBasicParsing 
 $Subscriptions=@($Subscriptions.value)
 
-Write-Output "$($Subscriptions.count) Subscription found"
+
+IF($collectionFromAllSubscriptions -and $Subscriptions.count -gt 1 )
+{
+    Write-Output "$($Subscriptions.count) Subscription found , additonal runbook jobs will be created to collect data "
+    $AAResourceGroup = Get-AutomationVariable -Name 'AzureSAIngestion-AzureAutomationResourceGroup-MS-Mgmt-SA'
+    $AAAccount = Get-AutomationVariable -Name 'AzureSAIngestion-AzureAutomationAccount-MS-Mgmt-SA'
+    $MetricsRunbookName = "AzureSAIngestionMetrics-MS-Mgmt-SA"
+
+    #we will process first subscription with this runbook and  pass the rest to additional jobs
+
+    $n=$Subscriptions.count-1
+    $subslist=$Subscriptions[-$n..-1]
+    Foreach($item in $subslist)
+    {
+
+    $params1 = @{"SubscriptionidFilter"=$item.subscriptionId;"collectionFromAllSubscriptions" = $false}
+    Start-AzureRmAutomationRunbook -AutomationAccountName $AAAccount -Name $MetricsRunbookName -ResourceGroupName $AAResourceGroup -Parameters $params1 | out-null
+    }
+}
+
+
 #endregion
 
 #region Get Storage account list
@@ -554,10 +578,123 @@ Write-Output "Core Count  $([System.Environment]::ProcessorCount)"
 
 #populate Storage Account inventory 
 
+#region collect Storage account inventory 
+$SAInventory=@()
+$sa=$null
+
+foreach($sa in $saArmList)
+{
+	$rg=$sa.id.Split('/')[4]
+	$cu=$null
+	$cu = New-Object PSObject -Property @{
+		Timestamp = $timestamp
+		MetricName = 'Inventory';
+		InventoryType='StorageAccount'
+		StorageAccount=$sa.name
+		Uri="https://management.azure.com"+$sa.id
+		DeploymentType='ARM'
+		Location=$sa.location
+		Kind=$sa.kind
+		ResourceGroup=$rg
+		Sku=$sa.sku.name
+		Tier=$sa.sku.tier
+		
+		SubscriptionId = $ArmConn.SubscriptionId;
+		AzureSubscription = $subscriptionInfo.displayName
+	}
+	
+	IF ($sa.properties.creationTime){$cu|Add-Member -MemberType NoteProperty -Name CreationTime -Value $sa.properties.creationTime}
+	IF ($sa.properties.primaryLocation){$cu|Add-Member -MemberType NoteProperty -Name PrimaryLocation -Value $sa.properties.primaryLocation}
+	IF ($sa.properties.secondaryLocation){$cu|Add-Member -MemberType NoteProperty -Name secondaryLocation-Value $sa.properties.secondaryLocation}
+	IF ($sa.properties.statusOfPrimary){$cu|Add-Member -MemberType NoteProperty -Name statusOfPrimary -Value $sa.properties.statusOfPrimary}
+	IF ($sa.properties.statusOfSecondary){$cu|Add-Member -MemberType NoteProperty -Name statusOfSecondary -Value $sa.properties.statusOfSecondary}
+	IF ($sa.kind -eq 'BlobStorage'){$cu|Add-Member -MemberType NoteProperty -Name accessTier -Value $sa.properties.accessTier}
+    IF ($t.properties.encryption.services.blob){$cu|Add-Member -MemberType NoteProperty -Name blobEncryption -Value 'enabled'}
+    IF ($t.properties.encryption.services.file){$cu|Add-Member -MemberType NoteProperty -Name fileEncryption -Value 'enabled'}
+	$SAInventory+=$cu
+}
+#Add Classic SA
+foreach($sa in $saAsmList)
+{
+	$rg=$sa.id.Split('/')[4]
+	$cu=$iotype=$null
+	IF($sa.properties.accountType -like 'Standard*')
+	{$iotype='Standard'}Else{{$iotype='Premium'}}
+	$cu = New-Object PSObject -Property @{
+		Timestamp = $timestamp
+		MetricName = 'Inventory'
+		InventoryType='StorageAccount'
+		StorageAccount=$sa.name
+		Uri="https://management.azure.com"+$sa.id
+		DeploymentType='Classic'
+		Location=$sa.location
+		Kind='Storage'
+		ResourceGroup=$rg
+		Sku=$sa.properties.accountType
+		Tier=$iotype
+		SubscriptionId = $ArmConn.SubscriptionId;
+		AzureSubscription = $subscriptionInfo.displayName
+	}
+	
+	IF ($sa.properties.creationTime){$cu|Add-Member -MemberType NoteProperty -Name CreationTime -Value $sa.properties.creationTime}
+	IF ($sa.properties.geoPrimaryRegion){$cu|Add-Member -MemberType NoteProperty -Name PrimaryLocation -Value $sa.properties.geoPrimaryRegion.Replace(' ','')}
+	IF ($sa.properties.geoSecondaryRegion ){$cu|Add-Member -MemberType NoteProperty -Name SecondaryLocation-Value $sa.properties.geoSecondaryRegion.Replace(' ','')}
+	IF ($sa.properties.statusOfPrimaryRegion){$cu|Add-Member -MemberType NoteProperty -Name statusOfPrimary -Value $sa.properties.statusOfPrimaryRegion}
+	IF ($sa.properties.statusOfSecondaryRegion){$cu|Add-Member -MemberType NoteProperty -Name statusOfSecondary -Value $sa.properties.statusOfSecondaryRegion}
+	
+	$SAInventory+=$cu
+}
+
+$jsonSAInventory = ConvertTo-Json -InputObject $SAInventory
+If($jsonSAInventory){Post-OMSData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonSAInventory)) -logType $logname}
+"$(get-date)  - SA Inventory  data  uploaded"
+#endregion
+
 #populate Storgae Account Quota Usage 
+#region get Storage Quota Consumption
+$quotas=@()
+$uri="https://management.core.windows.net/$subscriptionId"
+$qresp=Invoke-WebRequest -Uri $uri -Method GET  -Headers $headerasm -UseBasicParsing -Certificate $AzureCert
+[xml]$qres=$qresp.Content
+[int]$SAMAX=$qres.Subscription.MaxStorageAccounts
+[int]$SACurrent=$qres.Subscription.CurrentStorageAccounts
+$Quotapct=$qres.Subscription.CurrentStorageAccounts/$qres.Subscription.MaxStorageAccounts*100  
+$quotas+= New-Object PSObject -Property @{
+	Timestamp = $timestamp
+	MetricName = 'StorageQuotas';
+	QuotaType="Classic"
+	SAMAX=$samax
+	SACurrent=$SACurrent
+	Quotapct=$Quotapct     
+	SubscriptionId = $ArmConn.SubscriptionId;
+	AzureSubscription = $subscriptionInfo.displayName;
+	
+}
 
+$SAMAX=$SACurrent=$SAquotapct=$null
+$usageuri="https://management.azure.com/subscriptions/"+$subscriptionid+"/providers/Microsoft.Storage/usages?api-version=2016-05-01"
+$usageapi = Invoke-RestMethod -Uri $usageuri -Method GET -Headers $Headers  -UseBasicParsing
+$usagecontent=$usageapi.value
+$SAquotapct=$usagecontent[0].currentValue/$usagecontent[0].Limit*100
+[int]$SAMAX=$usagecontent[0].limit
+[int]$SACurrent=$usagecontent[0].currentValue
 
-
+$quotas+= New-Object PSObject -Property @{
+	Timestamp = $timestamp
+	MetricName = 'StorageQuotas';
+	QuotaType="ARM"
+	SAMAX=$SAMAX
+	SACurrent=$SACurrent
+	Quotapct=$SAquotapct     
+	SubscriptionId = $ArmConn.SubscriptionId;
+	AzureSubscription = $subscriptionInfo.displayName;
+	
+}
+#submit data to oms
+$jsonquotas = ConvertTo-Json -InputObject $quotas
+If($jsonquotas){Post-OMSData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonquotas)) -logType $logname}
+"$(get-date)  - Quota info uploaded"
+#endregion
 
 # Using powershell runspaces to cache  all storage account keys 
 #region parallel with RS 
@@ -976,7 +1113,6 @@ Foreach ($svc in $svclist)
 Write-Output "After Runspace creation  $([System.gc]::gettotalmemory('forcefullcollection') /1MB) MB"
 write-output "$($colParamsforChild.count) objects will be processed "
 
-
 $i=1 
 $Starttimer=get-date
 $colParamsforChild|foreach{
@@ -1045,16 +1181,6 @@ Remove-Variable Jobobj -Force -Scope Global
 Remove-Variable Jobsclone -Force -Scope Global
 $runspacepool.Close()
 [gc]::Collect()
-
-#Will save all variables created till this point  to be able to clean up unnecessary varibles to save memory
-
-$startupVariables=""
-
-new-variable -force -name startupVariables -value ( Get-Variable |
-
-   % { $_.Name } )
-
-Write-Output "After Initial pool for keys : $([System.gc]::gettotalmemory('forcefullcollection') /1MB) MB" 
 
 
 # Will utilize runspace pool to collect all metrics for each storage account
@@ -1958,7 +2084,7 @@ If($hash.saTransactionsMetrics)
         $splitLogs=$null
         $splitLogs=$_
           $jsonlogs= ConvertTo-Json -InputObject $splitLogs
-         Post-OMSData -customerId $customerId2 -sharedKey $sharedKey2 -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
+         Post-OMSData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
    
      }
 
@@ -1968,7 +2094,7 @@ If($hash.saTransactionsMetrics)
 
     $jsonlogs= ConvertTo-Json -InputObject $uploadToOms
 
-        Post-OMSData -customerId $customerId2 -sharedKey $sharedKey2 -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
+        Post-OMSData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
   
   
     }
@@ -1998,7 +2124,7 @@ If($hash.saCapacityMetrics)
         $splitLogs=$null
         $splitLogs=$_
           $jsonlogs= ConvertTo-Json -InputObject $splitLogs
-          Post-OMSData -customerId $customerId2 -sharedKey $sharedKey2 -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
+          Post-OMSData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
   
      }
 
@@ -2008,7 +2134,7 @@ If($hash.saCapacityMetrics)
 
     $jsonlogs= ConvertTo-Json -InputObject $uploadToOms
 
-       Post-OMSData -customerId $customerId2 -sharedKey $sharedKey2 -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
+       Post-OMSData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
   
     }
      Remove-Variable uploadToOms -Force -Scope Global  -ErrorAction SilentlyContinue
@@ -2019,6 +2145,18 @@ If($hash.saCapacityMetrics)
 
 If($hash.tableInventory)
 {
+New-Object PSObject -Property @{
+				Timestamp = $timestamp
+				MetricName = 'Inventory'
+				InventoryType='Table'
+				StorageAccount=$storageaccount
+				Table=$tbl
+				Uri=$uritable.Scheme+'://'+$uritable.Host+'/'+$tbl
+				SubscriptionID = $ArmConn.SubscriptionId;
+				AzureSubscription = $subscriptionInfo.displayName
+				
+			}
+
 
     $uploadToOms=$hash.tableInventory
 
@@ -2037,7 +2175,7 @@ If($hash.tableInventory)
         $splitLogs=$null
         $splitLogs=$_
           $jsonlogs= ConvertTo-Json -InputObject $splitLogs
-           Post-OMSData -customerId $customerId2 -sharedKey $sharedKey2 -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
+           Post-OMSData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
   
      }
 
@@ -2047,7 +2185,7 @@ If($hash.tableInventory)
 
     $jsonlogs= ConvertTo-Json -InputObject $uploadToOms
 
-      Post-OMSData -customerId $customerId2 -sharedKey $sharedKey2 -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
+      Post-OMSData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
   
     }
      Remove-Variable uploadToOms -Force -Scope Global -ErrorAction SilentlyContinue
@@ -2057,10 +2195,22 @@ If($hash.tableInventory)
 }
 
 
-If($hash.queueInventory)
+If(!$hash.queueInventory)
 {
 
-    $uploadToOms=$hash.queueInventory
+$hash.queueInventory+=New-Object PSObject -Property @{
+				Timestamp = $timestamp
+				MetricName = 'Inventory'
+				InventoryType='Queue'
+				Queue= "NO RESOURCE FOUND"
+				Uri="NO RESOURCE FOUND"
+				SubscriptionID = $ArmConn.SubscriptionId;
+				AzureSubscription = $subscriptionInfo.displayName
+             ShowinDesigner=0
+			}
+}
+
+$uploadToOms=$hash.queueInventory
     $hash.queueInventory=@()
     
     If($uploadToOms.count -gt $splitSize)
@@ -2076,7 +2226,7 @@ If($hash.queueInventory)
         $splitLogs=$null
         $splitLogs=$_
           $jsonlogs= ConvertTo-Json -InputObject $splitLogs
-        Post-OMSData -customerId $customerId2 -sharedKey $sharedKey2 -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
+        Post-OMSData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
   
      }
 
@@ -2086,21 +2236,33 @@ If($hash.queueInventory)
 
     $jsonlogs= ConvertTo-Json -InputObject $uploadToOms
 
-      Post-OMSData -customerId $customerId2 -sharedKey $sharedKey2 -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
+      Post-OMSData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
   
     }
      Remove-Variable uploadToOms -Force -Scope Global  -ErrorAction SilentlyContinue
       Remove-Variable jsonlogs -Force -Scope Global  -ErrorAction SilentlyContinue
       Remove-Variable spltlist -Force -Scope Global  -ErrorAction SilentlyContinue
       [System.gc]::Collect()
-}
 
 
-If($hash.fileInventory)
+If(!$hash.fileInventory)
 {
 
-    $uploadToOms=$hash.fileInventory
+  $hash.fileInventory+=ew-Object PSObject -Property @{
+				Timestamp = $timestamp
+				MetricName = 'Inventory'
+				InventoryType='File'
+				FileShare="NO RESOURCE FOUND"
+				Uri="NO RESOURCE FOUND"                       
+				SubscriptionID = $ArmConn.SubscriptionId;
+				AzureSubscription = $subscriptionInfo.displayName
+                ShowinDesigner=0
+	        	}
+           				
+}
+  $uploadToOms=$hash.fileInventory
     $hash.fileInventory=@()
+
     If($uploadToOms.count -gt $splitSize)
     {
         $spltlist=@()
@@ -2115,7 +2277,7 @@ If($hash.fileInventory)
         $splitLogs=$_
           $jsonlogs= ConvertTo-Json -InputObject $splitLogs
  
-        Post-OMSData -customerId $customerId2 -sharedKey $sharedKey2 -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
+        Post-OMSData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
   
      }
 
@@ -2126,42 +2288,35 @@ If($hash.fileInventory)
     $jsonlogs= ConvertTo-Json -InputObject $uploadToOms
 
 
-        Post-OMSData -customerId $customerId2 -sharedKey $sharedKey2 -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
+        Post-OMSData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
   
     }
      Remove-Variable uploadToOms -Force -Scope Global -ErrorAction SilentlyContinue
       Remove-Variable jsonlogs -Force -Scope Global -ErrorAction SilentlyContinue
       Remove-Variable spltlist -Force -Scope Global -ErrorAction SilentlyContinue
       [System.gc]::Collect()
-}
 
 
-If($hash.vhdinventory)
-{
 
-    $uploadToOms=$hash.vhdinventory
-    $hash.vhdinventory=@()
-
-}Else
+If(!$hash.vhdinventory)
 {
 
 
 		$hash.vhdinventory+= New-Object PSObject -Property @{
-			Timestamp = $colltime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
-			MetricName = 'ScaleSetInventory';
-			Name="NO RESOURCE FOUND"
-            RunningVMs="NO RESOURCE FOUND"
-            fqdn="NO RESOURCE FOUND"
-            publicIP="NO RESOURCE FOUND"
-			SubscriptionId = $subscriptionID
-			AzureSubscription = $subscriptionname
-			ShowinDesigner=0
-			
+						Timestamp = $timestamp
+						MetricName = 'Inventory'
+						InventoryType='VHDFile'
+						VHDName="NO RESOURCE FOUND"
+						Uri= "NO RESOURCE FOUND"
+						SubscriptionID = $ArmConn.SubscriptionId;
+						AzureSubscription = $subscriptionInfo.displayName
+            			ShowinDesigner=0		
+					}        
 
-	}
 }
 
-
+    $uploadToOms=$hash.vhdinventory
+    $hash.vhdinventory=@()
     
     If($uploadToOms.count -gt $splitSize)
     {
@@ -2177,7 +2332,7 @@ If($hash.vhdinventory)
         $splitLogs=$_
           $jsonlogs= ConvertTo-Json -InputObject $splitLogs
 
-        Post-OMSData -customerId $customerId2 -sharedKey $sharedKey2 -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
+        Post-OMSData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
   
      }
 
@@ -2187,7 +2342,7 @@ If($hash.vhdinventory)
 
     $jsonlogs= ConvertTo-Json -InputObject $uploadToOms
 
-         Post-OMSData -customerId $customerId2 -sharedKey $sharedKey2 -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
+         Post-OMSData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
     
     
     }

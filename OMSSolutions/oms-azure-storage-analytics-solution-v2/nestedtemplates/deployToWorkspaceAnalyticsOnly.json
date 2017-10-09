@@ -85,6 +85,17 @@
         "description": "This option creates extra collectors to collect and ingest storage audit logs"
       }
     },
+        "collectionFromAllSubscriptions": {
+            "type": "string",
+            "allowedValues": [
+                "Enabled",
+                "Disabled"
+            ],
+            "metadata": {
+                "description": "Enables data collection from all subscriptions where Azure SPN has access"
+            }
+        }
+    ,
     "_artifactsLocation": {
       "type": "string",
       "defaultValue": "https://raw.githubusercontent.com/Volkanco/AzureDeploy/master/OMSSolutions/oms-azure-storage-analytics-solution-v2",
@@ -2294,7 +2305,8 @@
               "name": "[variables('Runbooks').ingestSchedulerRunbook.name]"
             },
             "parameters": {
-              "collectAuditLogs": "[parameters('collectAuditLogs')]"
+              "collectAuditLogs": "[parameters('collectAuditLogs')]",
+              "collectionFromAllSubscriptions": "[parameters('collectionFromAllSubscriptions')]"
             }
           }
         }

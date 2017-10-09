@@ -1,4 +1,4 @@
-param ($collectAuditLogs)
+param ($collectAuditLogs,$collectionFromAllSubscriptions)
 
 #region Login to Azure account and select the subscription.
 #Authenticate to Azure with SPN section
@@ -210,12 +210,22 @@ Do {
 		-ResourceGroupName $AAResourceGroup `
 		-StartTime (Get-Variable -Name RBStart"$i").Value
 
+        IF ([string]::IsNullOrEmpty($collectionFromAllSubscriptions))
+        {
+            Register-AzureRmAutomationScheduledRunbook `
+		        -AutomationAccountName $AAAccount `
+		        -ResourceGroupName  $AAResourceGroup `
+		        -RunbookName $MetricsRunbookName `
+		        -ScheduleName $($MetricsScheduleName+"-$i") -Parameters $Params
+        }Else
+        {
+                Register-AzureRmAutomationScheduledRunbook `
+		        -AutomationAccountName $AAAccount `
+		        -ResourceGroupName  $AAResourceGroup `
+		        -RunbookName $MetricsRunbookName `
+		        -ScheduleName $($MetricsScheduleName+"-$i")
+        }
 
-Register-AzureRmAutomationScheduledRunbook `
-		-AutomationAccountName $AAAccount `
-		-ResourceGroupName  $AAResourceGroup `
-		-RunbookName $MetricsRunbookName `
-		-ScheduleName $($MetricsScheduleName+"-$i")
     $i++
     }
 While ($i -le 4)
