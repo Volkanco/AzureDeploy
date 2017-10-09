@@ -2282,7 +2282,7 @@ $uploadToOms=$hash.queueInventory
 If(!$hash.fileInventory)
 {
 
-  $hash.fileInventory+=ew-Object PSObject -Property @{
+  $hash.fileInventory+=New-Object PSObject -Property @{
 				Timestamp = $timestamp
 				MetricName = 'Inventory'
 				InventoryType='File'
