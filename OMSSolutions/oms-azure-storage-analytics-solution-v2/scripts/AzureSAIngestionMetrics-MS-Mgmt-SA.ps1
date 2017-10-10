@@ -1826,6 +1826,7 @@ IF($tier -notmatch 'premium' -and $kind -ne 'BlobStorage')
 				Uri=$uriQueue.Scheme+'://'+$uriQueue.Host+'/'+$queue.Name
 				SubscriptionID = $ArmConn.SubscriptionId;
 				AzureSubscription = $subscriptionInfo.displayName
+				ShowinDesigner=1
 			}
 
             #collect metrics
@@ -1902,6 +1903,7 @@ IF($tier -notmatch 'premium' -and $kind -ne 'BlobStorage')
 				Quota=$share.Properties.Quota                              
 				SubscriptionID = $ArmConn.SubscriptionId;
 				AzureSubscription = $subscriptionInfo.displayName
+				ShowinDesigner=1
 			}
 
             [uri]$uriforF="https://{0}.file.core.windows.net/{1}?restype=share&comp=stats" -f $storageaccount,$share.Name 
@@ -1963,6 +1965,7 @@ IF($tier -notmatch 'premium')
 				Uri=$uritable.Scheme+'://'+$uritable.Host+'/'+$tbl
 				SubscriptionID = $ArmConn.SubscriptionId;
 				AzureSubscription = $subscriptionInfo.displayName
+				ShowinDesigner=1
 				
 			}
 		}
@@ -2010,6 +2013,7 @@ IF($tier -notmatch 'premium')
 						StorageAccount= $storageaccount
 						SubscriptionID = $ArmConn.SubscriptionId;
 						AzureSubscription = $subscriptionInfo.displayName
+						ShowinDesigner=1
 						
 					}
 					           
