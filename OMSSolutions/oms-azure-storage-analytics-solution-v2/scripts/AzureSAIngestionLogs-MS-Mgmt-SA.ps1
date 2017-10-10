@@ -333,6 +333,9 @@ Function Build-OMSSignature ($customerId, $sharedKey, $date, $contentLength, $me
 # Create the function to create and post the request
 Function Post-OMSData($customerId, $sharedKey, $body, $logType)
 {
+
+
+	#usage     Post-OMSData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
 	$method = "POST"
 	$contentType = "application/json"
 	$resource = "/api/logs"
@@ -354,19 +357,29 @@ Function Post-OMSData($customerId, $sharedKey, $body, $logType)
 		"x-ms-date" = $rfc1123date;
 		"time-generated-field" = $TimeStampField;
 	}
-#write-output "OMS parameters"
-#$OMSheaders
+
 	Try{
 		$response = Invoke-WebRequest -Uri $uri -Method POST  -ContentType $contentType -Headers $OMSheaders -Body $body -UseBasicParsing
-	}
-	Catch
+	}catch [Net.WebException] 
 	{
-		$_.MEssage
+	$ex=$_.Exception
+	   If ($_.Exception.Response.StatusCode.value__) {
+    $exrespcode = ($_.Exception.Response.StatusCode.value__ ).ToString().Trim();
+    #Write-Output $crap;
 	}
-	return $response.StatusCode
+	If  ($_.Exception.Message) {
+    $exMessage = ($_.Exception.Message).ToString().Trim();
+    #Write-Output $crapMessage;
+	}
+	$errmsg= "$exrespcode : $exMessage"
+	}
+
+if ($errmsg){return $errmsg }
+Else{	return $response.StatusCode }
 	#write-output $response.StatusCode
 	Write-error $error[0]
 }
+
 
 
 function Cleanup-Variables {
@@ -961,6 +974,9 @@ Function Build-OMSSignature ($customerId, $sharedKey, $date, $contentLength, $me
 # Create the function to create and post the request
 Function Post-OMSData($customerId, $sharedKey, $body, $logType)
 {
+
+
+	#usage     Post-OMSData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
 	$method = "POST"
 	$contentType = "application/json"
 	$resource = "/api/logs"
@@ -982,20 +998,28 @@ Function Post-OMSData($customerId, $sharedKey, $body, $logType)
 		"x-ms-date" = $rfc1123date;
 		"time-generated-field" = $TimeStampField;
 	}
-#write-output "OMS parameters"
-#$OMSheaders
+
 	Try{
 		$response = Invoke-WebRequest -Uri $uri -Method POST  -ContentType $contentType -Headers $OMSheaders -Body $body -UseBasicParsing
-	}
-	Catch
+	}catch [Net.WebException] 
 	{
-		$_.MEssage
+	$ex=$_.Exception
+	   If ($_.Exception.Response.StatusCode.value__) {
+    $exrespcode = ($_.Exception.Response.StatusCode.value__ ).ToString().Trim();
+    #Write-Output $crap;
 	}
-	return $response.StatusCode
+	If  ($_.Exception.Message) {
+    $exMessage = ($_.Exception.Message).ToString().Trim();
+    #Write-Output $crapMessage;
+	}
+	$errmsg= "$exrespcode : $exMessage"
+	}
+
+if ($errmsg){return $errmsg }
+Else{	return $response.StatusCode }
 	#write-output $response.StatusCode
 	Write-error $error[0]
 }
-
 
 
 
@@ -1267,9 +1291,6 @@ Foreach ($svc in @('blob','table','queue'))
             $content=$null
             $auditlog= invoke-StorageREST -sharedKey $prikey -method GET -resource $storageaccount -uri $uriLogs3 -download $true 
 
-
-           # if(Test-Path $auditlog)
-            #if($false)
             if(Test-Path $auditlog)
             {
                 $file = New-Object System.IO.StreamReader -Arg $auditlog
@@ -1373,9 +1394,6 @@ If($logArray)
     }
 }
 
-
-#"$($logArray.count)  audit log collected"
- # $hash.Host.ui.WriteLine("$($logArray.count) storage logs found for $svc")
 
    IF($s%10 -eq 0) 
    {

@@ -326,6 +326,9 @@ Function Build-OMSSignature ($customerId, $sharedKey, $date, $contentLength, $me
 # Create the function to create and post the request
 Function Post-OMSData($customerId, $sharedKey, $body, $logType)
 {
+
+
+	#usage     Post-OMSData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
 	$method = "POST"
 	$contentType = "application/json"
 	$resource = "/api/logs"
@@ -347,16 +350,25 @@ Function Post-OMSData($customerId, $sharedKey, $body, $logType)
 		"x-ms-date" = $rfc1123date;
 		"time-generated-field" = $TimeStampField;
 	}
-#write-output "OMS parameters"
-#$OMSheaders
+
 	Try{
 		$response = Invoke-WebRequest -Uri $uri -Method POST  -ContentType $contentType -Headers $OMSheaders -Body $body -UseBasicParsing
-	}
-	Catch
+	}catch [Net.WebException] 
 	{
-		$_.MEssage
+	$ex=$_.Exception
+	   If ($_.Exception.Response.StatusCode.value__) {
+    $exrespcode = ($_.Exception.Response.StatusCode.value__ ).ToString().Trim();
+    #Write-Output $crap;
 	}
-	return $response.StatusCode
+	If  ($_.Exception.Message) {
+    $exMessage = ($_.Exception.Message).ToString().Trim();
+    #Write-Output $crapMessage;
+	}
+	$errmsg= "$exrespcode : $exMessage"
+	}
+
+if ($errmsg){return $errmsg }
+Else{	return $response.StatusCode }
 	#write-output $response.StatusCode
 	Write-error $error[0]
 }
@@ -1509,6 +1521,9 @@ Function Build-OMSSignature ($customerId, $sharedKey, $date, $contentLength, $me
 # Create the function to create and post the request
 Function Post-OMSData($customerId, $sharedKey, $body, $logType)
 {
+
+
+	#usage     Post-OMSData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
 	$method = "POST"
 	$contentType = "application/json"
 	$resource = "/api/logs"
@@ -1530,19 +1545,29 @@ Function Post-OMSData($customerId, $sharedKey, $body, $logType)
 		"x-ms-date" = $rfc1123date;
 		"time-generated-field" = $TimeStampField;
 	}
-#write-output "OMS parameters"
-#$OMSheaders
+
 	Try{
 		$response = Invoke-WebRequest -Uri $uri -Method POST  -ContentType $contentType -Headers $OMSheaders -Body $body -UseBasicParsing
-	}
-	Catch
+	}catch [Net.WebException] 
 	{
-		$_.MEssage
+	$ex=$_.Exception
+	   If ($_.Exception.Response.StatusCode.value__) {
+    $exrespcode = ($_.Exception.Response.StatusCode.value__ ).ToString().Trim();
+    #Write-Output $crap;
 	}
-	return $response.StatusCode
+	If  ($_.Exception.Message) {
+    $exMessage = ($_.Exception.Message).ToString().Trim();
+    #Write-Output $crapMessage;
+	}
+	$errmsg= "$exrespcode : $exMessage"
+	}
+
+if ($errmsg){return $errmsg }
+Else{	return $response.StatusCode }
 	#write-output $response.StatusCode
 	Write-error $error[0]
 }
+
 
 
 
@@ -2143,6 +2168,7 @@ If($hash.saTransactionsMetrics)
 If($hash.saCapacityMetrics)
 {
 
+ write-output  "Uploading  $($hash.saCapacityMetrics.count) capacity metrics"
     $uploadToOms=$hash.saCapacityMetrics
     $hash.saCapacityMetrics=@()
     
@@ -2180,19 +2206,7 @@ If($hash.saCapacityMetrics)
 
 If($hash.tableInventory)
 {
-New-Object PSObject -Property @{
-				Timestamp = $timestamp
-				MetricName = 'Inventory'
-				InventoryType='Table'
-				StorageAccount=$storageaccount
-				Table=$tbl
-				Uri=$uritable.Scheme+'://'+$uritable.Host+'/'+$tbl
-				SubscriptionID = $ArmConn.SubscriptionId;
-				AzureSubscription = $subscriptionInfo.displayName
-				
-			}
-
-
+write-output  "Uploading  $($hash.tableInventory.count) table inventory"
     $uploadToOms=$hash.tableInventory
 
     $hash.tableInventory=@()
@@ -2245,6 +2259,7 @@ $hash.queueInventory+=New-Object PSObject -Property @{
 			}
 }
 
+write-output  "Uploading  $($hash.queueInventory.count) queue inventory"
 $uploadToOms=$hash.queueInventory
     $hash.queueInventory=@()
     
@@ -2283,6 +2298,7 @@ $uploadToOms=$hash.queueInventory
 If(!$hash.fileInventory)
 {
 
+
   $hash.fileInventory+=New-Object PSObject -Property @{
 				Timestamp = $timestamp
 				MetricName = 'Inventory'
@@ -2295,6 +2311,8 @@ If(!$hash.fileInventory)
 	        	}
            				
 }
+
+write-output  "Uploading  $($hash.fileInventory.count) file inventory"
   $uploadToOms=$hash.fileInventory
     $hash.fileInventory=@()
 
@@ -2350,6 +2368,7 @@ If(!$hash.vhdinventory)
 
 }
 
+	write-output  "Uploading  $($hash.vhdinventory.count) vhd inventory"
     $uploadToOms=$hash.vhdinventory
     $hash.vhdinventory=@()
     
