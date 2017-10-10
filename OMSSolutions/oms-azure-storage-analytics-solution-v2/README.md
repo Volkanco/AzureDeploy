@@ -160,7 +160,7 @@ The views for Azure Storage Analytics  will give you an overview of all the stor
 
  Solution collects and visualizes Azure Storage Audit Logs  every hour and visualize ;
 
-* Operation (PutBlob, Delete )
+* Operation (PutBlob, Delete ,Get Blob , InsertEntry etc )
 * Storage Account Info
 * Authentication Type 
 * Remote IP Address
@@ -182,12 +182,16 @@ Solution relies on Automation Account with Runas Accounts  configured. Both SPN 
 ![alt text](images/runasaccounts.png "Azure Automation Runas Accounts")
 
 General Troubleshooting steps ;
+
+* Check the templyment deployment status from Azure Portal / <ResourceGroup> / Deployments. If deplyment failed  delete the AzureStorageAnalytics[....] AzureStorageAuditLogs[.....] and redeploy the solution usinga a new  deploymnet name suffix. This suffix needs to unique for the deploymnet in that specific resoruce group. 
 * Check if automation account can start  the runbooks
 * Check if Runas Accounts configured properly and has permission to query subscription details and can access storage keys  
-* Check if AzureStorageIngestion.......  Automation Schedules are enabled
+* Check if AzureSAIngestionMetrics-MS-Mgmt-SA and AzureSAIngestionLogs-MS-Mgmt-SA has enabled schedules. If not you can run AzureSACreateSchedules-MS-Mgmt-SA to re-create the schedules. 
 
 When solution is deployed  first MinuteMetrics will be enabled on all storage accounts. Transaction and capacity metrics will be logged after these metrics are first enabled. Based on the number of the storage accounts these runbook job can take  long time to finish. If you want to speed up the process you can enable metrics by running the following cdmlet;
 
 Set-AzureStorageServiceMetricsProperty -MetricsType Minute -ServiceType (Blob,Table,Queue,File)  -MetricsLevel ServiceAndApi -RetentionDays 1 -Context (storageaccountcontext)
 
 Sample script to get all strorage accounts and enable metrics can be found under /Scripts/EnableMetrics.ps1
+
+Unlike metrics Storage Logs are not enabled by the solution and needs to be enabled by the admin.
