@@ -17,7 +17,8 @@ Azure Storage Analytics Solution collects and visualizes inventory information, 
 - **Automation Account with SPN**
 
 Before you deploy this template, you must create an Automation Account in the Azure portal with the default settings so that the SPN account will be created. If you have an existing OMS Log Analytics Workspace you would like to use for this solution, it is important that the Automation account is created into the **same Resource Group where the OMS Log Analytics Workspace is located**. 
-If you are interted collect data from multiple subscription Automation Account SPN needs to have required permission on all subscriptions. See Multiple Subscription support section for details. 
+
+If you want to collect data from multiple subscription Automation Account SPN needs to have required permission on all subscriptions. See Multiple Subscription support section for details. 
 
 If you **dont** have an existing OMS Log Analytics Workspace, the template will create and deploy this for you.
 
@@ -150,6 +151,28 @@ The views for Azure Storage Analytics  will give you an overview of all the stor
 ![alt text](images/metrics.png "Azure Storage Metrics view")
 
 Solution also includes 14 preconfigured alerts  which can be used to notify for when certain thresholds are reached.  You can view the alerts and modify thresholds  from Alerts under workspace settings.
+
+### Azure Storage Audit Logs
+
+The views for Azure Storage Analytics  will give you an overview of all the storage accounts  within your Azure Subscription. 
+
+![alt text](images/solutionviewlogs.png "Azure Storage Audit Logs View")
+
+ Solution collects and visualizes Azure Storage Audit Logs  every hour and visualize ;
+
+* Operation (PutBlob, Delete )
+* Storage Account Info
+* Authentication Type 
+* Remote IP Address
+* Storage Service details 
+
+Audit Logs is not enabled by default and need to be enabled on the storage accounts where auditing is necessary. Logs for individual services can be enabled from  Azure Portal / Storage Account / Monitoring / Diagnostic as seen below
+
+![alt text](images/auditlogenable.png "Enable Storage Account Logs")
+
+Alternatively you can enable logging by using Set-AzureStorageServiceLoggingProperty  Powershell cdmlet. 
+
+
 
 
 ### Troubleshooting 
