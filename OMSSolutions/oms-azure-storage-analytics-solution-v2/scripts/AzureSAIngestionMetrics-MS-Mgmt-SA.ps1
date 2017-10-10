@@ -639,7 +639,7 @@ foreach($sa in $saAsmList)
 	$rg=$sa.id.Split('/')[4]
 	$cu=$iotype=$null
 	IF($sa.properties.accountType -like 'Standard*')
-	{$iotype='Standard'}Else{{$iotype='Premium'}}
+	{$iotype='Standard'}Else{$iotype='Premium'}
 	$cu = New-Object PSObject -Property @{
 		Timestamp = $timestamp
 		MetricName = 'Inventory'
