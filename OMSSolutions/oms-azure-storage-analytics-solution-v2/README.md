@@ -10,7 +10,7 @@
  Microsoft Azure Storage is the cloud storage solution for modern applications that rely on durability, availability, and scalability to meet the needs of their customers. Azure storage provides  Blob storage, Table storage, Queue storage, and File storage services.
 Azure Storage Analytics Solution collects and visualizes inventory information, capacity metrics, transaction metrics,storage errors and Audit Logs  for storage accounts in an Azure subscription. Users can easily create additional rules to monitor storage resources. This solution leverages Azure Automation, the Log Analytics Ingestion API, together with Log Analytics views to present data about all your storage accounts  in a single  workspace. 
 
-![alt text](images/sasolution.png "Overview")
+![alt text](images/sasolution.png "Overview") ![alt text](images/logsolution.png "Overview")
 
 ## Pre-reqs
 
@@ -53,6 +53,10 @@ Ensure that the parameters reflects your setup so that you are deploying this in
 
 #### Parameters
 
+* Deplyment Name Suffix 
+
+Specify a unique name to be used as suffix to deployment name. This name will be used to create a guid  needed for the automation jobs. You need to provide a unique suffix for the resource group every time you deploy the solution  .
+
 * OMS Log Analytics Workspace Name
 
 Specify the name of the workspace you want to deploy this solution to
@@ -60,6 +64,10 @@ Specify the name of the workspace you want to deploy this solution to
 * OMS Log Analytics Region
 
 Select the Azure Region where your existing workspace is located
+
+* OMS Log Analytics Sku
+
+Select the Sku for Log Analytics Workspace 
 
 * OMS Automation Account Name
 
@@ -69,17 +77,24 @@ Specify the name of the automation account you created earlier
 
 Select the Azure Region where your automation account is located
 
+* OMS Workspace Type 
 
-You should also change the values for the *Ingest Scheduler Guid* and *Ingest Cleanup Guid*. You can generate your own using PowerShell with the following cmdlet:
+Specify if Log Analytics Workspace and Automation account is linked 
+
+* Linked Workspace SKU
+
+Specify the SKu to be used in linked workspace. Only used if OMS Workspace Type is set to Linked 
+
+* Collect Audit Logs 
+
+Select if you want to deploy additional Azure Storage Audit Log solution components
+
+* Collection From All Subscriptions 
+
+Select if you want to enable data collection from all subscriptions where Automation SPN  has access to 
 
 
-![alt text](images/knguid.png "guid")
-
-Once you have customized all the parameters, click *Create*
-
-![alt text](images/template.png "template")
-
-The ingestion will start 5-10 minutes post deployment.
+The ingestion will start 5-10 minutes post deployment. IF you have created a new log analytics workspace  it might take up tp 30 mins for all fields to populate.
 
 ## Exploring the views
 
