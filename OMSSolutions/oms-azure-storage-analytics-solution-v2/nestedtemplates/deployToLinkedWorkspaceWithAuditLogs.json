@@ -103,8 +103,7 @@
             "metadata": {
                 "description": "Enables data collection from all subscriptions where Azure SPN has access"
             }
-        }
-        ,
+        },
         "_artifactsLocation": {
             "type": "string",
             "defaultValue": "https://raw.githubusercontent.com/Volkanco/AzureDeploy/master/OMSSolutions/oms-azure-storage-analytics-solution-v2",
@@ -151,7 +150,6 @@
                 "Id": ""
             }
         },
-        
         "ingestScheduleGuid": "[guid(uniqueString(resourceGroup().id, deployment().name))]",
         "metricsRunbookUri": "[concat(parameters('_artifactsLocation'),'/scripts/AzureSAIngestionMetrics-MS-Mgmt-SA.ps1', parameters('_artifactsLocationSasToken'))]",
         "logsRunbookUri": "[concat(parameters('_artifactsLocation'),'/scripts/AzureSAIngestionLogs-MS-Mgmt-SA.ps1', parameters('_artifactsLocationSasToken'))]",
@@ -862,7 +860,7 @@
                                     }
                                 }
                             },
-                             {
+                            {
                                 "Id": "SingleQueryDonutBuilderBladeV1",
                                 "Type": "Blade",
                                 "Version": 0,
@@ -931,7 +929,6 @@
                                     }
                                 }
                             },
-                          
                             {
                                 "Id": "LineChartCalloutBuilderBlade",
                                 "Type": "Blade",
@@ -2799,7 +2796,7 @@
                         },
                         "parameters": {
                             "collectAuditLogs": "[parameters('collectAuditLogs')]",
-              "collectionFromAllSubscriptions": "[parameters('collectionFromAllSubscriptions')]"
+                            "collectionFromAllSubscriptions": "[parameters('collectionFromAllSubscriptions')]"
                         }
                     }
                 }

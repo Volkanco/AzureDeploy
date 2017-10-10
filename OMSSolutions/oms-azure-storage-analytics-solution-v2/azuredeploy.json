@@ -153,8 +153,8 @@
                 },
                 "parameters": {
                     "deploymentNameSuffix": {
-                         "value": "[parameters('deploymentNameSuffix')]"
-                     },
+                        "value": "[parameters('deploymentNameSuffix')]"
+                    },
                     "omsLogAnalyticsWorkspaceName": {
                         "value": "[parameters('omsLogAnalyticsWorkspaceName')]"
                     },
@@ -182,7 +182,6 @@
                     "collectionFromAllSubscriptions": {
                         "value": "[parameters('collectAuditLogs')]"
                     }
-                    
                 }
             }
         },
@@ -200,8 +199,8 @@
                 },
                 "parameters": {
                     "deploymentNameSuffix": {
-                         "value": "[parameters('deploymentNameSuffix')]"
-                     },
+                        "value": "[parameters('deploymentNameSuffix')]"
+                    },
                     "omsLogAnalyticsWorkspaceName": {
                         "value": "[parameters('omsLogAnalyticsWorkspaceName')]"
                     },
