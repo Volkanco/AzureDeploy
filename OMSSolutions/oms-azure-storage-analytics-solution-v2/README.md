@@ -172,8 +172,19 @@ Audit Logs is not enabled by default and need to be enabled on the storage accou
 
 Alternatively you can enable logging by using Set-AzureStorageServiceLoggingProperty  Powershell cdmlet. 
 
+### Multiple Subscription Support
 
+Ingestion data from multiple subscriptions uses Azure RBAC and only supported on  ARM based storage accounts. 
+To access additional subscriptions Azure Automation SPN needs to have acess on  the additional subscriptions. 
+ApplicationId  for the Automation Account SPN can be found under Automation Account / Connections / AzureRunAsConnection
 
+![alt text](images/runasspn.png "Runas Account ApplicationId")
+
+You need to add this ApplicationId  to additional Subscriptions / Access Control / Add
+
+Under Roles  yo can create a custom role for the ApplicationID to Read Storage accounts and List Storage Account Keys  or select Read and Storage Account Key Operator roles. 
+
+![alt text](images/rbac.png " Delegation")
 
 ### Troubleshooting 
 
