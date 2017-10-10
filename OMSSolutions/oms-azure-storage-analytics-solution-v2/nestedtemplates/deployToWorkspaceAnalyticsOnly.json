@@ -404,7 +404,7 @@
             },
             "resources": [
                 {
-                    "apiVersion": "2017-03-15-preview",
+                    "apiVersion": "2015-11-01-preview",
                     "name": "[variables('omsSolutions').customSolution1.name]",
                     "type": "views",
                     "id": "[resourceId('Microsoft.OperationalInsights/workspaces/views/', parameters('omsLogAnalyticsWorkspaceName'), variables('omsSolutions').customSolution1.name)]",
