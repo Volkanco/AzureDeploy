@@ -175,7 +175,7 @@ Alternatively you can enable logging by using Set-AzureStorageServiceLoggingProp
 ### Multiple Subscription Support
 
 Ingestion data from multiple subscriptions uses Azure RBAC and only supported on  ARM based storage accounts. 
-To access additional subscriptions Azure Automation SPN needs to have acess on  the additional subscriptions. 
+To access additional subscriptions Azure Automation SPN needs to have acess on  the additional subscriptions.
 ApplicationId  for the Automation Account SPN can be found under Automation Account / Connections / AzureRunAsConnection
 
 ![alt text](images/runasspn.png "Runas Account ApplicationId")
