@@ -144,7 +144,7 @@
             "condition": "[equals(parameters('omsWorkspaceType'), 'Linked')]",
             "type": "Microsoft.Resources/deployments",
             "apiVersion": "2016-02-01",
-            "name": "[concat('DeployLinkedWorkspaceStorageAnalyticsOnly-',parameters('deploymentNameSuffix'))]",
+            "name": "[concat('LinkedWSAnalyticsOnly-',parameters('deploymentNameSuffix'))]",
             "dependsOn": [],
             "properties": {
                 "mode": "Incremental",
@@ -187,7 +187,7 @@
             "condition": "[equals(parameters('omsWorkspaceType'), 'Unlinked')]",
             "type": "Microsoft.Resources/deployments",
              "apiVersion": "2016-02-01",
-            "name": "[concat('deployToWorkspaceAnalyticsOnly-',parameters('deploymentNameSuffix'))]",
+            "name": "[concat('AnalyticsOnly-',parameters('deploymentNameSuffix'))]",
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {

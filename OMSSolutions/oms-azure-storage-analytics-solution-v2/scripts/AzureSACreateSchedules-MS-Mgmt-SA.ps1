@@ -241,7 +241,7 @@ IF($collectAuditLogs -eq 'Enabled')
 
     #Add the schedule an hour ahead and start the runbook
 
-    $RunbookStartTime = $Date =(get-date -Minute 02 -Second 00).AddHours(1).ToUniversalTime()
+    $RunbookStartTime = $Date =(get-date -Minute 05 -Second 00).AddHours(1).ToUniversalTime()
 	IF (($runbookstarttime-(Get-date).ToUniversalTime()).TotalMinutes -lt 6)
 	{
 			$RunbookStartTime=((Get-date).ToUniversalTime()).AddMinutes(7)

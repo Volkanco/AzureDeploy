@@ -3,7 +3,7 @@
     "contentVersion": "1.0.0.0",
     "parameters": {
                "deploymentNameSuffix": {
-            "value": "GEN-UNIQUE-10"
+            "value": "GEN-UNIQUE-30"
         },
         "omsLogAnalyticsWorkspaceName": {
             "value": "GEN-UNIQUE-20"
