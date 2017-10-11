@@ -532,9 +532,12 @@ IF($collectionFromAllSubscriptions -and $Subscriptions.count -gt 1 )
 
     #we will process first subscription with this runbook and  pass the rest to additional jobs
 
-    $n=$Subscriptions.count-1
-    $subslist=$Subscriptions[-$n..-1]
-    Foreach($item in $subslist)
+    #$n=$Subscriptions.count-1
+    #$subslist=$Subscriptions[-$n..-1]
+    
+		$subslist=$subscriptions|where {$_.subscriptionId  -ne $subscriptionId}
+		
+	Foreach($item in $subslist)
     {
 
     $params1 = @{"SubscriptionidFilter"=$item.subscriptionId;"collectionFromAllSubscriptions" = $false;"getAsmHeader"=$false}
