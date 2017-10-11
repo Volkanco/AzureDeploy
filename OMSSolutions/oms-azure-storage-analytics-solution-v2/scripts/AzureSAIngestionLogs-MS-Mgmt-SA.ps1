@@ -1398,21 +1398,6 @@ If($logArray)
     Post-OMSData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
 
     }
-}Else
-{
- $logArray+=New-Object PSObject -Property @{
-                	            Timestamp = $(get-date)
-	                            MetricName = 'AuditLogs'
-                                Resource="NO LOG FOUND"
-	                            SubscriptionId = $ArmConn.SubscriptionId;
-	                            AzureSubscription = $subscriptionInfo.displayName;
-	                                    }
-										 $jsonlogs= ConvertTo-Json -InputObject $logArray
-
-    Post-OMSData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
-
-               
-
 }
 
 
