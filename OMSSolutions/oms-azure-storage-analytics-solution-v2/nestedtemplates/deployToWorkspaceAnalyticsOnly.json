@@ -439,7 +439,7 @@
                                     "List": [
                                         {
                                             "Title": "Solution Overview",
-                                            "Content": "\nAzure Storage Analytics Solution utilizes  native **Storage REST API** capabilities and **Storage Analytics**  to enable inventory and monitoring of storage accounts.\n\n![MS Logo](https://assets.onestore.ms/cdnfiles/onestorerolling-1607-15000/shell/v3/images/logo/microsoft.png \"Microsoft\")"
+                                           "Content": "\nAzure Storage Analytics Solution utilizes  native **Storage REST API** capabilities and **Storage Analytics**  to enable inventory of storage accounts , capacity and transaction  monitoring and collecting storage audit logs  from a single or multiple Azure Subscriptions. /nCollected data can be utilized to create alerts and trigger automation runbooks.\n\n Inventory and metrics are collected every 15 mins, logs are collected every 60 mins and VHD blob scan is performed every 4hours."
                                         }
                                     ]
                                 }
