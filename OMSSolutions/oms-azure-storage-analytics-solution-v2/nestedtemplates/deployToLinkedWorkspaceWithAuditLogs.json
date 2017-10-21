@@ -2818,7 +2818,9 @@
             "properties": {
                 "resourceId": "[resourceId('Microsoft.Automation/automationAccounts/',parameters('omsAutomationAccountName'))]"
             },
-            "dependsOn": []
+            "dependsOn": [
+                "[concat('Microsoft.OperationalInsights/workspaces/', parameters('omsLogAnalyticsWorkspaceName'))]"
+                ]
         },
         {
             "name": "[variables('omsSolutions').customSolution1.solutionName]",
