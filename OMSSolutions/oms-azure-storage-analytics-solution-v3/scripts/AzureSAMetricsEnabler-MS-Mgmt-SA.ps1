@@ -357,32 +357,44 @@ IF($subscriptionInfo)
 	"Successfully connected to Azure ARM REST"
 }
 
-
+#try to authenticate with ASM 
 
 if ($getAsmHeader) {
- 
-	$AsmConn = Get-AutomationConnection -Name AzureClassicRunAsConnection 
-    if ($AsmConn -eq $null) {
-        Write-Warning "Could not retrieve connection asset AzureClassicRunAsConnection. Ensure that runas account exist and valid in the Automation account."
-        $getAsmHeader=$false
+    
+	try
+    {
+        $AsmConn = Get-AutomationConnection -Name AzureClassicRunAsConnection -ea 0
+       
     }
-
-	$CertificateAssetName = $AsmConn.CertificateAssetName
-	$AzureCert = Get-AutomationCertificate -Name $CertificateAssetName
-	if ($AzureCert -eq $null)
-	{
-		Write-Warning  "Could not retrieve certificate asset: $CertificateAssetName. Ensure that this asset exists and valid  in the Automation account."
-        $getAsmHeader=$false
+    Catch
+    {
+        if ($AsmConn -eq $null) {
+            Write-Warning "Could not retrieve connection asset AzureClassicRunAsConnection. Ensure that runas account exist and valid in the Automation account."
+            $getAsmHeader=$false
+        }
     }
-	Else{
+     if ($AsmConn -eq $null) {
+        Write-Warning "Could not retrieve connection asset AzureClassicRunAsConnection. Ensure that runas account exist and valid in the Automation account. Quota usage infomration for classic accounts will no tbe collected"
+        $getAsmHeader=$false
+    }Else{
 
-	"Logging into Azure Service Manager"
-	Write-Verbose "Authenticating to Azure with certificate." -Verbose
-	Set-AzureSubscription -SubscriptionName $AsmConn.SubscriptionName -SubscriptionId $AsmConn.SubscriptionId -Certificate $AzureCert
-	Select-AzureSubscription -SubscriptionId $AsmConn.SubscriptionId
-	#finally create the headers for ASM REST 
-	$headerasm = @{"x-ms-version"="2013-08-01"}
-	}
+        $CertificateAssetName = $AsmConn.CertificateAssetName
+        $AzureCert = Get-AutomationCertificate -Name $CertificateAssetName
+        if ($AzureCert -eq $null)
+        {
+            Write-Warning  "Could not retrieve certificate asset: $CertificateAssetName. Ensure that this asset exists and valid  in the Automation account."
+            $getAsmHeader=$false
+        }
+        Else{
+
+        "Logging into Azure Service Manager"
+        Write-Verbose "Authenticating to Azure with certificate." -Verbose
+        Set-AzureSubscription -SubscriptionName $AsmConn.SubscriptionName -SubscriptionId $AsmConn.SubscriptionId -Certificate $AzureCert
+        Select-AzureSubscription -SubscriptionId $AsmConn.SubscriptionId
+        #finally create the headers for ASM REST 
+        $headerasm = @{"x-ms-version"="2013-08-01"}
+        }
+    }
 
 }
 

@@ -69,17 +69,29 @@ IF($subscriptionInfo)
 }
 
 #cheking if ASM Runas Account exist
+   
+	try
+    {
+        $AsmConn = Get-AutomationConnection -Name AzureClassicRunAsConnection -ea 0
+       
+    }
+    Catch
+    {
+        if ($AsmConn -eq $null) {
+            Write-Warning "Could not retrieve connection asset AzureClassicRunAsConnection. Ensure that runas account exist and valid in the Automation account."
+            $getAsmHeader=$false
+        }
+    }
+     if ($AsmConn -eq $null) {
+        Write-Warning "Could not retrieve connection asset AzureClassicRunAsConnection. Ensure that runas account exist and valid in the Automation account. Quota usage infomration for classic accounts will no tbe collected"
+        $getAsmHeader=$false
+    }Else
+	{
+			$getAsmHeader=$true
+    }
 
-$AsmConn = Get-AutomationConnection -Name AzureClassicRunAsConnection  
 
 
-if ($AsmConn  -eq $null)
-{
-$getAsmHeader=$false
-}
-else {
-	$getAsmHeader=$true
-}
 #endregion
 
 $AAResourceGroup = Get-AutomationVariable -Name 'AzureSAIngestion-AzureAutomationResourceGroup-MS-Mgmt-SA'
@@ -97,7 +109,7 @@ $varText= "AAResourceGroup = $AAResourceGroup , AAAccount = $AAAccount"
 Write-output $varText
 
 
-New-AzureRmAutomationVariable -Name $varVMIopsList -Description "Variable to store IOPS limits for Azure VM Sizes." -Value $vmiolimits -Encrypted 0 -ResourceGroupName $AAResourceGroup -AutomationAccountName $AAAccount  -ea 0
+New-AzureRmAutomationVariable -Name varVMIopsList -Description "Variable to store IOPS limits for Azure VM Sizes." -Value $vmiolimits -Encrypted 0 -ResourceGroupName $AAResourceGroup -AutomationAccountName $AAAccount  -ea 0
 
 IF([string]::IsNullOrEmpty($AAAccount) -or [string]::IsNullOrEmpty($AAResourceGroup))
 {
