@@ -109,7 +109,7 @@
         },
         "dataCollectionFrequency": {
             "type": "int",
-            "defaultValue": 30,
+            "defaultValue": 15,
             "allowedValues": [
                 15,
                 30,
@@ -132,21 +132,13 @@
             }
         },
         "collectQueryPerformance": {
-            "type": "string",
-            "allowedValues": [
-                "Enabled",
-                "Disabled"
-            ],
-            "metadata": {
+            "type": "bool",
+             "metadata": {
                 "description": "Specify the Azure Region for your OMS Automation Account"
             }
         },
         "collectHanaTableInventory": {
-            "type": "string",
-            "allowedValues": [
-                "Enabled",
-                "Disabled"
-            ],
+            "type": "bool",
             "metadata": {
                 "description": "Specify the Azure Region for your OMS Automation Account"
             }

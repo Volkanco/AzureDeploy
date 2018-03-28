@@ -91,7 +91,7 @@
         },
         "dataCollectionFrequency": {
             "type": "int",
-            "defaultValue": 30,
+            "defaultValue": 15,
             "allowedValues": [
                 15,
                 30,
@@ -114,21 +114,13 @@
             }
         },
         "collectQueryPerformance": {
-            "type": "string",
-            "allowedValues": [
-                "Enabled",
-                "Disabled"
-            ],
-            "metadata": {
+            "type": "bool",
+             "metadata": {
                 "description": "Specify the Azure Region for your OMS Automation Account"
             }
         },
         "collectHanaTableInventory": {
-            "type": "string",
-            "allowedValues": [
-                "Enabled",
-                "Disabled"
-            ],
+            "type": "bool",
             "metadata": {
                 "description": "Specify the Azure Region for your OMS Automation Account"
             }
@@ -151,14 +143,14 @@
     "variables": {
         "runbooks": {
             "ingestParentRunbook": {
-                "name": "AzureSAPHanaCollector",
+                "name": "AzureSAPHanaCollector-MS",
                 "version": "1.0.0.1",
                 "description": "Runbook to collect SAP Hana information and metrics into Log Analytics",
                 "type": "PowerShell",
                 "Id": ""
             },
             "ingestSchedulerRunbook": {
-                "name": "AzureSAPHanaInitialization",
+                "name": "AzureSAPHanaInitialization-MS",
                 "version": "1.0.0.1",
                 "description": "Runbook to automatically create required schedules and variables for SAP Hana data collection",
                 "type": "PowerShell",
@@ -1306,37 +1298,10 @@
                             "collectQueryPerformance": "[parameters('collectQueryPerformance')]",
                             "collectHanaTableInventory": "[parameters('collectHanaTableInventory')]",
                             "configFolder": "[variables('sapHanaConfigfolder')]",
-
+                            "defaultProfileUser": "[parameters('sapHanaMonitorUser')]",
+                            "defaultProfilePassword": "[parameters('sapHanaMonitorPassword')]"
                         }
                     }
-                },
-                {
-                    "name": "[variables('hanaMonitorDefaultUser')]",
-                    "type": "variables",
-                    "apiVersion": "2015-10-31",
-                    "scale": null,
-                    "properties": {
-                        "description": "Hana Monitoring User for default profile",
-                        "isEncrypted": false,
-                        "value": "parameters('sapHanaMonitorUser')"
-                    },
-                    "dependsOn": [
-                        "[concat('Microsoft.Automation/automationAccounts/', parameters('automationAccountName'))]"
-                    ]
-                },
-                {
-                    "name": "[variables('hanaMonitorDefaultPassword')]",
-                    "type": "variables",
-                    "apiVersion": "2015-10-31",
-                    "scale": null,
-                    "properties": {
-                        "description": "Hana Monitoring User for default profile",
-                        "isEncrypted": true,
-                        "value": "parameters('sapHanaMonitorPassword')"
-                    },
-                    "dependsOn": [
-                        "[concat('Microsoft.Automation/automationAccounts/', parameters('automationAccountName'))]"
-                    ]
                 }
             ]
         },
