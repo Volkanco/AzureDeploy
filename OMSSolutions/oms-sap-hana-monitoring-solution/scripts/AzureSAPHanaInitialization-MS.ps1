@@ -165,7 +165,7 @@ Do {
 	New-AzureRmAutomationSchedule `
 	-AutomationAccountName $AAAccount `
 	-HourInterval 1 `
-	-Name $($MetricsScheduleName+"-$i") `
+	-Name $($collectorScheduleName+"-$i") `
 	-ResourceGroupName $AAResourceGroup `
 	-StartTime (Get-Variable -Name RBStart"$i").Value
 
@@ -176,7 +176,7 @@ Do {
 		-AutomationAccountName $AAAccount `
 		-ResourceGroupName  $AAResourceGroup `
 		-RunbookName $collectorRunbookName `
-		-ScheduleName $($MetricsScheduleName+"-$i")  -Parameters $Params -RunOn $hybridworkername
+		-ScheduleName $($collectorScheduleName+"-$i")  -Parameters $Params -RunOn $hybridworkername
 
 	
 	}
