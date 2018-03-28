@@ -1422,7 +1422,7 @@
         {
             "type": "Microsoft.Resources/deployments",
             "apiVersion": "2016-02-01",
-            "name": "[concat('deployAzureDashboards-',parameters('deploymentNameSuffix'))]",
+            "name": "deployAzureDashboards",
             "dependsOn": [
                 "[concat('Microsoft.OperationalInsights/workspaces/', parameters('logAnalyticsWorkspaceName'))]",
                 "[concat('Microsoft.Automation/automationAccounts/', parameters('automationAccountName'))]"
