@@ -54,6 +54,38 @@ $certs= Get-ChildItem -Path Cert:\Currentuser\my -Recurse | Where{$_.Thumbprint 
 #$certs
 [System.Security.Cryptography.X509Certificates.X509Certificate2]$mycert=$certs[0]
 #Write-output "$mycert will be used to acquire token"
+<#
+
+Active Directory Endpoint and Authority	https://login.microsoftonline.us	https://login.microsoftonline.com
+Azure API	https://management.usgovcloudapi.net/	https://management.azure.com/
+Germany 
+ResourceManagerUrl	https://management.microsoftazure.de/
+StorageEndpointSuffix	core.cloudapi.de
+ActiveDirectoryAuthority	https://login.microsoftonline.de/
+
+Azure storage	*.blob.core.windows.net *.queue.core.windows.net *.table.core.windows.net	*.blob.core.chinacloudapi.cn *.queue.core.chinacloudapi.cn *.table.core.chinacloudapi.cn
+Azure service management	https://management.core.windows.net	https://management.core.chinacloudapi.cn
+Azure Resource Manager	https://management.azure.com	https://management.chinacloudapi.cn
+Azure management portal	https://portal.azure.com	https://portal.azure.cn
+SQL Database	*.database.windows.net	*.database.chinacloudapi.cn
+SQL Azure DB management API	https://management.database.windows.net	https://management.database.chinacloudapi.cn
+Azure Service Bus	*.servicebus.windows.net	*.servicebus.chinacloudapi.cn
+Azure Access Control Service	*.accesscontrol.windows.net	*.accesscontrol.chinacloudapi.cn
+Azure HDInsight	*.azurehdinsight.net	*.azurehdinsight.cn
+SQL DB import/export service endpoint		1. China East https://sh1prod-dacsvc.chinacloudapp.cn/dacwebservice.svc 
+2. China North https://bj1prod-dacsvc.chinacloudapp.cn/dacwebservice.svc
+MySQL PaaS		*.mysqldb.chinacloudapi.cn
+Azure Service Fabric cluster	*.cloudapp.azure.com	*.chinaeast.chinacloudapp.cn
+Azure Active Directory (AD)	*.onmicrosoft.com	*.partner.onmschina.cn
+Azure AD logon	https://login.windows.net	https://login.chinacloudapi.cn
+
+#>
+
+
+
+
+
+
 $CliCert=new-object   Microsoft.IdentityModel.Clients.ActiveDirectory.ClientAssertionCertificate($ArmConn.ApplicationId,$mycert)
 $AuthContext = new-object Microsoft.IdentityModel.Clients.ActiveDirectory.AuthenticationContext("https://login.windows.net/$($ArmConn.tenantid)")
 $result = $AuthContext.AcquireToken("https://management.core.windows.net/",$CliCert)
