@@ -4,7 +4,8 @@ param
 [Parameter(Mandatory=$false)] [bool] $collecttableinv=$false,
 [Parameter(Mandatory=$true)] [string] $configfolder,
 [Parameter(Mandatory=$true)] [string] $defaultProfileUser,
-[Parameter(Mandatory=$true)] [SecureString] $defaultProfilePassword
+[Parameter(Mandatory=$true)] [SecureString] $defaultProfilePassword,
+[Parameter(Mandatory=$true)] [string] $hybridworkername="HANAMonitorGroup"
 )
 
 
@@ -170,21 +171,14 @@ Do {
 
 	{
 
-		$params = @{"collectqueryperf" = $collectqueryperf ; "collecttableinv" = $collecttableinv;"configfolder" = $configfolder,"collectfreq"=$collectfreq}
+		$params = @{"collectqueryperf" = $collectqueryperf ; "collecttableinv" = $collecttableinv;"configfolder" = $configfolder;"collectfreq"=$collectfreq}
 		Register-AzureRmAutomationScheduledRunbook `
 		-AutomationAccountName $AAAccount `
 		-ResourceGroupName  $AAResourceGroup `
 		-RunbookName $collectorRunbookName `
-		-ScheduleName $($MetricsScheduleName+"-$i")  -Parameters $Params 
+		-ScheduleName $($MetricsScheduleName+"-$i")  -Parameters $Params -RunOn $hybridworkername
 
-		<#
-[Parameter(Mandatory=$false)] [bool] $collectqueryperf=$false,
-[Parameter(Mandatory=$false)] [bool] $collecttableinv=$false,
-[Parameter(Mandatory=$true)] [string] $configfolder,
-[Parameter(Mandatory=$true)] [string] $defaultProfileUser,
-[Parameter(Mandatory=$true)] [SecureString] $defaultProfilePassword
-
-		#>
+	
 	}
 
 	$i++
@@ -194,27 +188,6 @@ While ($i -le 4)
 
 
 
-
-
-# Creating Schedules for enabling MEtrics
-
-$MetricsRunbookStartTime = $Date = [DateTime]::Today.AddHours(2).AddDays(1)
-
-Write-Output "Creating schedule $MetricsEnablerScheduleName for $MetricsRunbookStartTime for runbook $MetricsEnablerRunbookName"
-
-New-AzureRmAutomationSchedule `
--AutomationAccountName $AAAccount `
--DayInterval 1 `
--Name "$MetricsEnablerScheduleName" `
--ResourceGroupName $AAResourceGroup `
--StartTime $MetricsRunbookStartTime
-
-
-Register-AzureRmAutomationScheduledRunbook `
--AutomationAccountName $AAAccount `
--ResourceGroupName  $AAResourceGroup `
--RunbookName $MetricsEnablerRunbookName `
--ScheduleName "$MetricsEnablerScheduleName"
 
 
 

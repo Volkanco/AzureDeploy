@@ -165,7 +165,7 @@
                 "solutionName": "[concat('AzureSAPHanaMonitoring', '[', parameters('logAnalyticsWorkspaceName'), ']')]",
                 "publisher": "volkanc@microsoft.com",
                 "displayName": "Azure SAP HANA Monitor",
-                "description": "Monitor Azure VMs and Sclae Sets  deployed across subscriptions",
+                "description": "Monitor SAP Hana with Azure Log Analytics",
                 "author": "volkanc@microsoft.com"
             }
         },
@@ -189,7 +189,10 @@
         "sapHanaConfigfolder": "c:\\HanaMonitor",
         "hanaMonitorDefaultUser":"AzureHanaMonitorUser",
         "hanaMonitorDefaultPassword":"AzureHanaMonitorPassword",
-        "alertArray": [
+        "nestedTemplates": {
+            "deployDashboards": "[concat(parameters('_artifactsLocation'), '/nestedtemplates/deployDashboards.json', parameters('_artifactsLocationSasToken'))]"
+               },
+                "alertArray": [
             {
                 "searchName": "Azure VMs in Stopped State",
                 "description": "Azure VMs which shutdown from within operating system  will continue incurring charges. Stop the VM from the portal to prevent unnecessary consumption.",
@@ -1292,7 +1295,6 @@
                         "runbook": {
                             "name": "[variables('Runbooks').ingestSchedulerRunbook.name]"
                         },
-                        "runOn": "HANAMonitorGroup",
                          "parameters": {
                             "frequency": "[parameters('dataCollectionFrequency')]",
                             "collectQueryPerformance": "[parameters('collectQueryPerformance')]",
@@ -1413,6 +1415,28 @@
                 "Threshold": {
                     "Operator": "[variables('alertArray')[copyIndex()].operator]",
                     "Value": "[variables('alertArray')[copyIndex()].alertTresholdValue]"
+                }
+            }
+        }
+        ,
+        {
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2016-02-01",
+            "name": "[concat('deployAzureDashboards-',parameters('deploymentNameSuffix'))]",
+            "dependsOn": [
+                "[concat('Microsoft.OperationalInsights/workspaces/', parameters('logAnalyticsWorkspaceName'))]",
+                "[concat('Microsoft.Automation/automationAccounts/', parameters('automationAccountName'))]"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('nestedTemplates').deployDashboards]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "logAnalyticsWorkspaceName": {
+                        "value": "[parameters('logAnalyticsWorkspaceName')]"
+                    }
                 }
             }
         }
