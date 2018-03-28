@@ -7,7 +7,8 @@
       }
   },
   "variables": {
-    "dashboard1Name":"Hana Dashboard1"
+    "dashboard1Name":"HanaDashboard1",
+    "dashboard1DisplayName":"Hana Dashboard Full"
   }
   ,
   "resources": [
@@ -1896,7 +1897,7 @@
             "name": "[variables('dashboard1Name')]",
             "location": "[resourceGroup().location]",
             "tags": {
-                "hidden-title": "[variables('dashboard1Name')]"
+                "hidden-title": "[variables('dashboard1DisplayName')]"
             }
         }
       ]
