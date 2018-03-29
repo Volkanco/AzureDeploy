@@ -2,7 +2,7 @@ param
 (
 [Parameter(Mandatory=$false)] [bool] $collectqueryperf=$false,
 [Parameter(Mandatory=$false)] [bool] $collecttableinv=$false,
-[Parameter(Mandatory=$true)] [string] $configfolder ,
+[Parameter(Mandatory=$true)] [string] $configfolder="C:\HanaMonitor",
 [Parameter(Mandatory=$true)] [int] $freq=15
 )
 
@@ -115,37 +115,48 @@ Function Post-OMSData($customerId, $sharedKey, $body, $logType)
 
 #region  load Hana hdbclient and config file
 #$sapdll="C:\Program Files\sap\hdbclient\ado.net\v4.5\Sap.Data.Hana.v4.5.dll"  #add this as param 
-$dllcol=@()
-$dllcol+=Get-ChildItem -Path $env:ProgramFiles  -Filter $sapdll -Recurse -ErrorAction SilentlyContinue -Force
-
-If([string]::IsNullOrEmpty($dllcol[0])) # Hana Client dll not found , will do a wider search
+$hanadefaultpath="C:\Program Files\sap\hdbclient\ado.net\v4.5\$sapdll"
+IF(Test-Path -Path  $hanadefaultpath)
 {
-$folderlist=@()
-$folderlist+="C:\Program Files"
-$folderlist+="D:\Program Files"
-$folderlist+="E:\Program Files"
-$folderlist+=$configfolder 
+   [System.Reflection.Assembly]::LoadFrom($hanadefaultpath) #|out-null
+    Write-Output " Hana Client found in default location"
 
-	
-	Foreach($Folder in $folderlist)
-	{
-		$dllcol+=Get-ChildItem -Path $Folder   -Filter $sapdll -Recurse -ErrorAction SilentlyContinue -Force
-	}
+}Else{
+    $dllcol=@()
+    $dllcol+=Get-ChildItem -Path $env:ProgramFiles  -Filter $sapdll -Recurse -ErrorAction SilentlyContinue -Force
+
+    If([string]::IsNullOrEmpty($dllcol[0])) # Hana Client dll not found , will do a wider search
+    {
+    $folderlist=@()
+    $folderlist+="C:\Program Files"
+    $folderlist+="D:\Program Files"
+    $folderlist+="E:\Program Files"
+    $folderlist+=$configfolder 
+    Write-Output " Hana client not found in default location , searching for $sapdll "
+        
+        Foreach($Folder in $folderlist)
+        {
+            $dllcol+=Get-ChildItem -Path $Folder   -Filter $sapdll -Recurse -ErrorAction SilentlyContinue -Force
+        }
+
+    }
+
+    If([string]::IsNullOrEmpty($dllcol[0]))
+    {
+        Write-Error " Hana client Dll not found , Please install x64 HDBClient for Windows on the Hybrid Rb Worker :$rbworkername"
+        Exit
+
+    }ELSE
+    {
+
+    #Add-type -Path $sapdll
+       # [reflection.assembly]::LoadWithPartialName( "Sap.Data.Hana" )|out-null
+        [System.Reflection.Assembly]::LoadFrom($dllcol[0])|out-null
+    }
+
 
 }
 
-If([string]::IsNullOrEmpty($dllcol[0]))
-{
-	Write-Error " Hana client Dll not found , Please install x64 HDBClient for Windows on the Hybrid Rb Worker :$rbworkername"
-	Exit
-
-}ELSE
-{
-
-#Add-type -Path $sapdll
-	[reflection.assembly]::LoadWithPartialName( "Sap.Data.Hana" )|out-null
-	[System.Reflection.Assembly]::LoadFrom($dllcol[0])|out-null
-}
 
 
 $configfile=$configfolder+"\hanaconfig.xml"
@@ -158,7 +169,7 @@ If([string]::IsNullOrEmpty($hanaconfig))
 	Exit
 }else
 {
-
+    Write-Output " Config file found "
 $Timestampfield = "SYS_TIMESTAMP"  #check this as this needs to be in UTC 
 $ex=$null
 
@@ -174,7 +185,10 @@ $ex=$null
 		$OmsInvupload=@()
 		$OmsStateupload=@()
 		$saphost=$ins.'hanaserver'
-		$sapport=$ins.'port'
+        $sapport=$ins.'port'
+        
+        
+
 		If($ins.UserAsset -match 'default')
 		{
 			$user=Get-AutomationVariable -Name "AzureHanaMonitorUser"
