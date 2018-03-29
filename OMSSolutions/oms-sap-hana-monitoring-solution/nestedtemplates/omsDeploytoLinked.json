@@ -100,7 +100,8 @@
              "metadata": {
                 "description": "Specify the password  for Hana Monitoring Role"
             }
-        },"hybridWorkerGroup": {
+        },
+        "hybridWorkerGroup": {
             "type": "string",
              "metadata": {
                 "description": "Specify the Hybrid Worker Group Name"
@@ -1296,7 +1297,7 @@
                             "defaultProfileUser": "[parameters('sapHanaMonitorUser')]",
                             "defaultProfilePassword": "[parameters('sapHanaMonitorPassword')]",
                             "hybridworkergroup":"[parameters('hybridWorkerGroup')]",
-                            "freq":"[parameters('hybridWorkerGroup')]"
+                            "freq":"[variables('dataCollectionFrequency')]"
                         }
                     }
                 }
