@@ -170,17 +170,15 @@ Do {
 	-ResourceGroupName $AAResourceGroup `
 	-StartTime (Get-Variable -Name RBStart"$i").Value
 
-	{
 
 		$params = @{"collectqueryperf" = $collectqueryperf ; "collecttableinv" = $collecttableinv;"configfolder" = $configfolder;"freq"=$freq}
 		Register-AzureRmAutomationScheduledRunbook `
 		-AutomationAccountName $AAAccount `
 		-ResourceGroupName  $AAResourceGroup `
-		-RunbookName $collectorRunbookName `
+		-RunbookName $collectorRunbookName  `
 		-ScheduleName $($collectorScheduleName+"-$i")  -Parameters $Params -RunOn $hybridworkergroup
 
 	
-	}
 
 	$i++
 }
