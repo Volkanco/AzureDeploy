@@ -1290,7 +1290,6 @@
                             "name": "[variables('Runbooks').ingestSchedulerRunbook.name]"
                         },
                          "parameters": {
-                            "frequency": "[variables('dataCollectionFrequency')]",
                             "collectQueryPerformance": "[parameters('collectQueryPerformance')]",
                             "collectHanaTableInventory": "[parameters('collectHanaTableInventory')]",
                             "configFolder": "[variables('sapHanaConfigfolder')]",

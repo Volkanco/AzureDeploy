@@ -118,7 +118,8 @@
              "metadata": {
                 "description": "Specify the password  for Hana Monitoring Role"
             }
-        },"hybridWorkerGroup": {
+        },
+        "hybridWorkerGroup": {
             "type": "string",
              "metadata": {
                 "description": "Specify the Hybrid Worker Group Name"
@@ -192,14 +193,14 @@
                     "linkedWorkspaceSKU": {
                         "value": "[parameters('linkedWorkspaceSKU')]"
                     },
-                    "dataCollectionFrequency": {
-                        "value": "[parameters('dataCollectionFrequency')]"
-                    },
                     "sapHanaMonitorUser": {
                         "value": "[parameters('sapHanaMonitorUser')]"
                     },
                     "sapHanaMonitorPassword": {
                         "value": "[parameters('sapHanaMonitorPassword')]"
+                    },
+                    "hybridWorkerGroup": {
+                        "value": "[parameters('hybridWorkerGroup')]"
                     },
                     "collectQueryPerformance": {
                         "value": "[parameters('collectQueryPerformance')]"
@@ -249,6 +250,9 @@
                     },
                     "sapHanaMonitorPassword": {
                         "value": "[parameters('sapHanaMonitorPassword')]"
+                    },
+                    "hybridWorkerGroup": {
+                        "value": "[parameters('hybridWorkerGroup')]"
                     },
                     "collectQueryPerformance": {
                         "value": "[parameters('collectQueryPerformance')]"
