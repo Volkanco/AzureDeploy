@@ -5,7 +5,8 @@ param
 [Parameter(Mandatory=$true)] [string] $configfolder,
 [Parameter(Mandatory=$true)] [string] $defaultProfileUser,
 [Parameter(Mandatory=$true)] [string] $defaultProfilePassword,
-[Parameter(Mandatory=$true)] [string] $hybridworkername="HANAMonitorGroup"
+[Parameter(Mandatory=$true)] [string] $hybridworkergroup="HANAMonitorGroup",
+[Parameter(Mandatory=$true)] [int] $freq=15
 )
 
 
@@ -171,12 +172,12 @@ Do {
 
 	{
 
-		$params = @{"collectqueryperf" = $collectqueryperf ; "collecttableinv" = $collecttableinv;"configfolder" = $configfolder;"collectfreq"=$collectfreq}
+		$params = @{"collectqueryperf" = $collectqueryperf ; "collecttableinv" = $collecttableinv;"configfolder" = $configfolder;"freq"=$freq}
 		Register-AzureRmAutomationScheduledRunbook `
 		-AutomationAccountName $AAAccount `
 		-ResourceGroupName  $AAResourceGroup `
 		-RunbookName $collectorRunbookName `
-		-ScheduleName $($collectorScheduleName+"-$i")  -Parameters $Params -RunOn $hybridworkername
+		-ScheduleName $($collectorScheduleName+"-$i")  -Parameters $Params -RunOn $hybridworkergroup
 
 	
 	}

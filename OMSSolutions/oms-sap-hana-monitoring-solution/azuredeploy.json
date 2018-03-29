@@ -107,18 +107,6 @@
                 "description": "Choose the SKU for linked workspace  , only valid  if workspaceType is Linked otherwise ignored."
             }
         },
-        "dataCollectionFrequency": {
-            "type": "int",
-            "defaultValue": 15,
-            "allowedValues": [
-                15,
-                30,
-                60
-            ],
-            "metadata": {
-                "description": "Specify the Azure VM Inventory retrieval frequency"
-            }
-        },
         "sapHanaMonitorUser": {
             "type": "string",
             "metadata": {
@@ -129,6 +117,11 @@
             "type": "securestring",
              "metadata": {
                 "description": "Specify the password  for Hana Monitoring Role"
+            }
+        },"hybridWorkerGroup": {
+            "type": "string",
+             "metadata": {
+                "description": "Specify the Hybrid Worker Group Name"
             }
         },
         "collectQueryPerformance": {
@@ -250,9 +243,6 @@
                     },
                     "workspaceType": {
                         "value": "[parameters('workspaceType')]"
-                    },
-                    "dataCollectionFrequency": {
-                        "value": "[parameters('dataCollectionFrequency')]"
                     },
                     "sapHanaMonitorUser": {
                         "value": "[parameters('sapHanaMonitorUser')]"

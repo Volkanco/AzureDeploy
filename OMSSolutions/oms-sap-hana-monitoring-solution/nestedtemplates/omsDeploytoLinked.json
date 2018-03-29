@@ -89,18 +89,6 @@
                 "description": "Choose the SKU for linked workspace  , only valid  if workspaceType is Linked otherwise ignored."
             }
         },
-        "dataCollectionFrequency": {
-            "type": "int",
-            "defaultValue": 15,
-            "allowedValues": [
-                15,
-                30,
-                60
-            ],
-            "metadata": {
-                "description": "Specify the Azure SAP HANA Monitor retrieval frequency"
-            }
-        },
         "sapHanaMonitorUser": {
             "type": "string",
             "metadata": {
@@ -111,6 +99,11 @@
             "type": "securestring",
              "metadata": {
                 "description": "Specify the password  for Hana Monitoring Role"
+            }
+        },"hybridWorkerGroup": {
+            "type": "string",
+             "metadata": {
+                "description": "Specify the Hybrid Worker Group Name"
             }
         },
         "collectQueryPerformance": {
@@ -186,6 +179,7 @@
         "ingestInterval": "1",
         "ingestFrequency": "hour",
         "ingestScheduleName": "AzureSAPHanaMonitoring-Scheduler-Hourly",
+        "dataCollectionFrequency": "15",
         "sapHanaConfigfolder": "c:\\HanaMonitor",
         "hanaMonitorDefaultUser":"AzureHanaMonitorUser",
         "hanaMonitorDefaultPassword":"AzureHanaMonitorPassword",
@@ -1296,12 +1290,14 @@
                             "name": "[variables('Runbooks').ingestSchedulerRunbook.name]"
                         },
                          "parameters": {
-                            "frequency": "[parameters('dataCollectionFrequency')]",
+                            "frequency": "[variables('dataCollectionFrequency')]",
                             "collectQueryPerformance": "[parameters('collectQueryPerformance')]",
                             "collectHanaTableInventory": "[parameters('collectHanaTableInventory')]",
                             "configFolder": "[variables('sapHanaConfigfolder')]",
                             "defaultProfileUser": "[parameters('sapHanaMonitorUser')]",
-                            "defaultProfilePassword": "[parameters('sapHanaMonitorPassword')]"
+                            "defaultProfilePassword": "[parameters('sapHanaMonitorPassword')]",
+                            "hybridworkergroup":"[parameters('hybridWorkerGroup')]",
+                            "freq":"[parameters('hybridWorkerGroup')]"
                         }
                     }
                 }
