@@ -367,8 +367,15 @@ $ex=$null
 			$Resultsinv=@(); 
 			$Resultsstate=@(); 
 
+				$mdc=$null
 			Write-Output ' CollectorType="Inventory" ,  Category="DatabaseState"'
+            If($ex)
+            {
+                #not multi tenant
+                $MDC=$false
 
+            }Else
+            {
 			foreach ($row in $ds.Tables[0].rows)
 			{
 				$resultsinv+= New-Object PSObject -Property @{
@@ -398,9 +405,12 @@ $ex=$null
 			$Omsstateupload+=,$Resultsstate
 
 #get USer DB list 
-			$UserDBs=@($resultsinv|where{[String]::IsNullOrEmpty($_.Database) -ne $true -and $_.SQL_PORT -ne 0 -and $_.Database -ne 'SYSTEMDB'}|select DATABASE,SQL_Port)
 
+			$UserDBs=@($resultsinv|where{[String]::IsNullOrEmpty($_.Database) -ne $true -and $_.SQL_PORT -ne 0 -and $_.Database -ne 'SYSTEMDB'}|select DATABASE,SQL_Port)
 			$UserDBs
+
+            $MDC=$true
+            }
 
 #endregion
 
@@ -512,7 +522,53 @@ $ex=$null
 			$Resultsperf=@(); 
 
 #this is used to calculate UTC time conversion in data collection 
-			$utcdiff=NEW-TIMESPAN –Start $ds[0].Tables[0].rows[0].UTC_TIMESTAMP  –End $ds[0].Tables[0].rows[0].SYS_TIMESTAMP 
+#			$utcdiff=NEW-TIMESPAN –Start $ds[0].Tables[0].rows[0].UTC_TIMESTAMP  –End $ds[0].Tables[0].rows[0].SYS_TIMESTAMP 
+			$query="SELECT 
+			O.HOST,
+			N.VALUE TIMEZONE_NAME,
+			LPAD(O.VALUE, 17) TIMEZONE_OFFSET_S
+			FROM
+			( SELECT                      /* Modification section */
+			'%' HOST
+			FROM
+			DUMMY
+			) BI,
+			( SELECT
+			HOST,
+			VALUE
+			FROM
+			M_HOST_INFORMATION
+			WHERE
+			KEY = 'timezone_offset'
+			) O,
+			( SELECT
+			HOST,
+			VALUE
+			FROM
+			M_HOST_INFORMATION
+			WHERE
+			KEY = 'timezone_name'
+			) N
+			WHERE
+			O.HOST LIKE BI.HOST AND
+			N.HOST = O.HOST
+			ORDER BY
+			O.HOST
+			"
+
+			$cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+					$ds = New-Object system.Data.DataSet ;
+			$ex=$null
+					Try{
+						$cmd.fill($ds)|out-null
+					}
+					Catch
+					{
+						$Ex=$_.Exception.MEssage
+						write-warning  $ex 
+					}
+					
+					$utcdiff=$ds.Tables[0].rows[0].TIMEZONE_OFFSET_S
 
 
 			Write-Output '  CollectorType="Performance" - Category="Host" - Subcategory="OverallUsage" '
@@ -1076,7 +1132,7 @@ $ex=$null
 						HOST=$row.HOST
 						Instance=$sapinstance
 						Database=$defaultdb
-						SYS_TIMESTAMP=([datetime]$row.SYS_TIMESTAMP).addhours($utcdiff.Hours)
+						SYS_TIMESTAMP=([datetime]$row.SYS_TIMESTAMP).addseconds($utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Service"
 						PerfInstance=$row.SERVICE_NAME
@@ -1088,7 +1144,7 @@ $ex=$null
 						HOST=$row.HOST
 						Instance=$sapinstance
 						Database=$defaultdb
-						SYS_TIMESTAMP=([datetime]$row.SYS_TIMESTAMP).addhours($utcdiff.Hours)
+						SYS_TIMESTAMP=([datetime]$row.SYS_TIMESTAMP).addseconds($utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Service"
 						PerfInstance=$row.SERVICE_NAME
@@ -1100,7 +1156,7 @@ $ex=$null
 						HOST=$row.HOST
 						Instance=$sapinstance
 						Database=$defaultdb
-						SYS_TIMESTAMP=([datetime]$row.SYS_TIMESTAMP).addhours($utcdiff.Hours)
+						SYS_TIMESTAMP=([datetime]$row.SYS_TIMESTAMP).addseconds($utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Service"
 						PerfInstance=$row.SERVICE_NAME
@@ -1112,7 +1168,7 @@ $ex=$null
 						HOST=$row.HOST
 						Instance=$sapinstance
 						Database=$defaultdb
-						SYS_TIMESTAMP=([datetime]$row.SYS_TIMESTAMP).addhours($utcdiff.Hours)
+						SYS_TIMESTAMP=([datetime]$row.SYS_TIMESTAMP).addseconds($utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Service"
 						PerfInstance=$row.SERVICE_NAME
@@ -1124,7 +1180,7 @@ $ex=$null
 						HOST=$row.HOST
 						Instance=$sapinstance
 						Database=$defaultdb
-						SYS_TIMESTAMP=([datetime]$row.SYS_TIMESTAMP).addhours($utcdiff.Hours)
+						SYS_TIMESTAMP=([datetime]$row.SYS_TIMESTAMP).addseconds($utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Service"
 						PerfInstance=$row.SERVICE_NAME
@@ -1136,7 +1192,7 @@ $ex=$null
 						HOST=$row.HOST
 						Instance=$sapinstance
 						Database=$defaultdb
-						SYS_TIMESTAMP=([datetime]$row.SYS_TIMESTAMP).addhours($utcdiff.Hours)
+						SYS_TIMESTAMP=([datetime]$row.SYS_TIMESTAMP).addseconds($utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Service"
 						PerfInstance=$row.SERVICE_NAME
@@ -1148,7 +1204,7 @@ $ex=$null
 						HOST=$row.HOST
 						Instance=$sapinstance
 						Database=$defaultdb
-						SYS_TIMESTAMP=([datetime]$row.SYS_TIMESTAMP).addhours($utcdiff.Hours)
+						SYS_TIMESTAMP=([datetime]$row.SYS_TIMESTAMP).addseconds($utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Service"
 						PerfInstance=$row.SERVICE_NAME
@@ -1160,7 +1216,7 @@ $ex=$null
 						HOST=$row.HOST
 						Instance=$sapinstance
 						Database=$defaultdb
-						SYS_TIMESTAMP=([datetime]$row.SYS_TIMESTAMP).addhours($utcdiff.Hours)
+						SYS_TIMESTAMP=([datetime]$row.SYS_TIMESTAMP).addseconds($utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Service"
 						PerfInstance=$row.SERVICE_NAME
@@ -1172,7 +1228,7 @@ $ex=$null
 						HOST=$row.HOST
 						Instance=$sapinstance
 						Database=$defaultdb
-						SYS_TIMESTAMP=([datetime]$row.SYS_TIMESTAMP).addhours($utcdiff.Hours)
+						SYS_TIMESTAMP=([datetime]$row.SYS_TIMESTAMP).addseconds($utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Service"
 						PerfInstance=$row.SERVICE_NAME
@@ -1184,7 +1240,7 @@ $ex=$null
 						HOST=$row.HOST
 						Instance=$sapinstance
 						Database=$defaultdb
-						SYS_TIMESTAMP=([datetime]$row.SYS_TIMESTAMP).addhours($utcdiff.Hours)
+						SYS_TIMESTAMP=([datetime]$row.SYS_TIMESTAMP).addseconds($utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Service"
 						PerfInstance=$row.SERVICE_NAME
@@ -1196,7 +1252,7 @@ $ex=$null
 						HOST=$row.HOST
 						Instance=$sapinstance
 						Database=$defaultdb
-						SYS_TIMESTAMP=([datetime]$row.SYS_TIMESTAMP).addhours($utcdiff.Hours)
+						SYS_TIMESTAMP=([datetime]$row.SYS_TIMESTAMP).addseconds($utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Service"
 						PerfInstance=$row.SERVICE_NAME
@@ -1208,7 +1264,7 @@ $ex=$null
 						HOST=$row.HOST
 						Instance=$sapinstance
 						Database=$defaultdb
-						SYS_TIMESTAMP=([datetime]$row.SYS_TIMESTAMP).addhours($utcdiff.Hours)
+						SYS_TIMESTAMP=([datetime]$row.SYS_TIMESTAMP).addseconds($utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Service"
 						PerfInstance=$row.SERVICE_NAME
@@ -1220,7 +1276,7 @@ $ex=$null
 						HOST=$row.HOST
 						Instance=$sapinstance
 						Database=$defaultdb
-						SYS_TIMESTAMP=([datetime]$row.SYS_TIMESTAMP).addhours($utcdiff.Hours)
+						SYS_TIMESTAMP=([datetime]$row.SYS_TIMESTAMP).addseconds($utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Service"
 						PerfInstance=$row.SERVICE_NAME
@@ -1232,7 +1288,7 @@ $ex=$null
 						HOST=$row.HOST
 						Instance=$sapinstance
 						Database=$defaultdb
-						SYS_TIMESTAMP=([datetime]$row.SYS_TIMESTAMP).addhours($utcdiff.Hours)
+						SYS_TIMESTAMP=([datetime]$row.SYS_TIMESTAMP).addseconds($utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Service"
 						PerfInstance=$row.SERVICE_NAME
@@ -1244,7 +1300,7 @@ $ex=$null
 						HOST=$row.HOST
 						Instance=$sapinstance
 						Database=$defaultdb
-						SYS_TIMESTAMP=([datetime]$row.SYS_TIMESTAMP).addhours($utcdiff.Hours)
+						SYS_TIMESTAMP=([datetime]$row.SYS_TIMESTAMP).addseconds($utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Service"
 						PerfInstance=$row.SERVICE_NAME
@@ -1256,7 +1312,7 @@ $ex=$null
 						HOST=$row.HOST
 						Instance=$sapinstance
 						Database=$defaultdb
-						SYS_TIMESTAMP=([datetime]$row.SYS_TIMESTAMP).addhours($utcdiff.Hours)
+						SYS_TIMESTAMP=([datetime]$row.SYS_TIMESTAMP).addseconds($utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Service"
 						PerfInstance=$row.SERVICE_NAME
@@ -1268,7 +1324,7 @@ $ex=$null
 						HOST=$row.HOST
 						Instance=$sapinstance
 						Database=$defaultdb
-						SYS_TIMESTAMP=([datetime]$row.SYS_TIMESTAMP).addhours($utcdiff.Hours)
+						SYS_TIMESTAMP=([datetime]$row.SYS_TIMESTAMP).addseconds($utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Service"
 						PerfInstance=$row.SERVICE_NAME
@@ -1280,7 +1336,7 @@ $ex=$null
 						HOST=$row.HOST
 						Instance=$sapinstance
 						Database=$defaultdb
-						SYS_TIMESTAMP=([datetime]$row.SYS_TIMESTAMP).addhours($utcdiff.Hours)
+						SYS_TIMESTAMP=([datetime]$row.SYS_TIMESTAMP).addseconds($utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Service"
 						PerfInstance=$row.SERVICE_NAME
@@ -1415,7 +1471,7 @@ $ex=$null
 						HOST=$row.HOST
 						Instance=$sapinstance
 						Database=$defaultdb
-						SYS_TIMESTAMP=([datetime]$row.SAMPLE_TIME).addhours($utcdiff.Hours)
+						SYS_TIMESTAMP=([datetime]$row.SAMPLE_TIME).addseconds($utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Host"
 						PerfInstance=$row.HOST
@@ -1609,7 +1665,7 @@ $ex=$null
 						HOST=$row.HOST
 						Instance=$sapinstance
 						Database=$defaultdb
-						SYS_TIMESTAMP=([datetime]$row.SAMPLE_TIME).addhours($utcdiff.Hours)
+						SYS_TIMESTAMP=([datetime]$row.SAMPLE_TIME).addseconds($utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Service"
 						PerfInstance=$row.PORT
@@ -1621,7 +1677,7 @@ $ex=$null
 						HOST=$row.HOST
 						Instance=$sapinstance
 						Database=$defaultdb
-						SYS_TIMESTAMP=([datetime]$row.SAMPLE_TIME).addhours($utcdiff.Hours)
+						SYS_TIMESTAMP=([datetime]$row.SAMPLE_TIME).addseconds($utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Service"
 						PerfInstance=$row.PORT
@@ -1633,7 +1689,7 @@ $ex=$null
 						HOST=$row.HOST
 						Instance=$sapinstance
 						Database=$defaultdb
-						SYS_TIMESTAMP=([datetime]$row.SAMPLE_TIME).addhours($utcdiff.Hours)
+						SYS_TIMESTAMP=([datetime]$row.SAMPLE_TIME).addseconds($utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Service"
 						PerfInstance=$row.PORT
@@ -1645,7 +1701,7 @@ $ex=$null
 						HOST=$row.HOST
 						Instance=$sapinstance
 						Database=$defaultdb
-						SYS_TIMESTAMP=([datetime]$row.SAMPLE_TIME).addhours($utcdiff.Hours)
+						SYS_TIMESTAMP=([datetime]$row.SAMPLE_TIME).addseconds($utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Service"
 						PerfInstance=$row.PORT
@@ -1657,7 +1713,7 @@ $ex=$null
 						HOST=$row.HOST
 						Instance=$sapinstance
 						Database=$defaultdb
-						SYS_TIMESTAMP=([datetime]$row.SAMPLE_TIME).addhours($utcdiff.Hours)
+						SYS_TIMESTAMP=([datetime]$row.SAMPLE_TIME).addseconds($utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Service"
 						PerfInstance=$row.PORT
@@ -1669,7 +1725,7 @@ $ex=$null
 						HOST=$row.HOST
 						Instance=$sapinstance
 						Database=$defaultdb
-						SYS_TIMESTAMP=([datetime]$row.SAMPLE_TIME).addhours($utcdiff.Hours)
+						SYS_TIMESTAMP=([datetime]$row.SAMPLE_TIME).addseconds($utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Service"
 						PerfInstance=$row.PORT
@@ -1681,7 +1737,7 @@ $ex=$null
 						HOST=$row.HOST
 						Instance=$sapinstance
 						Database=$defaultdb
-						SYS_TIMESTAMP=([datetime]$row.SAMPLE_TIME).addhours($utcdiff.Hours)
+						SYS_TIMESTAMP=([datetime]$row.SAMPLE_TIME).addseconds($utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Service"
 						PerfInstance=$row.PORT
@@ -1694,7 +1750,7 @@ $ex=$null
 						HOST=$row.HOST
 						Instance=$sapinstance
 						Database=$defaultdb
-						SYS_TIMESTAMP=([datetime]$row.SAMPLE_TIME).addhours($utcdiff.Hours)
+						SYS_TIMESTAMP=([datetime]$row.SAMPLE_TIME).addseconds($utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Service"
 						PerfInstance=$row.PORT
@@ -1706,7 +1762,7 @@ $ex=$null
 						HOST=$row.HOST
 						Instance=$sapinstance
 						Database=$defaultdb
-						SYS_TIMESTAMP=([datetime]$row.SAMPLE_TIME).addhours($utcdiff.Hours)
+						SYS_TIMESTAMP=([datetime]$row.SAMPLE_TIME).addseconds($utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Service"
 						PerfInstance=$row.PORT
@@ -1718,7 +1774,7 @@ $ex=$null
 						HOST=$row.HOST
 						Instance=$sapinstance
 						Database=$defaultdb
-						SYS_TIMESTAMP=([datetime]$row.SAMPLE_TIME).addhours($utcdiff.Hours)
+						SYS_TIMESTAMP=([datetime]$row.SAMPLE_TIME).addseconds($utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Service"
 						PerfInstance=$row.PORT
@@ -1730,7 +1786,7 @@ $ex=$null
 						HOST=$row.HOST
 						Instance=$sapinstance
 						Database=$defaultdb
-						SYS_TIMESTAMP=([datetime]$row.SAMPLE_TIME).addhours($utcdiff.Hours)
+						SYS_TIMESTAMP=([datetime]$row.SAMPLE_TIME).addseconds($utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Service"
 						PerfInstance=$row.PORT
@@ -2145,7 +2201,7 @@ $ex=$null
 					HOST=$row.HOST
 					Instance=$sapinstance
 					Database=$defaultdb
-					SYS_TIMESTAMP=([datetime]$row.TIME).addhours($utcdiff.Hours)
+					SYS_TIMESTAMP=([datetime]$row.TIME).addseconds($utcdiff*(-1))
 					CollectorType="Performance"
 					PerfObject="Service"
 					PerfInstance=$row.PORT
@@ -2157,7 +2213,7 @@ $ex=$null
 					HOST=$row.HOST
 					Instance=$sapinstance
 					Database=$defaultdb
-					SYS_TIMESTAMP=([datetime]$row.TIME).addhours($utcdiff.Hours)
+					SYS_TIMESTAMP=([datetime]$row.TIME).addseconds($utcdiff*(-1))
 					CollectorType="Performance"
 					PerfObject="Service"
 					PerfInstance=$row.PORT
@@ -2169,7 +2225,7 @@ $ex=$null
 					HOST=$row.HOST
 					Instance=$sapinstance
 					Database=$defaultdb
-					SYS_TIMESTAMP=([datetime]$row.TIME).addhours($utcdiff.Hours)
+					SYS_TIMESTAMP=([datetime]$row.TIME).addseconds($utcdiff*(-1))
 					CollectorType="Performance"
 					PerfObject="Service"
 					PerfInstance=$row.PORT
@@ -2181,7 +2237,7 @@ $ex=$null
 					HOST=$row.HOST
 					Instance=$sapinstance
 					Database=$defaultdb
-					SYS_TIMESTAMP=([datetime]$row.TIME).addhours($utcdiff.Hours)
+					SYS_TIMESTAMP=([datetime]$row.TIME).addseconds($utcdiff*(-1))
 					CollectorType="Performance"
 					PerfObject="Service"
 					PerfInstance=$row.PORT
@@ -2193,7 +2249,7 @@ $ex=$null
 					HOST=$row.HOST
 					Instance=$sapinstance
 					Database=$defaultdb
-					SYS_TIMESTAMP=([datetime]$row.TIME).addhours($utcdiff.Hours)
+					SYS_TIMESTAMP=([datetime]$row.TIME).addseconds($utcdiff*(-1))
 					CollectorType="Performance"
 					PerfObject="Service"
 					PerfInstance=$row.PORT
@@ -2205,7 +2261,7 @@ $ex=$null
 					HOST=$row.HOST
 					Instance=$sapinstance
 					Database=$defaultdb
-					SYS_TIMESTAMP=([datetime]$row.TIME).addhours($utcdiff.Hours)
+					SYS_TIMESTAMP=([datetime]$row.TIME).addseconds($utcdiff*(-1))
 					CollectorType="Performance"
 					PerfObject="Service"
 					PerfInstance=$row.PORT
@@ -2217,7 +2273,7 @@ $ex=$null
 					HOST=$row.HOST
 					Instance=$sapinstance
 					Database=$defaultdb
-					SYS_TIMESTAMP=([datetime]$row.TIME).addhours($utcdiff.Hours)
+					SYS_TIMESTAMP=([datetime]$row.TIME).addseconds($utcdiff*(-1))
 					CollectorType="Performance"
                     Category='LoadHistory'
 					PerfObject="Service"
@@ -2230,7 +2286,7 @@ $ex=$null
 					HOST=$row.HOST
 					Instance=$sapinstance
 					Database=$defaultdb
-					SYS_TIMESTAMP=([datetime]$row.TIME).addhours($utcdiff.Hours)
+					SYS_TIMESTAMP=([datetime]$row.TIME).addseconds($utcdiff*(-1))
 					CollectorType="Performance"
 					PerfObject="Service"
 					PerfInstance=$row.PORT
@@ -2242,7 +2298,7 @@ $ex=$null
 					HOST=$row.HOST
 					Instance=$sapinstance
 					Database=$defaultdb
-					SYS_TIMESTAMP=([datetime]$row.TIME).addhours($utcdiff.Hours)
+					SYS_TIMESTAMP=([datetime]$row.TIME).addseconds($utcdiff*(-1))
 					CollectorType="Performance"
 					PerfObject="Service"
 					PerfInstance=$row.PORT
@@ -2254,7 +2310,7 @@ $ex=$null
 					HOST=$row.HOST
 					Instance=$sapinstance
 					Database=$defaultdb
-					SYS_TIMESTAMP=([datetime]$row.TIME).addhours($utcdiff.Hours)
+					SYS_TIMESTAMP=([datetime]$row.TIME).addseconds($utcdiff*(-1))
 					CollectorType="Performance"
 					PerfObject="Service"
 					PerfInstance=$row.PORT
@@ -2267,7 +2323,7 @@ $ex=$null
 					HOST=$row.HOST
 					Instance=$sapinstance
 					Database=$defaultdb
-					SYS_TIMESTAMP=([datetime]$row.TIME).addhours($utcdiff.Hours)
+					SYS_TIMESTAMP=([datetime]$row.TIME).addseconds($utcdiff*(-1))
 					CollectorType="Performance"
 					PerfObject="Service"
 					PerfInstance=$row.PORT
@@ -2280,7 +2336,7 @@ $ex=$null
 					HOST=$row.HOST
 					Instance=$sapinstance
 					Database=$defaultdb
-					SYS_TIMESTAMP=([datetime]$row.TIME).addhours($utcdiff.Hours)
+					SYS_TIMESTAMP=([datetime]$row.TIME).addseconds($utcdiff*(-1))
 					CollectorType="Performance"
 					PerfObject="Service"
 					PerfInstance=$row.PORT
@@ -2293,7 +2349,7 @@ $ex=$null
 					HOST=$row.HOST
 					Instance=$sapinstance
 					Database=$defaultdb
-					SYS_TIMESTAMP=([datetime]$row.TIME).addhours($utcdiff.Hours)
+					SYS_TIMESTAMP=([datetime]$row.TIME).addseconds($utcdiff*(-1))
 					CollectorType="Performance"
 					PerfObject="Service"
 					PerfInstance=$row.PORT
@@ -2305,7 +2361,7 @@ $ex=$null
 					HOST=$row.HOST
 					Instance=$sapinstance
 					Database=$defaultdb
-					SYS_TIMESTAMP=([datetime]$row.TIME).addhours($utcdiff.Hours)
+					SYS_TIMESTAMP=([datetime]$row.TIME).addseconds($utcdiff*(-1))
 					CollectorType="Performance"
 					PerfObject="Service"
 					PerfInstance=$row.PORT
@@ -2319,7 +2375,7 @@ $ex=$null
 					HOST=$row.HOST
 					Instance=$sapinstance
 					Database=$defaultdb
-					SYS_TIMESTAMP=([datetime]$row.TIME).addhours($utcdiff.Hours)
+					SYS_TIMESTAMP=([datetime]$row.TIME).addseconds($utcdiff*(-1))
 					CollectorType="Performance"
 					PerfObject="Service"
 					PerfInstance=$row.PORT
@@ -2331,7 +2387,7 @@ $ex=$null
 					HOST=$row.HOST
 					Instance=$sapinstance
 					Database=$defaultdb
-					SYS_TIMESTAMP=([datetime]$row.TIME).addhours($utcdiff.Hours)
+					SYS_TIMESTAMP=([datetime]$row.TIME).addseconds($utcdiff*(-1))
 					CollectorType="Performance"
 					PerfObject="Service"
 					PerfInstance=$row.PORT
@@ -2343,7 +2399,7 @@ $ex=$null
 					HOST=$row.HOST
 					Instance=$sapinstance
 					Database=$defaultdb
-					SYS_TIMESTAMP=([datetime]$row.TIME).addhours($utcdiff.Hours)
+					SYS_TIMESTAMP=([datetime]$row.TIME).addseconds($utcdiff*(-1))
 					CollectorType="Performance"
 					PerfObject="Service"
 					PerfInstance=$row.PORT
@@ -2392,7 +2448,7 @@ $ex=$null
 						HOST=$row.HOST
 						Instance=$sapinstance
 						Database=$defaultdb
-						SYS_TIMESTAMP=([datetime]$row.TIME).addhours($utcdiff.Hours)
+						SYS_TIMESTAMP=([datetime]$row.TIME).addseconds($utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Host"
 						PerfInstance=$row.HOST
@@ -2404,7 +2460,7 @@ $ex=$null
 						HOST=$row.HOST
 						Instance=$sapinstance
 						Database=$defaultdb
-						SYS_TIMESTAMP=([datetime]$row.TIME).addhours($utcdiff.Hours)
+						SYS_TIMESTAMP=([datetime]$row.TIME).addseconds($utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Host"
 						PerfInstance=$row.HOST
@@ -2416,7 +2472,7 @@ $ex=$null
 						HOST=$row.HOST
 						Instance=$sapinstance
 						Database=$defaultdb
-						SYS_TIMESTAMP=([datetime]$row.TIME).addhours($utcdiff.Hours)
+						SYS_TIMESTAMP=([datetime]$row.TIME).addseconds($utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Host"
 						PerfInstance=$row.HOST
@@ -2428,7 +2484,7 @@ $ex=$null
 						HOST=$row.HOST
 						Instance=$sapinstance
 						Database=$defaultdb
-						SYS_TIMESTAMP=([datetime]$row.TIME).addhours($utcdiff.Hours)
+						SYS_TIMESTAMP=([datetime]$row.TIME).addseconds($utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Host"
 						PerfInstance=$row.HOST
@@ -2442,7 +2498,7 @@ $ex=$null
 						HOST=$row.HOST
 						Instance=$sapinstance
 						Database=$defaultdb
-						SYS_TIMESTAMP=([datetime]$row.TIME).addhours($utcdiff.Hours)
+						SYS_TIMESTAMP=([datetime]$row.TIME).addseconds($utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Host"
 						PerfInstance=$row.HOST
@@ -2454,7 +2510,7 @@ $ex=$null
 						HOST=$row.HOST
 						Instance=$sapinstance
 						Database=$defaultdb
-						SYS_TIMESTAMP=([datetime]$row.TIME).addhours($utcdiff.Hours)
+						SYS_TIMESTAMP=([datetime]$row.TIME).addseconds($utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Host"
 						PerfInstance=$row.HOST
@@ -2467,7 +2523,7 @@ $ex=$null
 						HOST=$row.HOST
 						Instance=$sapinstance
 						Database=$defaultdb
-						SYS_TIMESTAMP=([datetime]$row.TIME).addhours($utcdiff.Hours)
+						SYS_TIMESTAMP=([datetime]$row.TIME).addseconds($utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Host"
 						PerfInstance=$row.HOST
@@ -2480,7 +2536,7 @@ $ex=$null
 						HOST=$row.HOST
 						Instance=$sapinstance
 						Database=$defaultdb
-						SYS_TIMESTAMP=([datetime]$row.TIME).addhours($utcdiff.Hours)
+						SYS_TIMESTAMP=([datetime]$row.TIME).addseconds($utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Host"
 						PerfInstance=$row.HOST
@@ -3209,7 +3265,7 @@ $ex=$null
 						Instance=$sapinstance
 						Database=$defaultdb
 						Schema_Name=$row.SCHEMA_NAME
-						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addhours($utcdiff.Hours)
+						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addseconds($utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Query"
 						PerfInstance=$row.STATEMENT_HASH
@@ -3222,7 +3278,7 @@ $ex=$null
 						Instance=$sapinstance
 						Database=$defaultdb
 						Schema_Name=$row.SCHEMA_NAME
-						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addhours($utcdiff.Hours)
+						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addseconds($utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Query"
 						PerfInstance=$row.STATEMENT_HASH
@@ -3235,7 +3291,7 @@ $ex=$null
 						Instance=$sapinstance
 						Database=$defaultdb
 						Schema_Name=$row.SCHEMA_NAME
-						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addhours($utcdiff.Hours)
+						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addseconds($utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Query"
 						PerfInstance=$row.STATEMENT_HASH
@@ -3248,7 +3304,7 @@ $ex=$null
 						Instance=$sapinstance
 						Database=$defaultdb
 						Schema_Name=$row.SCHEMA_NAME
-						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addhours($utcdiff.Hours)
+						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addseconds($utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Query"
 						PerfInstance=$row.STATEMENT_HASH
@@ -3263,7 +3319,7 @@ $ex=$null
 						Instance=$sapinstance
 						Database=$defaultdb
 						Schema_Name=$row.SCHEMA_NAME
-						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addhours($utcdiff.Hours)
+						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addseconds($utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Query"
 						PerfInstance=$row.STATEMENT_HASH
@@ -3276,7 +3332,7 @@ $ex=$null
 						Instance=$sapinstance
 						Database=$defaultdb
 						Schema_Name=$row.SCHEMA_NAME
-						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addhours($utcdiff.Hours)
+						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addseconds($utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Query"
 						PerfInstance=$row.STATEMENT_HASH
@@ -3289,7 +3345,7 @@ $ex=$null
 						Instance=$sapinstance
 						Database=$defaultdb
 						Schema_Name=$row.SCHEMA_NAME
-						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addhours($utcdiff.Hours)
+						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addseconds($utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Query"
 						PerfInstance=$row.STATEMENT_HASH
@@ -3302,7 +3358,7 @@ $ex=$null
 						Instance=$sapinstance
 						Database=$defaultdb
 						Schema_Name=$row.SCHEMA_NAME
-						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addhours($utcdiff.Hours)
+						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addseconds($utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Query"
 						PerfInstance=$row.STATEMENT_HASH
@@ -3315,7 +3371,7 @@ $ex=$null
 						Instance=$sapinstance
 						Database=$defaultdb
 						Schema_Name=$row.SCHEMA_NAME
-						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addhours($utcdiff.Hours)
+						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addseconds($utcdiff*(-1))
 						CollectorType="Inventory"
 						Category="Statement"
 						STATEMENT_HASH=$row.STATEMENT_HASH
@@ -3336,7 +3392,7 @@ $ex=$null
 						Instance=$sapinstance
 						Database=$defaultdb
 						Schema_Name=$row.SCHEMA_NAME
-						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addhours($utcdiff.Hours)
+						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addseconds($utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Query"
 						PerfInstance=$row.STATEMENT_HASH
@@ -3351,7 +3407,7 @@ $ex=$null
 						Instance=$sapinstance
 						Database=$defaultdb
 						Schema_Name=$row.SCHEMA_NAME
-						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addhours($utcdiff.Hours)
+						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addseconds($utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Query"
 						PerfInstance=$row.STATEMENT_HASH
@@ -3366,7 +3422,7 @@ $ex=$null
 						Instance=$sapinstance
 						Database=$defaultdb
 						Schema_Name=$row.SCHEMA_NAME
-						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addhours($utcdiff.Hours)
+						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addseconds($utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Query"
 						PerfInstance=$row.STATEMENT_HASH
@@ -3380,7 +3436,7 @@ $ex=$null
 						Instance=$sapinstance
 						Database=$defaultdb
 						Schema_Name=$row.SCHEMA_NAME
-						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addhours($utcdiff.Hours)
+						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addseconds($utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Query"
 						PerfInstance=$row.STATEMENT_HASH
@@ -3396,7 +3452,7 @@ $ex=$null
 						Instance=$sapinstance
 						Database=$defaultdb
 						Schema_Name=$row.SCHEMA_NAME
-						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addhours($utcdiff.Hours)
+						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addseconds($utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Query"
 						PerfInstance=$row.STATEMENT_HASH
@@ -3409,7 +3465,7 @@ $ex=$null
 						Instance=$sapinstance
 						Database=$defaultdb
 						Schema_Name=$row.SCHEMA_NAME
-						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addhours($utcdiff.Hours)
+						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addseconds($utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Query"
 						PerfInstance=$row.STATEMENT_HASH
@@ -3422,7 +3478,7 @@ $ex=$null
 						Instance=$sapinstance
 						Database=$defaultdb
 						Schema_Name=$row.SCHEMA_NAME
-						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addhours($utcdiff.Hours)
+						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addseconds($utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Query"
 						PerfInstance=$row.STATEMENT_HASH
@@ -3437,7 +3493,7 @@ $ex=$null
 						Instance=$sapinstance
 						Database=$defaultdb
 						Schema_Name=$row.SCHEMA_NAME
-						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addhours($utcdiff.Hours)
+						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addseconds($utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Query"
 						PerfInstance=$row.STATEMENT_HASH
@@ -3450,7 +3506,7 @@ $ex=$null
 						Instance=$sapinstance
 						Database=$defaultdb
 						Schema_Name=$row.SCHEMA_NAME
-						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addhours($utcdiff.Hours)
+						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addseconds($utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Query"
 						PerfInstance=$row.STATEMENT_HASH
@@ -3463,7 +3519,7 @@ $ex=$null
 						Instance=$sapinstance
 						Database=$defaultdb
 						Schema_Name=$row.SCHEMA_NAME
-						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addhours($utcdiff.Hours)
+						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addseconds($utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Query"
 						PerfInstance=$row.STATEMENT_HASH
@@ -3479,7 +3535,7 @@ $ex=$null
 						Instance=$sapinstance
 						Database=$defaultdb
 						Schema_Name=$row.SCHEMA_NAME
-						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addhours($utcdiff.Hours)
+						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addseconds($utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Query"
 						PerfInstance=$row.STATEMENT_HASH
@@ -3492,7 +3548,7 @@ $ex=$null
 						Instance=$sapinstance
 						Database=$defaultdb
 						Schema_Name=$row.SCHEMA_NAME
-						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addhours($utcdiff.Hours)
+						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addseconds($utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Query"
 						PerfInstance=$row.STATEMENT_HASH
@@ -3505,7 +3561,7 @@ $ex=$null
 						Instance=$sapinstance
 						Database=$defaultdb
 						Schema_Name=$row.SCHEMA_NAME
-						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addhours($utcdiff.Hours)
+						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addseconds($utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Query"
 						PerfInstance=$row.STATEMENT_HASH
@@ -3521,7 +3577,7 @@ $ex=$null
 						Instance=$sapinstance
 						Database=$defaultdb
 						Schema_Name=$row.SCHEMA_NAME
-						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addhours($utcdiff.Hours)
+						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addseconds($utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Query"
 						PerfInstance=$row.STATEMENT_HASH
@@ -3538,7 +3594,7 @@ $ex=$null
 						Instance=$sapinstance
 						Database=$defaultdb
 						Schema_Name=$row.SCHEMA_NAME
-						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addhours($utcdiff.Hours)
+						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addseconds($utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Query"
 						PerfInstance=$row.STATEMENT_HASH
@@ -3634,6 +3690,1458 @@ $ex=$null
 				}
 				$Omsperfupload+=,$Resultsperf
 			}
+
+			#######################################################################################
+#added queries 
+
+$query="SELECT HOST,
+LPAD(PORT, 5) PORT,
+SERVICE_NAME SERVICE,
+LPAD(NUM, 5) NUM,
+CONN_ID,
+LPAD(THREAD_ID, 9) THREAD_ID,
+THREAD_TYPE,
+THREAD_STATE,
+ACTIVE,
+APP_USER,
+DURATION_S,
+CPU_TIME_S
+FROM
+( SELECT
+  CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'HOST')         != 0 THEN T.HOST               ELSE MAP(BI.HOST, '%', 'any', BI.HOST)                 END HOST,
+  CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'PORT')         != 0 THEN TO_VARCHAR(T.PORT)      ELSE MAP(BI.PORT, '%', 'any', BI.PORT)                 END PORT,
+  CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'SERVICE')      != 0 THEN S.SERVICE_NAME       ELSE MAP(BI.SERVICE_NAME, '%', 'any', BI.SERVICE_NAME) END SERVICE_NAME,
+  CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'APP_USER')     != 0 THEN T.APP_USER           ELSE 'any'                                             END APP_USER,
+  CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'THREAD_TYPE')  != 0 THEN T.THREAD_TYPE        ELSE 'any'                                             END THREAD_TYPE,
+  CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'THREAD_STATE') != 0 THEN T.THREAD_STATE       ELSE 'any'                                             END THREAD_STATE,
+  CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'THREAD_ID')    != 0 THEN TO_VARCHAR(T.THREAD_ID) ELSE 'any'                                             END THREAD_ID,
+  COUNT(*) NUM,
+  MAP(MIN(T.CONN_ID), MAX(T.CONN_ID), LPAD(MAX(T.CONN_ID), 10), 'various') CONN_ID,
+  MAP(MIN(T.ACTIVE), MAX(T.ACTIVE), MAX(T.ACTIVE), 'various') ACTIVE,
+  LPAD(TO_DECIMAL(MAP(BI.AGGREGATION_TYPE, 'AVG', AVG(T.DURATION_MS), 'MAX', MAX(T.DURATION_MS), 'SUM', SUM(T.DURATION_MS)) / 1000, 10, 2), 10) DURATION_S,
+  LPAD(TO_DECIMAL(MAP(BI.AGGREGATION_TYPE, 'AVG', AVG(T.CPU_TIME_US), 'MAX', MAX(T.CPU_TIME_US), 'SUM', SUM(T.CPU_TIME_US)) / 1000 / 1000, 10, 2), 10) CPU_TIME_S,
+  BI.ORDER_BY
+FROM
+( SELECT                                      /* Modification section */
+	'%' HOST,
+	'%' PORT,
+	'%' SERVICE_NAME,
+	'X' ONLY_ACTIVE_THREADS,
+	-1 CONN_ID,
+	'SUM' AGGREGATION_TYPE,       /* MAX, AVG, SUM */
+	'NONE' AGGREGATE_BY,          /* HOST, PORT, SERVICE, APP_USER, THREAD_TYPE, THREAD_STATE, THREAD_ID and comma separated combinations, NONE for no aggregation */
+	'THREADS' ORDER_BY             /* THREAD_ID, CONNECTION, THREADS */
+  FROM
+	DUMMY
+) BI,
+  M_SERVICES S,
+( SELECT
+	HOST,
+	PORT,
+	CONNECTION_ID CONN_ID,
+	THREAD_ID,
+	THREAD_TYPE,
+	THREAD_STATE,
+	IS_ACTIVE ACTIVE,
+	APPLICATION_USER_NAME APP_USER,
+	DURATION DURATION_MS,
+	CPU_TIME_SELF CPU_TIME_US
+  FROM
+	M_SERVICE_THREADS
+) T
+WHERE
+  S.HOST LIKE BI.HOST AND
+  TO_VARCHAR(S.PORT) LIKE BI.PORT AND
+  S.SERVICE_NAME LIKE BI.SERVICE_NAME AND
+  T.HOST = S.HOST AND
+  T.PORT = S.PORT AND
+  ( BI.ONLY_ACTIVE_THREADS = ' ' OR T.ACTIVE = 'TRUE' ) AND
+  ( BI.CONN_ID = -1 OR T.CONN_ID = BI.CONN_ID )
+GROUP BY
+  CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'HOST')         != 0 THEN T.HOST               ELSE MAP(BI.HOST, '%', 'any', BI.HOST)                 END,
+  CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'PORT')         != 0 THEN TO_VARCHAR(T.PORT)      ELSE MAP(BI.PORT, '%', 'any', BI.PORT)                 END,
+  CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'SERVICE')      != 0 THEN S.SERVICE_NAME       ELSE MAP(BI.SERVICE_NAME, '%', 'any', BI.SERVICE_NAME) END,
+  CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'APP_USER')     != 0 THEN T.APP_USER           ELSE 'any'                                             END,
+  CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'THREAD_TYPE')  != 0 THEN T.THREAD_TYPE        ELSE 'any'                                             END,
+  CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'THREAD_STATE') != 0 THEN T.THREAD_STATE       ELSE 'any'                                             END,
+  CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'THREAD_ID')    != 0 THEN TO_VARCHAR(T.THREAD_ID) ELSE 'any'                                             END,
+  BI.ORDER_BY,
+  BI.AGGREGATION_TYPE
+)
+ORDER BY
+MAP(ORDER_BY, 'THREAD_ID',   THREAD_ID, 'any', 'CONNECTION', CONN_ID, 'any'),
+MAP(ORDER_BY, 'THREADS', NUM) DESC"
+$cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+		  $ds = New-Object system.Data.DataSet ;
+$ex=$null
+		  Try{
+			  $cmd.fill($ds)|out-null
+		  }
+		  Catch
+		  {
+			  $Ex=$_.Exception.MEssage
+			  write-warning  $ex 
+		  }
+		   
+
+		  $Resultsinv=$null
+		  $Resultsinv=@(); 
+
+		  IF($ds[0].Tables.rows)
+		  {
+			  foreach ($row in $ds.Tables[0].rows)
+			  {
+				  $Resultsinv+= New-Object PSObject -Property @{
+					  HOST=$row.HOST.ToLower()
+					  Instance=$sapinstance
+					  CollectorType="Inventory"
+					  Category="Thread"
+					  Subcategory="Current"
+					  Database=$defaultdb
+					  PORT=$row.PORT
+					  SERVICE=$row.SERVICE
+					  NUM=$row.Num
+					  CONN_ID=$row.CONN_ID
+					  THREAD_ID=$row.THREAD_ID
+					  THREAD_TYPE=$row.THREAD_TYPE
+					   THREAD_STATE=$row.THREAD_STATE    
+					   ACTIVE=$row.ACTIVE
+					  APP_USER=$row.APP_USER 
+					  DURATION_S=$row.DURATION_S 
+					  CPU_TIME_S=$row.CPU_TIME_S
+				  }
+			  }
+			  $Omsinvupload+=,$Resultsinv
+		  }
+# Tables - LArgest Inventory 
+	  $query="SELECT OWNER,
+TABLE_NAME,
+S,                                        /* 'C' --> column store, 'R' --> row store */
+LOADED L,                                 /* 'Y' --> fully loaded, 'P' --> partially loaded, 'N' --> not loaded */
+HOST,
+B T,                                      /* 'X' if table belongs to list of technical tables (SAP Note 2388483) */
+U,                                        /* 'X' if unique index exists for table */
+LPAD(ROW_NUM, 3) POS,
+LPAD(COLS, 4) COLS,
+LPAD(RECORDS, 12) RECORDS,
+LPAD(TO_DECIMAL(TOTAL_DISK_MB / 1024, 10, 2), 7) DISK_GB,
+LPAD(TO_DECIMAL(MAX_TOTAL_MEM_MB / 1024, 10, 2), 10) MAX_MEM_GB,
+LPAD(TO_DECIMAL(TOTAL_MEM_MB / 1024, 10, 2), 10) CUR_MEM_GB,
+LPAD(TO_DECIMAL(`"TO`TAL_MEM_%`", 9, 2), 5) `"MEM_%`",
+LPAD(TO_DECIMAL(SUM(`"TOTAL_MEM_%`") OVER (ORDER BY ROW_NUM), 5, 2), 5) `"CUM_%`",
+LPAD(PARTITIONS, 5) `"PART.`",
+LPAD(TO_DECIMAL(TABLE_MEM_MB / 1024, 10, 2), 10) TAB_MEM_GB,
+LPAD(INDEXES, 4) `"IND.`",
+LPAD(TO_DECIMAL(INDEX_MEM_MB / 1024, 10, 2), 10) IND_MEM_GB,
+LPAD(LOBS, 4) LOBS,
+LPAD(TO_DECIMAL(LOB_MB / 1024, 10, 2), 6) LOB_GB
+FROM
+( SELECT
+  OWNER,
+  TABLE_NAME,
+  HOST,
+  B,
+  CASE WHEN UNIQUE_INDEXES = 0 THEN ' ' ELSE 'X' END U,
+  MAP(STORE, 'COLUMN', 'C', 'ROW', 'R') S,
+  COLS,
+  RECORDS,
+  TABLE_MEM_MB + INDEX_MEM_RS_MB TOTAL_MEM_MB,
+  IFNULL(MAX_MEM_MB, TABLE_MEM_MB + INDEX_MEM_RS_MB) MAX_TOTAL_MEM_MB,
+  TABLE_MEM_MB - INDEX_MEM_CS_MB TABLE_MEM_MB,             /* Indexes are contained in CS table size */
+  LOADED,
+  TOTAL_DISK_MB,
+  CASE 
+	WHEN SUM(TABLE_MEM_MB + INDEX_MEM_RS_MB) OVER () * 100 = 0 THEN 0 
+	ELSE (TABLE_MEM_MB +  INDEX_MEM_RS_MB) / SUM(TABLE_MEM_MB + INDEX_MEM_RS_MB) OVER () * 100 
+  END `"TOTAL_MEM_%`",
+  PARTITIONS,
+  INDEXES,
+  INDEX_MEM_RS_MB + INDEX_MEM_CS_MB INDEX_MEM_MB,
+  LOBS,
+  LOB_MB,
+  ROW_NUMBER () OVER ( ORDER BY MAP ( ORDER_BY, 
+	'TOTAL_DISK',  TOTAL_DISK_MB, 
+	'CURRENT_MEM', TABLE_MEM_MB + INDEX_MEM_RS_MB, 
+	'MAX_MEM',     IFNULL(MAX_MEM_MB, TABLE_MEM_MB + INDEX_MEM_RS_MB),
+	'TABLE_MEM',   TABLE_MEM_MB - INDEX_MEM_CS_MB, 
+	'INDEX_MEM',   INDEX_MEM_RS_MB + INDEX_MEM_CS_MB ) 
+	DESC, OWNER,   TABLE_NAME ) ROW_NUM,
+  RESULT_ROWS,
+  ORDER_BY
+FROM
+( SELECT
+	T.SCHEMA_NAME OWNER,
+	T.TABLE_NAME,
+	TS.HOST,
+	CASE WHEN T.TABLE_NAME IN
+	( 'BALHDR', 'BALHDRP', 'BALM', 'BALMP', 'BALDAT', 'BALC', 
+	  'BAL_INDX', 'EDIDS', 'EDIDC', 'EDIDOC', 'EDI30C', 'EDI40', 'EDID4',
+	  'IDOCREL', 'SRRELROLES', 'SWFGPROLEINST', 'SWP_HEADER', 'SWP_NODEWI', 'SWPNODE',
+	  'SWPNODELOG', 'SWPSTEPLOG', 'SWW_CONT', 'SWW_CONTOB', 'SWW_WI2OBJ', 'SWWCNTP0',
+	  'SWWCNTPADD', 'SWWEI', 'SWWLOGHIST', 'SWWLOGPARA', 'SWWWIDEADL', 'SWWWIHEAD', 
+	  'SWWWIRET', 'SWZAI', 'SWZAIENTRY', 'SWZAIRET', 'SWWUSERWI',                  
+	  'BDCP', 'BDCPS', 'BDCP2', 'DBTABLOG', 'DBTABPRT', 
+	  'ARFCSSTATE', 'ARFCSDATA', 'ARFCRSTATE', 'TRFCQDATA',
+	  'TRFCQIN', 'TRFCQOUT', 'TRFCQSTATE', 'SDBAH', 'SDBAD', 'DBMSGORA', 'DDLOG',
+	  'APQD', 'TST01', 'TST03', 'TSPEVJOB', 'TXMILOGRAW', 'TSPEVDEV', 
+	  'SNAP', 'SMO8FTCFG', 'SMO8FTSTP', 'SMO8_TMSG', 'SMO8_TMDAT', 
+	  'SMO8_DLIST', 'SMW3_BDOC', 'SMW3_BDOC1', 'SMW3_BDOC2', 
+	  'SMW3_BDOC4', 'SMW3_BDOC5', 'SMW3_BDOC6', 'SMW3_BDOC7', 'SMW3_BDOCQ', 'SMWT_TRC',
+	  'TPRI_PAR', 'RSBMLOGPAR', 'RSBMLOGPAR_DTP', 'RSBMNODES', 'RSBMONMESS',
+	  'RSBMONMESS_DTP', 'RSBMREQ_DTP', 'RSCRTDONE', 'RSDELDONE', 'RSHIEDONE',
+	  'RSLDTDONE', 'RSMONFACT', 'RSMONICTAB', 'RSMONIPTAB', 'RSMONMESS', 'RSMONRQTAB', 'RSREQDONE',
+	  'RSRULEDONE', 'RSSELDONE', 'RSTCPDONE', 'RSUICDONE',
+	  'VBDATA', 'VBMOD', 'VBHDR', 'VBERROR', 'ENHLOG',
+	  'VDCHGPTR', 'JBDCPHDR2', 'JBDCPPOS2', 'SWELOG', 'SWELTS', 'SWFREVTLOG',
+	  'ARDB_STAT0', 'ARDB_STAT1', 'ARDB_STAT2', 'TAAN_DATA', 'TAAN_FLDS', 'TAAN_HEAD', 'QRFCTRACE', 'QRFCLOG',
+	  'DDPRS', 'TBTCO', 'TBTCP', 'TBTCS', 'MDMFDBEVENT', 'MDMFDBID', 'MDMFDBPR',
+	  'RSRWBSTORE', 'RSRWBINDEX', '/SAPAPO/LISMAP', '/SAPAPO/LISLOG', 
+	  'CCMLOG', 'CCMLOGD', 'CCMSESSION', 'CCMOBJLST', 'CCMOBJKEYS',
+	  'RSBATCHCTRL', 'RSBATCHCTRL_PAR', 'RSBATCHDATA', 'RSBATCHHEADER', 'RSBATCHPROT', 'RSBATCHSTACK',
+	  'SXMSPMAST', 'SXMSPMAST2', 'SXMSPHIST', 
+	  'SXMSPHIST2', 'SXMSPFRAWH', 'SXMSPFRAWD', 'SXMSCLUR', 'SXMSCLUR2', 'SXMSCLUP',
+	  'SXMSCLUP2', 'SWFRXIHDR', 'SWFRXICNT', 'SWFRXIPRC', 
+	  'XI_AF_MSG', 'XI_AF_MSG_AUDIT', 'BC_MSG', 'BC_MSG_AUDIT',
+	  'SMW0REL', 'SRRELROLES', 'COIX_DATA40', 'T811E', 'T811ED', 
+	  'T811ED2', 'RSDDSTATAGGR', 'RSDDSTATAGGRDEF', 'RSDDSTATCOND', 'RSDDSTATDTP',
+	  'RSDDSTATDELE', 'RSDDSTATDM', 'RSDDSTATEVDATA', 'RSDDSTATHEADER',
+	  'RSDDSTATINFO', 'RSDDSTATLOGGING', 'RSERRORHEAD', 'RSERRORLOG',
+	  'DFKKDOUBTD_W', 'DFKKDOUBTD_RET_W', 'RSBERRORLOG', 'INDX',
+	  'SOOD', 'SOOS', 'SOC3', 'SOFFCONT1', 'BCST_SR', 'BCST_CAM',
+	  'SICFRECORDER', 'CRM_ICI_TRACES', 'RSPCINSTANCE', 'RSPCINSTANCET',
+	  'GVD_BGPROCESS', 'GVD_BUFF_POOL_ST', 'GVD_LATCH_MISSES', 
+	  'GVD_ENQUEUE_STAT', 'GVD_FILESTAT', 'GVD_INSTANCE',    
+	  'GVD_PGASTAT', 'GVD_PGA_TARGET_A', 'GVD_PGA_TARGET_H',
+	  'GVD_SERVERLIST', 'GVD_SESSION_EVT', 'GVD_SESSION_WAIT',
+	  'GVD_SESSION', 'GVD_PROCESS', 'GVD_PX_SESSION',  
+	  'GVD_WPTOTALINFO', 'GVD_ROWCACHE', 'GVD_SEGMENT_STAT',
+	  'GVD_SESSTAT', 'GVD_SGACURRRESIZ', 'GVD_SGADYNFREE',  
+	  'GVD_SGA', 'GVD_SGARESIZEOPS', 'GVD_SESS_IO',     
+	  'GVD_SGASTAT', 'GVD_SGADYNCOMP', 'GVD_SEGSTAT',     
+	  'GVD_SPPARAMETER', 'GVD_SHAR_P_ADV', 'GVD_SQLAREA',     
+	  'GVD_SQL', 'GVD_SQLTEXT', 'GVD_SQL_WA_ACTIV',
+	  'GVD_SQL_WA_HISTO', 'GVD_SQL_WORKAREA', 'GVD_SYSSTAT',     
+	  'GVD_SYSTEM_EVENT', 'GVD_DATABASE', 'GVD_CURR_BLKSRV', 
+	  'GVD_DATAGUARD_ST', 'GVD_DATAFILE', 'GVD_LOCKED_OBJEC',
+	  'GVD_LOCK_ACTIVTY', 'GVD_DB_CACHE_ADV', 'GVD_LATCHHOLDER', 
+	  'GVD_LATCHCHILDS', 'GVD_LATCH', 'GVD_LATCHNAME',   
+	  'GVD_LATCH_PARENT', 'GVD_LIBRARYCACHE', 'GVD_LOCK',        
+	  'GVD_MANGD_STANBY', 'GVD_OBJECT_DEPEN', 'GVD_PARAMETER',   
+	  'GVD_LOGFILE', 'GVD_PARAMETER2', 'GVD_TEMPFILE',    
+	  'GVD_UNDOSTAT', 'GVD_WAITSTAT', 'ORA_SNAPSHOT',
+	  '/TXINTF/TRACE', 'RSECLOG', 'RSECUSERAUTH_CL', 'RSWR_DATA',
+	  'RSECVAL_CL', 'RSECHIE_CL', 'RSECTXT_CL', 'RSECSESSION_CL',
+	  'UPC_STATISTIC', 'UPC_STATISTIC2', 'UPC_STATISTIC3',
+	  'RSTT_CALLSTACK', 'RSZWOBJ', 'RSIXWWW', 'RSZWBOOKMARK', 'RSZWVIEW', 
+	  'RSZWITEM', 'RSR_CACHE_DATA_B', 'RSR_CACHE_DATA_C', 'RSR_CACHE_DBS_BL',
+	  'RSR_CACHE_FFB', 'RSR_CACHE_QUERY', 'RSR_CACHE_STATS',
+	  'RSR_CACHE_VARSHB', 'WRI`$_OPTSTAT_HISTGRM_HISTORY',
+	  'WRI`$_OPTSTAT_HISTHEAD_HISTORY', 'WRI`$_OPTSTAT_IND_HISTORY',
+	  'WRI`$_OPTSTAT_TAB_HISTORY', 'WRH`$_ACTIVE_SESSION_HISTORY',
+	  'RSODSACTUPDTYPE', 'TRFC_I_SDATA', 'TRFC_I_UNIT', 'TRFC_I_DEST', 
+	  'TRFC_I_UNIT_LOCK', 'TRFC_I_EXE_STATE', 'TRFC_I_ERR_STATE',
+	  'DYNPSOURCE', 'DYNPLOAD', 'D010TAB', 'REPOSRC', 'REPOLOAD',
+	  'RSOTLOGOHISTORY', 'SQLMD', '/SDF/ZQLMD', 'RSSTATMANREQMDEL',
+	  'RSSTATMANREQMAP', 'RSICPROT', 'RSPCPROCESSLOG',
+	  'DSVASRESULTSGEN', 'DSVASRESULTSSEL', 'DSVASRESULTSCHK', 
+	  'DSVASRESULTSATTR', 'DSVASREPODOCS', 'DSVASSESSADMIN', 'DOKCLU',
+	  'ORA_SQLC_HEAD', 'ORA_SQLC_DATA', 'CS_AUDIT_LOG_', 'RSBKSELECT',
+	  'SWN_NOTIF', 'SWN_NOTIFTSTMP', 'SWN_SENDLOG', 'JOB_LOG',
+	  'SWNCMONI', 'BC_SLD_CHANGELOG', 'ODQDATA_F', 'STATISTICS_ALERTS', 'STATISTICS_ALERTS_BASE',
+	  'SRT_UTIL_ERRLOG', 'SRT_MONILOG_DATA', 'SRT_RTC_DT_RT', 'SRT_RTC_DATA', 'SRT_RTC_DATA_RT', 
+	  'SRT_CDTC', 'SRT_MMASTER', 'SRT_SEQ_HDR_STAT', 'SRTM_SUB', 'SRT_SEQ_REORG',
+	  'UJ0_STAT_DTL', 'UJ0_STAT_HDR', '/SAPTRX/APPTALOG', '/SAPTRX/AOTREF', 'SSCOOKIE',
+	  'UJF_DOC', 'UJF_DOC_CLUSTER', '/AIF/PERS_XML', 'SE16N_CD_DATA', 'SE16N_CD_KEY',
+	  'RSBKDATA', 'RSBKDATAINFO', 'RSBKDATAPAKID', 'RSBKDATAPAKSEL',
+	  'ECLOG_CALL', 'ECLOG_DATA', 'ECLOG_EXEC', 'ECLOG_EXT', 'ECLOG_HEAD', 'ECLOG_RESTAB', 
+	  'ECLOG_SCNT', 'ECLOG_SCR', 'ECLOG_SEL', 'ECLOG_XDAT',
+	  'CROSS', 'WBCROSSGT', 'WBCROSSI', 'OBJECT_HISTORY', '/SSF/PTAB'
+	) OR
+	  ( T.TABLE_NAME LIKE 'GLOBAL%' AND T.SCHEMA_NAME = '_SYS_STATISTICS' ) OR
+	  ( T.TABLE_NAME LIKE 'HOST%' AND T.SCHEMA_NAME = '_SYS_STATISTICS' ) OR
+	  T.TABLE_NAME LIKE 'ZARIX%' OR
+	  T.TABLE_NAME LIKE '/BI0/0%' OR
+	  T.TABLE_NAME LIKE '/BIC/B%' OR
+	  T.TABLE_NAME LIKE '/BI_/H%' OR
+	  T.TABLE_NAME LIKE '/BI_/I%' OR
+	  T.TABLE_NAME LIKE '/BI_/J%' OR
+	  T.TABLE_NAME LIKE '/BI_/K%' OR
+	  T.TABLE_NAME LIKE '`$BPC`$HC$%' OR
+	  T.TABLE_NAME LIKE '`$BPC`$TMP%'
+	  THEN 'X' ELSE ' ' END B,
+	( SELECT COUNT(*) FROM INDEXES I WHERE I.SCHEMA_NAME = T.SCHEMA_NAME AND I.TABLE_NAME = T.TABLE_NAME AND I.INDEX_TYPE LIKE '%UNIQUE%' ) UNIQUE_INDEXES,
+	CASE WHEN T.IS_COLUMN_TABLE = 'FALSE' THEN 'ROW' ELSE 'COLUMN' END STORE,
+	( SELECT COUNT(*) FROM TABLE_COLUMNS C WHERE C.SCHEMA_NAME = T.SCHEMA_NAME AND C.TABLE_NAME = T.TABLE_NAME ) COLS,
+	T.RECORD_COUNT RECORDS,
+	T.TABLE_SIZE / 1024 / 1024 TABLE_MEM_MB,
+	TS.LOADED,
+	TS.MAX_MEM_MB,
+	TP.DISK_SIZE / 1024 / 1024 TOTAL_DISK_MB,
+	( SELECT GREATEST(COUNT(*), 1) FROM M_CS_PARTITIONS P WHERE P.SCHEMA_NAME = T.SCHEMA_NAME AND P.TABLE_NAME = T.TABLE_NAME ) PARTITIONS,
+	( SELECT COUNT(*) FROM INDEXES I WHERE I.SCHEMA_NAME = T.SCHEMA_NAME AND I.TABLE_NAME = T.TABLE_NAME ) INDEXES,
+	( SELECT IFNULL(SUM(INDEX_SIZE), 0) / 1024 / 1024 FROM M_RS_INDEXES I WHERE I.SCHEMA_NAME = T.SCHEMA_NAME AND I.TABLE_NAME = T.TABLE_NAME ) INDEX_MEM_RS_MB,
+	( SELECT 
+		IFNULL(SUM
+		( CASE INTERNAL_ATTRIBUTE_TYPE
+			WHEN 'TREX_UDIV'         THEN 0                             /* technical necessity, completely treated as `"table`" */
+			WHEN 'ROWID'             THEN 0                             /* technical necessity, completely treated as `"table`" */
+			WHEN 'VALID_FROM'        THEN 0                             /* technical necessity, completely treated as `"table`" */
+			WHEN 'VALID_TO'          THEN 0                             /* technical necessity, completely treated as `"table`" */
+			WHEN 'TEXT'              THEN MEMORY_SIZE_IN_TOTAL          /* both concat attribute and index on it treated as`"index`" */
+			WHEN 'TREX_EXTERNAL_KEY' THEN MEMORY_SIZE_IN_TOTAL          /* both concat attribute and index on it treated as `"index`" */
+			WHEN 'UNKNOWN'           THEN MEMORY_SIZE_IN_TOTAL          /* both concat attribute and index on it treated as `"index`" */
+			WHEN 'CONCAT_ATTRIBUTE'  THEN MEMORY_SIZE_IN_TOTAL          /* both concat attribute and index on it treated as `"index`" */
+			ELSE MAIN_MEMORY_SIZE_IN_INDEX + DELTA_MEMORY_SIZE_IN_INDEX /* index structures on single columns treated as `"index`" */
+		  END
+		), 0) / 1024 / 1024
+	  FROM 
+		M_CS_ALL_COLUMNS C 
+	  WHERE 
+		C.SCHEMA_NAME = T.SCHEMA_NAME AND 
+		C.TABLE_NAME = T.TABLE_NAME
+	) INDEX_MEM_CS_MB,
+	( SELECT IFNULL(MAX(MAP(CS_DATA_TYPE_NAME, 'ST_MEMORY_LOB', 'M', 'LOB', 'H', 'ST_DISK_LOB', 'D', 'U')), '') || COUNT(*)
+		FROM TABLE_COLUMNS C 
+	  WHERE C.SCHEMA_NAME = T.SCHEMA_NAME AND C.TABLE_NAME = T.TABLE_NAME AND DATA_TYPE_NAME IN ( 'BLOB', 'CLOB', 'NCLOB', 'TEXT' ) ) LOBS,
+	( SELECT IFNULL(SUM(PHYSICAL_SIZE), 0) / 1024 / 1024 FROM M_TABLE_LOB_FILES L WHERE L.SCHEMA_NAME = T.SCHEMA_NAME AND L.TABLE_NAME = T.TABLE_NAME ) LOB_MB,
+	BI.ONLY_TECHNICAL_TABLES,
+	BI.RESULT_ROWS,
+	BI.ORDER_BY
+  FROM
+  ( SELECT                                       /* Modification section */
+	  '%' SCHEMA_NAME,
+	  '%' TABLE_NAME,
+	  '%' STORE,                             /* ROW, COLUMN, % */
+	  ' ' ONLY_TECHNICAL_TABLES,
+	  50 RESULT_ROWS,
+	  'TOTAL_DISK' ORDER_BY                    /* TOTAL_DISK, CURRENT_MEM, MAX_MEM, TABLE_MEM, INDEX_MEM */
+	FROM
+	  DUMMY
+  ) BI,
+	M_TABLES T,
+	( SELECT 
+		SCHEMA_NAME, 
+		TABLE_NAME, 
+		MAP(MIN(HOST), MAX(HOST), MIN(HOST), 'various') HOST, 
+		MAP(MAX(LOADED), 'NO', 'N', 'FULL', 'Y', 'PARTIALLY', 'P') LOADED,
+		SUM(ESTIMATED_MAX_MEMORY_SIZE_IN_TOTAL) / 1024 / 1024 MAX_MEM_MB
+	  FROM 
+		M_CS_TABLES 
+	  GROUP BY 
+		SCHEMA_NAME, 
+		TABLE_NAME 
+	  UNION
+	  ( SELECT 
+		  SCHEMA_NAME, 
+		  TABLE_NAME, 
+		  MAP(MIN(HOST), MAX(HOST), MIN(HOST), 'various') HOST, 
+		  'Y' LOADED,
+		  NULL MAX_MEM_MB
+		FROM 
+		  M_RS_TABLES 
+		GROUP BY 
+		  SCHEMA_NAME, 
+		  TABLE_NAME 
+	  )
+	) TS,
+	M_TABLE_PERSISTENCE_STATISTICS TP
+  WHERE
+	T.SCHEMA_NAME LIKE BI.SCHEMA_NAME AND
+	T.TABLE_NAME LIKE BI.TABLE_NAME AND
+	T.SCHEMA_NAME = TP.SCHEMA_NAME AND
+	T.TABLE_NAME = TP.TABLE_NAME AND
+	T.SCHEMA_NAME = TS.SCHEMA_NAME AND
+	T.TABLE_NAME = TS.TABLE_NAME AND
+	( BI.STORE = '%' OR
+	  BI.STORE = 'ROW' AND T.IS_COLUMN_TABLE = 'FALSE' OR
+	  BI.STORE = 'COLUMN' AND T.IS_COLUMN_TABLE = 'TRUE'
+	)
+)
+WHERE
+  ( ONLY_TECHNICAL_TABLES = ' ' OR B = 'X' )
+)
+WHERE
+( RESULT_ROWS = -1 OR ROW_NUM <= RESULT_ROWS )
+ORDER BY
+ROW_NUM
+"
+	   $cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+		  $ds = New-Object system.Data.DataSet ;
+	  $ex=$null
+		  Try{
+			  $cmd.fill($ds)|out-null
+		  }
+		  Catch
+		  {
+			  $Ex=$_.Exception.MEssage
+			  write-warning  $ex 
+		  }
+		   
+
+		  
+		  $Resultsinv=$null
+		  $Resultsinv=@(); 
+
+
+		  IF($ds[0].Tables.rows)
+		  {
+			  foreach ($row in $ds.Tables[0].rows)
+			  {
+				  $Resultsinv+= New-Object PSObject -Property @{
+					  HOST=$row.HOST.ToLower()
+					  Instance=$sapinstance
+					  CollectorType="Inventory"
+					  Category="Tables"
+					  Subcategory="Largest"
+					  Database=$defaultdb
+					  StoreType=$row.S
+					  Loaded=$row.L
+					  POS=$row.POS
+					  COLS=$row.COLS
+					  RECORDS=$row.RECORDS    
+				  }
+			  }
+			  $Omsinvupload+=,$Resultsinv
+		  }
+
+#inventory Sessions    
+		   $query="SELECT  C.HOST,
+LPAD(C.PORT, 5) PORT,
+S.SERVICE_NAME SERVICE,
+IFNULL(LPAD(C.CONN_ID, 7), '') CONN_ID,
+IFNULL(LPAD(C.THREAD_ID, 9), '') THREAD_ID,
+IFNULL(LPAD(C.TRANSACTION_ID, 8), '') TRANS_ID,
+IFNULL(LPAD(C.UPD_TRANS_ID, 9), '') UPD_TID,
+IFNULL(LPAD(C.CLIENT_PID, 10), '') CLIENT_PID,
+C.CLIENT_HOST,
+C.TRANSACTION_START,
+IFNULL(LPAD(TO_DECIMAL(C.TRANSACTION_ACTIVE_DAYS, 10, 2), 8), '') ACT_DAYS,
+C.THREAD_TYPE,
+C.THREAD_STATE,
+C.CALLER,
+C.WAITING_FOR,
+C.APPLICATION_SOURCE,
+C.STATEMENT_HASH,
+CASE
+  WHEN MAX_THREAD_DETAIL_LENGTH = -1 THEN THREAD_DETAIL
+  WHEN THREAD_DETAIL_FROM_POS <= 15 THEN
+	SUBSTR(THREAD_DETAIL, 1, MAX_THREAD_DETAIL_LENGTH)
+  ELSE
+	SUBSTR(SUBSTR(THREAD_DETAIL, 1, LOCATE(THREAD_DETAIL, CHAR(32))) || '...' || SUBSTR(THREAD_DETAIL, THREAD_DETAIL_FROM_POS - 1), 1, MAX_THREAD_DETAIL_LENGTH) 
+END THREAD_DETAIL,
+IFNULL(LPAD(TO_DECIMAL(C.USED_MEMORY_SIZE / 1024 / 1024, 10, 2), 9), '') MEMORY_MB,
+C.THREAD_METHOD,
+C.TRANSACTION_STATE TRANS_STATE,
+C.TRANSACTION_TYPE,
+C.TABLE_NAME MVCC_TABLE_NAME,
+C.APPLICATION_USER_NAME APP_USER
+FROM
+( SELECT                     /* Modification section */
+  '%' HOST,
+  '%' PORT,
+  '%' SERVICE_NAME,
+  -1 CONN_ID,
+  -1 THREAD_ID,
+  '%' THREAD_STATE,
+  -1 TRANSACTION_ID,
+  -1 UPDATE_TRANSACTION_ID,
+  -1 CLIENT_PID,
+  'X' ONLY_ACTIVE_THREADS,
+  'X' ONLY_ACTIVE_TRANSACTIONS,
+  ' ' ONLY_ACTIVE_UPDATE_TRANSACTIONS,
+  ' ' ONLY_ACTIVE_SQL_STATEMENTS,
+  ' ' ONLY_MVCC_BLOCKER,
+  80 MAX_THREAD_DETAIL_LENGTH,
+  'TRANSACTION_TIME' ORDER_BY           /* CONNECTION, THREAD, TRANSACTION, UPDATE_TRANSACTION, TRANSACTION_TIME */
+FROM
+  DUMMY
+) BI,
+M_SERVICES S,
+( SELECT
+  IFNULL(C.HOST, IFNULL(TH.HOST, T.HOST)) HOST,
+  IFNULL(C.PORT, IFNULL(TH.PORT, T.PORT)) PORT,
+  C.CONNECTION_ID CONN_ID,
+  TH.THREAD_ID,
+  IFNULL(TH.THREAD_STATE, '') THREAD_STATE,
+  IFNULL(TH.THREAD_METHOD, '') THREAD_METHOD,
+  IFNULL(TH.THREAD_TYPE, '') THREAD_TYPE,
+  REPLACE(LTRIM(IFNULL(TH.THREAD_DETAIL, IFNULL(S.STATEMENT_STRING, ''))), CHAR(9), CHAR(32)) THREAD_DETAIL,
+  LOCATE(LTRIM(UPPER(IFNULL(TH.THREAD_DETAIL, IFNULL(S.STATEMENT_STRING, '')))), 'FROM ') THREAD_DETAIL_FROM_POS,
+  T.TRANSACTION_ID,
+  IFNULL(T.TRANSACTION_STATUS, '') TRANSACTION_STATE,
+  IFNULL(T.TRANSACTION_TYPE, '') TRANSACTION_TYPE,
+  T.UPDATE_TRANSACTION_ID UPD_TRANS_ID,
+  IFNULL(TH.CALLER, '') CALLER,
+  CASE WHEN BT.LOCK_OWNER_UPDATE_TRANSACTION_ID IS NOT NULL THEN 'UPD_TID: ' || BT.LOCK_OWNER_UPDATE_TRANSACTION_ID || CHAR(32) ELSE '' END ||
+	CASE WHEN TH.CALLING IS NOT NULL AND TH.CALLING != '' THEN 'CALLING: ' || TH.CALLING || CHAR(32) ELSE '' END WAITING_FOR,
+  IFNULL(TO_VARCHAR(T.START_TIME, 'YYYY/MM/DD HH24:MI:SS'), '') TRANSACTION_START,
+  SECONDS_BETWEEN(T.START_TIME, CURRENT_TIMESTAMP) / 86400 TRANSACTION_ACTIVE_DAYS,
+  IFNULL(C.CLIENT_HOST, '') CLIENT_HOST,
+  C.CLIENT_PID,
+  MT.MIN_SNAPSHOT_TS,
+  TA.TABLE_NAME,
+  S.APPLICATION_SOURCE,
+  S.STATEMENT_STRING,
+  S.USED_MEMORY_SIZE,
+  SC.STATEMENT_HASH,
+  TH.APPLICATION_USER_NAME
+FROM  
+  M_CONNECTIONS C FULL OUTER JOIN
+  M_SERVICE_THREADS TH ON
+	TH.CONNECTION_ID = C.CONNECTION_ID AND
+	TH.HOST = C.HOST AND
+	TH.PORT = C.PORT FULL OUTER JOIN
+  M_TRANSACTIONS T ON
+	T.TRANSACTION_ID = C.TRANSACTION_ID LEFT OUTER JOIN
+  M_PREPARED_STATEMENTS S ON
+	C.CURRENT_STATEMENT_ID = S.STATEMENT_ID FULL OUTER JOIN
+  M_SQL_PLAN_CACHE SC ON
+	S.PLAN_ID = SC.PLAN_ID FULL OUTER JOIN
+  M_BLOCKED_TRANSACTIONS BT ON
+	T.UPDATE_TRANSACTION_ID = BT.BLOCKED_UPDATE_TRANSACTION_ID LEFT OUTER JOIN
+  ( SELECT
+	  HOST,
+	  PORT,
+	  NUM_VERSIONS,
+	  TABLE_ID,
+	  MIN_SNAPSHOT_TS,
+	  MIN_READ_TID,
+	  MIN_WRITE_TID
+	FROM
+	( SELECT
+		HOST,
+		PORT,
+		MAX(MAP(NAME, 'NUM_VERSIONS',                 VALUE, 0))            NUM_VERSIONS,
+		MAX(MAP(NAME, 'TABLE_ID_OF_MAX_NUM_VERSIONS', VALUE, 0))            TABLE_ID,
+		MAX(MAP(NAME, 'MIN_SNAPSHOT_TS',              TO_NUMBER(VALUE), 0)) MIN_SNAPSHOT_TS,
+		MAX(MAP(NAME, 'MIN_READ_TID',                 TO_NUMBER(VALUE), 0)) MIN_READ_TID,
+		MAX(MAP(NAME, 'MIN_WRITE_TID',                TO_NUMBER(VALUE), 0)) MIN_WRITE_TID
+	  FROM
+		M_MVCC_TABLES
+	  GROUP BY
+		HOST,
+		PORT
+	) 
+	WHERE
+	  TABLE_ID != 0
+  ) MT ON
+	  MT.MIN_SNAPSHOT_TS = T.MIN_MVCC_SNAPSHOT_TIMESTAMP LEFT OUTER JOIN
+	TABLES TA ON
+	  TA.TABLE_OID = MT.TABLE_ID 
+) C
+WHERE
+S.HOST LIKE BI.HOST AND
+TO_VARCHAR(S.PORT) LIKE BI.PORT AND
+S.SERVICE_NAME LIKE BI.SERVICE_NAME AND
+C.HOST = S.HOST AND
+C.PORT = S.PORT AND
+( BI.CONN_ID = -1 OR BI.CONN_ID = C.CONN_ID ) AND
+( BI.THREAD_ID = -1 OR BI.THREAD_ID = C.THREAD_ID ) AND
+C.THREAD_STATE LIKE BI.THREAD_STATE AND
+( BI.ONLY_ACTIVE_THREADS = ' ' OR C.THREAD_STATE NOT IN ( 'Inactive', '') ) AND
+( BI.TRANSACTION_ID = -1 OR BI.TRANSACTION_ID = C.TRANSACTION_ID ) AND
+( BI.CLIENT_PID = -1 OR BI.CLIENT_PID = C.CLIENT_PID ) AND
+( BI.UPDATE_TRANSACTION_ID = -1 OR BI.UPDATE_TRANSACTION_ID = C.UPD_TRANS_ID ) AND
+( BI.ONLY_ACTIVE_UPDATE_TRANSACTIONS = ' ' OR C.UPD_TRANS_ID > 0 ) AND
+( BI.ONLY_ACTIVE_TRANSACTIONS = ' ' OR C.TRANSACTION_STATE = 'ACTIVE' ) AND
+( BI.ONLY_ACTIVE_SQL_STATEMENTS = ' ' OR C.STATEMENT_STRING IS NOT NULL ) AND
+( BI.ONLY_MVCC_BLOCKER = ' ' OR C.MIN_SNAPSHOT_TS IS NOT NULL )
+ORDER BY
+MAP(BI.ORDER_BY, 
+  'CONNECTION',         C.CONN_ID, 
+  'THREAD',             C.THREAD_ID, 
+  'TRANSACTION',        C.TRANSACTION_ID,
+  'UPDATE_TRANSACTION', C.UPD_TRANS_ID),
+MAP(BI.ORDER_BY,
+  'TRANSACTION_TIME',   C.TRANSACTION_START),
+C.CONN_ID,
+C.THREAD_ID,
+C.TRANSACTION_ID
+"
+		   $cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+		  $ds = New-Object system.Data.DataSet ;
+	  $ex=$null
+		  Try{
+			  $cmd.fill($ds)|out-null
+		  }
+		  Catch
+		  {
+			  $Ex=$_.Exception.MEssage
+			  write-warning  $ex 
+		  }
+		   
+
+		  $Resultsinv=$null
+		  $Resultsinv=@(); 
+
+
+		  IF($ds[0].Tables.rows)
+		  {
+			  foreach ($row in $ds.Tables[0].rows)
+			  {
+				  $Resultsinv+= New-Object PSObject -Property @{
+					  HOST=$row.HOST.ToLower()
+					  Instance=$sapinstance
+					  CollectorType="Inventory"
+					  Category="Sessions"
+					  Database=$defaultdb
+					  PORT=$row.PORT
+					  SERVICE=$row.Service
+					  CONN_ID=$row.CONN_ID
+					  THREAD_ID=$row.THREAD_ID
+					  TRANS_ID=$row.TRANS_ID
+					  UPD_TID =$row.UPD_TID 
+					  CLIENT_HOST=$row.CLIENT_HOST
+					  TRANSACTION_START=$row.TRANSACTION_START
+					  ACT_DAYS=$row.ACT_DAYS
+					  THREAD_TYPE=$row.THREAD_TYPE
+					  THREAD_STATE =$row.THREAD_STATE 
+					  CALLER=$row.CALLER
+					  STATEMENT_HASH =$row.STATEMENT_HASH 
+					  MEMORY_MB=$row.MEMORY_MB
+					  THREAD_METHOD=$row.THREAD_METHOD
+					  TRANS_STATE=$row.TRANS_STATE
+					  TRANSACTION_TYPE =$row.TRANSACTION_TYPE 
+					  APP_USER =$row.APP_USER 
+
+				  }
+			  }
+			  $Omsinvupload+=,$Resultsinv
+		  }
+
+  $checkfreq=900
+IF($firstrun){$checkfreq=2592000}Else{$checkfreq=900} # decide if you change 'HOUR' TIME_AGGREGATE_BY 
+
+#backup inventory 
+If($MDC)
+{
+  $query="Select START_TIME,
+HOST,
+SERVICE_NAME,
+DATABASE_NAME DB_NAME,
+LPAD(BACKUP_ID, 13) BACKUP_ID,
+BACKUP_TYPE,
+DATA_TYPE,
+STATUS,
+LPAD(BACKUPS, 7) BACKUPS,
+LPAD(TO_DECIMAL(MAP(BACKUPS, 0, 0, NUM_LOG_FULL / BACKUPS * 100), 10, 2), 12) FULL_LOG_PCT,
+AGG,
+LPAD(TO_DECIMAL(RUNTIME_H * 60, 10, 2), 11) RUNTIME_MIN,
+LPAD(TO_DECIMAL(BACKUP_SIZE_MB, 10, 2), 14) BACKUP_SIZE_MB,
+LPAD(TO_DECIMAL(MAP(RUNTIME_H, 0, 0, BACKUP_SIZE_MB / RUNTIME_H / 3600), 10, 2), 8) MB_PER_S,
+LPAD(TO_DECIMAL(SECONDS_BETWEEN(MAX_START_TIME, CURRENT_TIMESTAMP) / 86400, 10, 2), 11) DAYS_PASSED,
+MESSAGE
+FROM
+( SELECT
+  START_TIME,
+  HOST,
+  SERVICE_NAME,
+  DATABASE_NAME,
+  BACKUP_ID,
+  BACKUP_TYPE,
+  BACKUP_DATA_TYPE DATA_TYPE,
+  STATUS,
+  NUM_BACKUP_RUNS BACKUPS,
+  NUM_LOG_FULL,
+  AGGREGATION_TYPE AGG,
+  CASE AGGREGATION_TYPE
+	WHEN 'SUM' THEN SUM_RUNTIME_H
+	WHEN 'AVG' THEN MAP(NUM_BACKUP_RUNS, 0, 0, SUM_RUNTIME_H / NUM_BACKUP_RUNS)
+	WHEN 'MAX' THEN MAX_RUNTIME_H
+  END RUNTIME_H,
+  CASE AGGREGATION_TYPE
+	WHEN 'SUM' THEN SUM_BACKUP_SIZE_MB
+	WHEN 'AVG' THEN MAP(NUM_BACKUP_RUNS, 0, 0, SUM_BACKUP_SIZE_MB / NUM_BACKUP_RUNS)
+	WHEN 'MAX' THEN MAX_BACKUP_SIZE_MB
+  END BACKUP_SIZE_MB,
+  MAX_START_TIME,
+  MESSAGE
+FROM
+( SELECT
+	CASE 
+	  WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'TIME') != 0 THEN 
+		CASE 
+		  WHEN BI.TIME_AGGREGATE_BY LIKE 'TS%' THEN
+			TO_VARCHAR(ADD_SECONDS(TO_TIMESTAMP('2014/01/01 00:00:00', 'YYYY/MM/DD HH24:MI:SS'), FLOOR(SECONDS_BETWEEN(TO_TIMESTAMP('2014/01/01 00:00:00', 'YYYY/MM/DD HH24:MI:SS'), 
+			CASE BI.TIMEZONE WHEN 'UTC' THEN ADD_SECONDS(B.SYS_START_TIME, SECONDS_BETWEEN(CURRENT_TIMESTAMP, CURRENT_UTCTIMESTAMP)) ELSE B.SYS_START_TIME END) / SUBSTR(BI.TIME_AGGREGATE_BY, 3)) * SUBSTR(BI.TIME_AGGREGATE_BY, 3)), 'YYYY/MM/DD HH24:MI:SS')
+		  ELSE TO_VARCHAR(CASE BI.TIMEZONE WHEN 'UTC' THEN ADD_SECONDS(B.SYS_START_TIME, SECONDS_BETWEEN(CURRENT_TIMESTAMP, CURRENT_UTCTIMESTAMP)) ELSE B.SYS_START_TIME END, BI.TIME_AGGREGATE_BY)
+		END
+	  ELSE 'any' 
+	END START_TIME,
+	CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'HOST')             != 0 THEN BF.HOST                                         ELSE MAP(BI.HOST, '%', 'any', BI.HOST)                         END HOST,
+	CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'SERVICE')          != 0 THEN BF.SERVICE_TYPE_NAME                            ELSE MAP(BI.SERVICE_NAME, '%', 'any', BI.SERVICE_NAME)         END SERVICE_NAME,
+	CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'DATABASE')         != 0 THEN BF.DATABASE_NAME                                ELSE MAP(BI.DB_NAME, '%', 'any', BI.DB_NAME)                   END DATABASE_NAME,
+	CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'BACKUP_ID')        != 0 THEN TO_VARCHAR(B.BACKUP_ID)                         ELSE 'any'                                                     END BACKUP_ID,
+	CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'BACKUP_TYPE')      != 0 THEN B.ENTRY_TYPE_NAME                               ELSE MAP(BI.BACKUP_TYPE, '%', 'any', BI.BACKUP_TYPE)           END BACKUP_TYPE,
+	CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'BACKUP_DATA_TYPE') != 0 THEN BF.SOURCE_TYPE_NAME                             ELSE MAP(BI.BACKUP_DATA_TYPE, '%', 'any', BI.BACKUP_DATA_TYPE) END BACKUP_DATA_TYPE,
+	CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'STATE')            != 0 THEN B.STATE_NAME                                    ELSE MAP(BI.BACKUP_STATUS, '%', 'any', BI.BACKUP_STATUS)       END STATUS,
+	CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'MESSAGE')          != 0 THEN CASE WHEN B.MESSAGE LIKE 'Not all data could be written%' THEN 'Not all data could be written' ELSE B.MESSAGE END ELSE MAP(BI.MESSAGE, '%', 'any', BI.MESSAGE) END MESSAGE,
+	COUNT(DISTINCT(B.BACKUP_ID)) NUM_BACKUP_RUNS,
+	SUM(SECONDS_BETWEEN(B.SYS_START_TIME, B.SYS_END_TIME) / 3600) * SUM(BF.BACKUP_SIZE) / SUM(BF.TOTAL_BACKUP_SIZE) SUM_RUNTIME_H,
+	MAX(SECONDS_BETWEEN(B.SYS_START_TIME, B.SYS_END_TIME) / 3600) * MAX(BF.BACKUP_SIZE / BF.TOTAL_BACKUP_SIZE) MAX_RUNTIME_H,
+	IFNULL(SUM(BF.BACKUP_SIZE / 1024 / 1024 ), 0) SUM_BACKUP_SIZE_MB,
+	IFNULL(MAX(BF.BACKUP_SIZE / 1024 / 1024 ), 0) MAX_BACKUP_SIZE_MB,
+	MAX(CASE BI.TIMEZONE WHEN 'UTC' THEN ADD_SECONDS(B.SYS_START_TIME, SECONDS_BETWEEN(CURRENT_TIMESTAMP, CURRENT_UTCTIMESTAMP)) ELSE B.SYS_START_TIME END) MAX_START_TIME,
+	SUM(IFNULL(CASE WHEN B.ENTRY_TYPE_NAME = 'log backup' AND BF.SOURCE_TYPE_NAME = 'volume' AND BF.BACKUP_SIZE / 1024 / 1024 >= L.SEGMENT_SIZE * 0.95 THEN 1 ELSE 0 END, 0)) NUM_LOG_FULL,
+	BI.MIN_BACKUP_TIME_S,
+	BI.AGGREGATION_TYPE,
+	BI.AGGREGATE_BY
+  FROM
+  ( SELECT
+	  BEGIN_TIME,
+	  END_TIME,
+	  TIMEZONE,
+	  HOST,
+	  SERVICE_NAME,
+	  DB_NAME,
+	  BACKUP_TYPE,
+	  BACKUP_DATA_TYPE,
+	  BACKUP_STATUS,
+	  MESSAGE,
+	  MIN_BACKUP_TIME_S,
+	  AGGREGATION_TYPE,
+	  AGGREGATE_BY,
+	  MAP(TIME_AGGREGATE_BY,
+		'NONE',        'YYYY/MM/DD HH24:MI:SS',
+		'HOUR',        'YYYY/MM/DD HH24',
+		'DAY',         'YYYY/MM/DD (DY)',
+		'HOUR_OF_DAY', 'HH24',
+		TIME_AGGREGATE_BY ) TIME_AGGREGATE_BY
+	FROM
+	( SELECT                                                                  /* Modification section */
+		TO_TIMESTAMP('1900/01/01 12:00:00', 'YYYY/MM/DD HH24:MI:SS') BEGIN_TIME,
+		TO_TIMESTAMP('9999/01/13 12:00:00', 'YYYY/MM/DD HH24:MI:SS') END_TIME,
+		'SERVER' TIMEZONE,                              /* SERVER, UTC */
+		'%' HOST,
+		'%' SERVICE_NAME,
+		'%' DB_NAME,
+		'%' BACKUP_TYPE,                             /* e.g. 'log backup', 'complete data backup', 'incremental data backup', 'differential data backup', 'data snapshot',
+																'DATA_BACKUP' for all data backup and snapshot types */
+		'%' BACKUP_DATA_TYPE,                            /* VOLUME -> log or data, CATALOG -> catalog, TOPOLOGY -> topology */
+		'failed' BACKUP_STATUS,                                    /* e.g. 'successful', 'failed' */
+		'%' MESSAGE,
+		-1 MIN_BACKUP_TIME_S,
+		'AVG' AGGREGATION_TYPE,     /* SUM, MAX, AVG */
+		'HOST, TIME, SERVICE, BACKUP_TYPE' AGGREGATE_BY,        /* HOST, SERVICE, DB_NAME, TIME, BACKUP_ID, BACKUP_TYPE, BACKUP_DATA_TYPE, STATE, MESSAGE or comma separated list, NONE for no aggregation */
+		'HOUR' TIME_AGGREGATE_BY     /* HOUR, DAY, HOUR_OF_DAY or database time pattern, TS<seconds> for time slice, NONE for no aggregation */
+	  FROM
+		DUMMY
+	) 
+  ) BI INNER JOIN
+	SYS_DATABASES.M_BACKUP_CATALOG B ON
+	  CASE BI.TIMEZONE WHEN 'UTC' THEN ADD_SECONDS(B.SYS_START_TIME, SECONDS_BETWEEN(CURRENT_TIMESTAMP, CURRENT_UTCTIMESTAMP)) ELSE B.SYS_START_TIME END BETWEEN BI.BEGIN_TIME AND BI.END_TIME AND
+	  ( BI.BACKUP_TYPE = 'DATA_BACKUP' AND B.ENTRY_TYPE_NAME IN ( 'complete data backup', 'differential data backup', 'incremental data backup', 'data snapshot' ) OR
+		BI.BACKUP_TYPE != 'DATA_BACKUP' AND UPPER(B.ENTRY_TYPE_NAME) LIKE UPPER(BI.BACKUP_TYPE) 
+	  ) AND
+	  B.STATE_NAME LIKE BI.BACKUP_STATUS AND
+	  B.MESSAGE LIKE BI.MESSAGE INNER JOIN
+	( SELECT
+		DATABASE_NAME,
+		BACKUP_ID,
+		SOURCE_ID,
+		HOST,
+		SERVICE_TYPE_NAME,
+		SOURCE_TYPE_NAME,
+		BACKUP_SIZE,
+		SUM(BACKUP_SIZE) OVER (PARTITION BY BACKUP_ID) TOTAL_BACKUP_SIZE
+	  FROM
+		SYS_DATABASES.M_BACKUP_CATALOG_FILES 
+	) BF ON
+	  B.DATABASE_NAME = BF.DATABASE_NAME AND
+	  B.BACKUP_ID = BF.BACKUP_ID AND
+	  BF.HOST LIKE BI.HOST AND
+	  BF.SERVICE_TYPE_NAME LIKE BI.SERVICE_NAME AND
+	  BF.DATABASE_NAME LIKE BI.DB_NAME AND
+	  UPPER(BF.SOURCE_TYPE_NAME) LIKE UPPER(BI.BACKUP_DATA_TYPE) LEFT OUTER JOIN
+	SYS_DATABASES.M_LOG_BUFFERS L ON
+	  L.HOST = BF.HOST AND
+	  L.DATABASE_NAME = BF.DATABASE_NAME AND
+	  L.VOLUME_ID = BF.SOURCE_ID
+  GROUP BY
+	CASE 
+	  WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'TIME') != 0 THEN 
+		CASE 
+		  WHEN BI.TIME_AGGREGATE_BY LIKE 'TS%' THEN
+			TO_VARCHAR(ADD_SECONDS(TO_TIMESTAMP('2014/01/01 00:00:00', 'YYYY/MM/DD HH24:MI:SS'), FLOOR(SECONDS_BETWEEN(TO_TIMESTAMP('2014/01/01 00:00:00', 'YYYY/MM/DD HH24:MI:SS'), 
+			CASE BI.TIMEZONE WHEN 'UTC' THEN ADD_SECONDS(B.SYS_START_TIME, SECONDS_BETWEEN(CURRENT_TIMESTAMP, CURRENT_UTCTIMESTAMP)) ELSE B.SYS_START_TIME END) / SUBSTR(BI.TIME_AGGREGATE_BY, 3)) * SUBSTR(BI.TIME_AGGREGATE_BY, 3)), 'YYYY/MM/DD HH24:MI:SS')
+		  ELSE TO_VARCHAR(CASE BI.TIMEZONE WHEN 'UTC' THEN ADD_SECONDS(B.SYS_START_TIME, SECONDS_BETWEEN(CURRENT_TIMESTAMP, CURRENT_UTCTIMESTAMP)) ELSE B.SYS_START_TIME END, BI.TIME_AGGREGATE_BY)
+		END
+	  ELSE 'any' 
+	END,
+	CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'HOST')             != 0 THEN BF.HOST                                         ELSE MAP(BI.HOST, '%', 'any', BI.HOST)                         END,
+	CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'SERVICE')          != 0 THEN BF.SERVICE_TYPE_NAME                            ELSE MAP(BI.SERVICE_NAmE, '%', 'any', BI.SERVICE_NAME)         END,
+	CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'DATABASE')         != 0 THEN BF.DATABASE_NAME                                ELSE MAP(BI.DB_NAME, '%', 'any', BI.DB_NAME)                   END,
+	CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'BACKUP_ID')        != 0 THEN TO_VARCHAR(B.BACKUP_ID)                         ELSE 'any'                                                     END,
+	CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'BACKUP_TYPE')      != 0 THEN B.ENTRY_TYPE_NAME                               ELSE MAP(BI.BACKUP_TYPE, '%', 'any', BI.BACKUP_TYPE)           END,
+	CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'BACKUP_DATA_TYPE') != 0 THEN BF.SOURCE_TYPE_NAME                             ELSE MAP(BI.BACKUP_DATA_TYPE, '%', 'any', BI.BACKUP_DATA_TYPE) END,
+	CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'STATE')            != 0 THEN B.STATE_NAME                                    ELSE MAP(BI.BACKUP_STATUS, '%', 'any', BI.BACKUP_STATUS)       END,
+	CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'MESSAGE')          != 0 THEN CASE WHEN B.MESSAGE LIKE 'Not all data could be written%' THEN 'Not all data could be written' ELSE B.MESSAGE END ELSE MAP(BI.MESSAGE, '%', 'any', BI.MESSAGE) END,
+	BI.MIN_BACKUP_TIME_S,
+	BI.AGGREGATION_TYPE,
+	BI.AGGREGATE_BY
+)
+WHERE
+( MIN_BACKUP_TIME_S = -1 OR SUM_RUNTIME_H >= MIN_BACKUP_TIME_S / 3600 )
+)
+ORDER BY
+START_TIME DESC,
+HOST,
+SERVICE_NAME
+WITH HINT (NO_JOIN_REMOVAL)
+"
+}Else
+{
+  $query="SELECT   START_TIME,
+HOST,
+SERVICE_NAME,
+LPAD(BACKUP_ID, 13) BACKUP_ID,
+BACKUP_TYPE,
+DATA_TYPE,
+STATUS,
+LPAD(BACKUPS, 7) BACKUPS,
+LPAD(TO_DECIMAL(MAP(BACKUPS, 0, 0, NUM_LOG_FULL / BACKUPS * 100), 10, 2), 12) FULL_LOG_PCT,
+AGG,
+LPAD(TO_DECIMAL(RUNTIME_H * 60, 10, 2), 11) RUNTIME_MIN,
+LPAD(TO_DECIMAL(BACKUP_SIZE_MB, 10, 2), 14) BACKUP_SIZE_MB,
+LPAD(TO_DECIMAL(MAP(RUNTIME_H, 0, 0, BACKUP_SIZE_MB / RUNTIME_H / 3600), 10, 2), 8) MB_PER_S,
+LPAD(TO_DECIMAL(SECONDS_BETWEEN(MAX_START_TIME, CURRENT_TIMESTAMP) / 86400, 10, 2), 11) DAYS_PASSED,
+MESSAGE
+FROM
+( SELECT
+  START_TIME,
+  HOST,
+  SERVICE_NAME,
+  BACKUP_ID,
+  BACKUP_TYPE,
+  BACKUP_DATA_TYPE DATA_TYPE,
+  STATUS,
+  NUM_BACKUP_RUNS BACKUPS,
+  NUM_LOG_FULL,
+  AGGREGATION_TYPE AGG,
+  CASE AGGREGATION_TYPE
+	WHEN 'SUM' THEN SUM_RUNTIME_H
+	WHEN 'AVG' THEN MAP(NUM_BACKUP_RUNS, 0, 0, SUM_RUNTIME_H / NUM_BACKUP_RUNS)
+	WHEN 'MAX' THEN MAX_RUNTIME_H
+  END RUNTIME_H,
+  CASE AGGREGATION_TYPE
+	WHEN 'SUM' THEN SUM_BACKUP_SIZE_MB
+	WHEN 'AVG' THEN MAP(NUM_BACKUP_RUNS, 0, 0, SUM_BACKUP_SIZE_MB / NUM_BACKUP_RUNS)
+	WHEN 'MAX' THEN MAX_BACKUP_SIZE_MB
+  END BACKUP_SIZE_MB,
+  MAX_START_TIME,
+  MESSAGE
+FROM
+( SELECT
+	CASE 
+	  WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'TIME') != 0 THEN 
+		CASE 
+		  WHEN BI.TIME_AGGREGATE_BY LIKE 'TS%' THEN
+			TO_VARCHAR(ADD_SECONDS(TO_TIMESTAMP('2014/01/01 00:00:00', 'YYYY/MM/DD HH24:MI:SS'), FLOOR(SECONDS_BETWEEN(TO_TIMESTAMP('2014/01/01 00:00:00', 'YYYY/MM/DD HH24:MI:SS'), 
+			CASE BI.TIMEZONE WHEN 'UTC' THEN ADD_SECONDS(B.SYS_START_TIME, SECONDS_BETWEEN(CURRENT_TIMESTAMP, CURRENT_UTCTIMESTAMP)) ELSE B.SYS_START_TIME END) / SUBSTR(BI.TIME_AGGREGATE_BY, 3)) * SUBSTR(BI.TIME_AGGREGATE_BY, 3)), 'YYYY/MM/DD HH24:MI:SS')
+		  ELSE TO_VARCHAR(CASE BI.TIMEZONE WHEN 'UTC' THEN ADD_SECONDS(B.SYS_START_TIME, SECONDS_BETWEEN(CURRENT_TIMESTAMP, CURRENT_UTCTIMESTAMP)) ELSE B.SYS_START_TIME END, BI.TIME_AGGREGATE_BY)
+		END
+	  ELSE 'any' 
+	END START_TIME,
+	CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'HOST')             != 0 THEN BF.HOST                                         ELSE MAP(BI.HOST, '%', 'any', BI.HOST)                         END HOST,
+	CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'SERVICE')          != 0 THEN BF.SERVICE_TYPE_NAME                            ELSE MAP(BI.SERVICE_NAME, '%', 'any', BI.SERVICE_NAME)         END SERVICE_NAME,
+	CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'BACKUP_ID')        != 0 THEN TO_VARCHAR(B.BACKUP_ID)                         ELSE 'any'                                                     END BACKUP_ID,
+	CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'BACKUP_TYPE')      != 0 THEN B.ENTRY_TYPE_NAME                               ELSE MAP(BI.BACKUP_TYPE, '%', 'any', BI.BACKUP_TYPE)           END BACKUP_TYPE,
+	CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'BACKUP_DATA_TYPE') != 0 THEN BF.SOURCE_TYPE_NAME                             ELSE MAP(BI.BACKUP_DATA_TYPE, '%', 'any', BI.BACKUP_DATA_TYPE) END BACKUP_DATA_TYPE,
+	CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'STATE')            != 0 THEN B.STATE_NAME                                    ELSE MAP(BI.BACKUP_STATUS, '%', 'any', BI.BACKUP_STATUS)       END STATUS,
+	CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'MESSAGE')          != 0 THEN CASE WHEN B.MESSAGE LIKE 'Not all data could be written%' THEN 'Not all data could be written' 
+	  ELSE B.MESSAGE END ELSE MAP(BI.MESSAGE, '%', 'any', BI.MESSAGE) END MESSAGE,
+	COUNT(DISTINCT(B.BACKUP_ID)) NUM_BACKUP_RUNS,
+	SUM(SECONDS_BETWEEN(B.SYS_START_TIME, B.SYS_END_TIME) / 3600) * SUM(BF.BACKUP_SIZE) / SUM(BF.TOTAL_BACKUP_SIZE) SUM_RUNTIME_H,
+	MAX(SECONDS_BETWEEN(B.SYS_START_TIME, B.SYS_END_TIME) / 3600) * MAX(BF.BACKUP_SIZE / BF.TOTAL_BACKUP_SIZE) MAX_RUNTIME_H,
+	IFNULL(SUM(BF.BACKUP_SIZE / 1024 / 1024 ), 0) SUM_BACKUP_SIZE_MB,
+	IFNULL(MAX(BF.BACKUP_SIZE / 1024 / 1024 ), 0) MAX_BACKUP_SIZE_MB,
+	MAX(CASE BI.TIMEZONE WHEN 'UTC' THEN ADD_SECONDS(B.SYS_START_TIME, SECONDS_BETWEEN(CURRENT_TIMESTAMP, CURRENT_UTCTIMESTAMP)) ELSE B.SYS_START_TIME END) MAX_START_TIME,
+	SUM(IFNULL(CASE WHEN B.ENTRY_TYPE_NAME = 'log backup' AND BF.SOURCE_TYPE_NAME = 'volume' AND BF.BACKUP_SIZE / 1024 / 1024 >= L.SEGMENT_SIZE * 0.95 THEN 1 ELSE 0 END, 0)) NUM_LOG_FULL,
+	BI.MIN_BACKUP_TIME_S,
+	BI.AGGREGATION_TYPE,
+	BI.AGGREGATE_BY
+  FROM
+  ( SELECT
+	  BEGIN_TIME,
+	  END_TIME,
+	  TIMEZONE,
+	  HOST,
+	  SERVICE_NAME,
+	  BACKUP_TYPE,
+	  BACKUP_DATA_TYPE,
+	  BACKUP_STATUS,
+	  MESSAGE,
+	  MIN_BACKUP_TIME_S,
+	  AGGREGATION_TYPE,
+	  AGGREGATE_BY,
+	  MAP(TIME_AGGREGATE_BY,
+		'NONE',        'YYYY/MM/DD HH24:MI:SS',
+		'HOUR',        'YYYY/MM/DD HH24',
+		'DAY',         'YYYY/MM/DD (DY)',
+		'HOUR_OF_DAY', 'HH24',
+		TIME_AGGREGATE_BY ) TIME_AGGREGATE_BY
+	FROM
+	( SELECT                                                                  /* Modification section */
+		/*TO_TIMESTAMP('1900/01/01 12:00:00', 'YYYY/MM/DD HH24:MI:SS') BEGIN_TIME,*/
+		add_seconds(now(),-$($checkfreq*1)) BEGIN_TIME,
+		TO_TIMESTAMP('9999/01/13 12:00:00', 'YYYY/MM/DD HH24:MI:SS') END_TIME,
+		'SERVER' TIMEZONE,                              /* SERVER, UTC */
+		'%' HOST,
+		'%' SERVICE_NAME,
+		'log backup' BACKUP_TYPE,                             /* e.g. 'log backup', 'complete data backup', 'incremental data backup', 'differential data backup', 'data snapshot',
+																'DATA_BACKUP' for all data backup and snapshot types */
+		'%' BACKUP_DATA_TYPE,                            /* VOLUME -> log or data, CATALOG -> catalog, TOPOLOGY -> topology */
+		'%' BACKUP_STATUS,                                    /* e.g. 'successful', 'failed' */
+		'%' MESSAGE,
+		-1 MIN_BACKUP_TIME_S,
+		'AVG' AGGREGATION_TYPE,     /* SUM, MAX, AVG */
+		'HOST, TIME, SERVICE, BACKUP_TYPE' AGGREGATE_BY,        /* HOST, SERVICE, TIME, BACKUP_ID, BACKUP_TYPE, BACKUP_DATA_TYPE, STATE, MESSAGE or comma separated list, NONE for no aggregation */
+		'HOUR' TIME_AGGREGATE_BY     /* HOUR, DAY, HOUR_OF_DAY or database time pattern, TS<seconds> for time slice, NONE for no aggregation */
+	  FROM
+		DUMMY
+	) 
+  ) BI INNER JOIN
+	M_BACKUP_CATALOG B ON
+	  CASE BI.TIMEZONE WHEN 'UTC' THEN ADD_SECONDS(B.SYS_START_TIME, SECONDS_BETWEEN(CURRENT_TIMESTAMP, CURRENT_UTCTIMESTAMP)) ELSE B.SYS_START_TIME END BETWEEN BI.BEGIN_TIME AND BI.END_TIME AND
+	  ( BI.BACKUP_TYPE = 'DATA_BACKUP' AND B.ENTRY_TYPE_NAME IN ( 'complete data backup', 'differential data backup', 'incremental data backup', 'data snapshot' ) OR
+		BI.BACKUP_TYPE != 'DATA_BACKUP' AND UPPER(B.ENTRY_TYPE_NAME) LIKE UPPER(BI.BACKUP_TYPE) 
+	  ) AND
+	  B.STATE_NAME LIKE BI.BACKUP_STATUS AND
+	  B.MESSAGE LIKE BI.MESSAGE INNER JOIN
+	( SELECT
+		BACKUP_ID,
+		SOURCE_ID,
+		HOST,
+		SERVICE_TYPE_NAME,
+		SOURCE_TYPE_NAME,
+		BACKUP_SIZE,
+		SUM(BACKUP_SIZE) OVER (PARTITION BY BACKUP_ID) TOTAL_BACKUP_SIZE
+	  FROM
+		M_BACKUP_CATALOG_FILES 
+	) BF ON
+	  B.BACKUP_ID = BF.BACKUP_ID AND
+	  BF.HOST LIKE BI.HOST AND
+	  BF.SERVICE_TYPE_NAME LIKE BI.SERVICE_NAME AND
+	  UPPER(BF.SOURCE_TYPE_NAME) LIKE UPPER(BI.BACKUP_DATA_TYPE) LEFT OUTER JOIN
+	M_LOG_BUFFERS L ON
+	  L.HOST = BF.HOST AND
+	  L.VOLUME_ID = BF.SOURCE_ID
+  GROUP BY
+	CASE 
+	  WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'TIME') != 0 THEN 
+		CASE 
+		  WHEN BI.TIME_AGGREGATE_BY LIKE 'TS%' THEN
+			TO_VARCHAR(ADD_SECONDS(TO_TIMESTAMP('2014/01/01 00:00:00', 'YYYY/MM/DD HH24:MI:SS'), FLOOR(SECONDS_BETWEEN(TO_TIMESTAMP('2014/01/01 00:00:00', 'YYYY/MM/DD HH24:MI:SS'), 
+			CASE BI.TIMEZONE WHEN 'UTC' THEN ADD_SECONDS(B.SYS_START_TIME, SECONDS_BETWEEN(CURRENT_TIMESTAMP, CURRENT_UTCTIMESTAMP)) ELSE B.SYS_START_TIME END) / SUBSTR(BI.TIME_AGGREGATE_BY, 3)) * SUBSTR(BI.TIME_AGGREGATE_BY, 3)), 'YYYY/MM/DD HH24:MI:SS')
+		  ELSE TO_VARCHAR(CASE BI.TIMEZONE WHEN 'UTC' THEN ADD_SECONDS(B.SYS_START_TIME, SECONDS_BETWEEN(CURRENT_TIMESTAMP, CURRENT_UTCTIMESTAMP)) ELSE B.SYS_START_TIME END, BI.TIME_AGGREGATE_BY)
+		END
+	  ELSE 'any' 
+	END,
+	CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'HOST')             != 0 THEN BF.HOST                                         ELSE MAP(BI.HOST, '%', 'any', BI.HOST)                         END,
+	CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'SERVICE')          != 0 THEN BF.SERVICE_TYPE_NAME                            ELSE MAP(BI.SERVICE_NAmE, '%', 'any', BI.SERVICE_NAME)         END,
+	CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'BACKUP_ID')        != 0 THEN TO_VARCHAR(B.BACKUP_ID)                         ELSE 'any'                                                     END,
+	CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'BACKUP_TYPE')      != 0 THEN B.ENTRY_TYPE_NAME                               ELSE MAP(BI.BACKUP_TYPE, '%', 'any', BI.BACKUP_TYPE)           END,
+	CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'BACKUP_DATA_TYPE') != 0 THEN BF.SOURCE_TYPE_NAME                             ELSE MAP(BI.BACKUP_DATA_TYPE, '%', 'any', BI.BACKUP_DATA_TYPE) END,
+	CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'STATE')            != 0 THEN B.STATE_NAME                                    ELSE MAP(BI.BACKUP_STATUS, '%', 'any', BI.BACKUP_STATUS)       END,
+	CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'MESSAGE')          != 0 THEN CASE WHEN B.MESSAGE LIKE 'Not all data could be written%' THEN 'Not all data could be written' ELSE B.MESSAGE END 
+	  ELSE MAP(BI.MESSAGE, '%', 'any', BI.MESSAGE) END,
+	BI.MIN_BACKUP_TIME_S,
+	BI.AGGREGATION_TYPE,
+	BI.AGGREGATE_BY
+)
+WHERE
+( MIN_BACKUP_TIME_S = -1 OR SUM_RUNTIME_H >= MIN_BACKUP_TIME_S / 3600 )
+)
+ORDER BY
+START_TIME DESC,
+HOST,
+SERVICE_NAME
+WITH HINT (NO_JOIN_REMOVAL)"
+}
+
+   $cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+		  $ds = New-Object system.Data.DataSet ;
+$ex=$null
+		  Try{
+			  $cmd.fill($ds)|out-null
+		  }
+		  Catch
+		  {
+			  $Ex=$_.Exception.MEssage
+			  write-warning  $ex 
+		  }
+
+
+	  
+		  $Resultsinv=$null
+		  $Resultsinv=@(); 
+
+<# format and add backups
+  IF($ds[0].Tables.rows)
+		  {
+			  foreach ($row in $ds.Tables[0].rows)
+			  {
+				  $Resultsinv+= New-Object PSObject -Property @{
+					  HOST=$row.HOST.ToLower()
+					  Instance=$sapinstance
+					  CollectorType="Inventory"
+					  Category="Sessions"
+					  Database=$defaultdb
+					  PORT=$row.PORT
+					  SERVICE=$row.Service
+					  CONN_ID=$row.CONN_ID
+					  THREAD_ID=$row.THREAD_ID
+					  TRANS_ID=$row.TRANS_ID
+					  UPD_TID =$row.UPD_TID 
+					  CLIENT_HOST=$row.CLIENT_HOST
+					  TRANSACTION_START=$row.TRANSACTION_START
+					  ACT_DAYS=$row.ACT_DAYS
+					  THREAD_TYPE=$row.THREAD_TYPE
+					  THREAD_STATE =$row.THREAD_STATE 
+					  CALLER=$row.CALLER
+					  STATEMENT_HASH =$row.STATEMENT_HASH 
+					  MEMORY_MB=$row.MEMORY_MB
+					  THREAD_METHOD=$row.THREAD_METHOD
+					  TRANS_STATE=$row.TRANS_STATE
+					  TRANSACTION_TYPE =$row.TRANSACTION_TYPE 
+					  APP_USER =$row.APP_USER 
+
+				  }
+			  }
+			  $Omsinvupload+=,$Resultsinv
+		  }
+
+
+
+
+
+START_TIME     : 2018/03/02 18
+HOST           : azesapsbxs4db1
+SERVICE_NAME   : nameserver
+BACKUP_ID      :           any
+BACKUP_TYPE    : log backup
+DATA_TYPE      : any
+STATUS         : any
+BACKUPS        :       1
+FULL_LOG_PCT   :         0.00
+AGG            : AVG
+RUNTIME_MIN    :        0.09
+BACKUP_SIZE_MB :          82.02
+MB_PER_S       :    13.67
+DAYS_PASSED    :       28.14
+MESSAGE        : any
+#>
+
+
+
+
+
+#FIX TIME
+
+	  $checkfreq=900
+IF($firstrun){$checkfreq=2592000}Else{$checkfreq=900} 
+
+$query="SELECT   BEGIN_TIME,
+HOST,
+LPAD(PORT, 5) PORT,
+SERVICE_NAME SERVICE,
+CLIENT_HOST,
+LPAD(CLIENT_PID, 10) CLIENT_PID,
+LPAD(CONN_ID, 10) CONN_ID,
+CONNECTION_TYPE,
+CONNECTION_STATUS,
+LPAD(CONNS, 8) CONNS,
+LPAD(CUR_CONNS, 9) CUR_CONNS,
+CLOSE_REASON,
+CREATED_BY,
+APP_NAME,
+APP_USER,
+APP_VERSION,
+APP_SOURCE
+FROM
+( SELECT
+  CASE 
+	WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'TIME') != 0 THEN 
+	  CASE 
+		WHEN BI.TIME_AGGREGATE_BY LIKE 'TS%' THEN
+		  TO_VARCHAR(ADD_SECONDS(TO_TIMESTAMP('2014/01/01 00:00:00', 'YYYY/MM/DD HH24:MI:SS'), FLOOR(SECONDS_BETWEEN(TO_TIMESTAMP('2014/01/01 00:00:00', 
+		  'YYYY/MM/DD HH24:MI:SS'), CASE BI.TIMEZONE WHEN 'UTC' THEN ADD_SECONDS(C.START_TIME, SECONDS_BETWEEN(CURRENT_TIMESTAMP, CURRENT_UTCTIMESTAMP)) ELSE C.START_TIME END) / SUBSTR(BI.TIME_AGGREGATE_BY, 3)) * SUBSTR(BI.TIME_AGGREGATE_BY, 3)), 'YYYY/MM/DD HH24:MI:SS')
+		ELSE TO_VARCHAR(CASE BI.TIMEZONE WHEN 'UTC' THEN ADD_SECONDS(C.START_TIME, SECONDS_BETWEEN(CURRENT_TIMESTAMP, CURRENT_UTCTIMESTAMP)) ELSE C.START_TIME END, BI.TIME_AGGREGATE_BY)
+	  END
+	ELSE 'any' 
+  END BEGIN_TIME,
+  CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'HOST')         != 0 THEN C.HOST                                      ELSE MAP(BI.HOST, '%', 'any', BI.HOST)                           END HOST,
+  CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'PORT')         != 0 THEN TO_VARCHAR(C.PORT)                             ELSE MAP(BI.PORT, '%', 'any', BI.PORT)                           END PORT,
+  CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'SERVICE')      != 0 THEN S.SERVICE_NAME                              ELSE MAP(BI.SERVICE_NAME, '%', 'any', BI.SERVICE_NAME)           END SERVICE_NAME,
+  CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'CLIENT_HOST')  != 0 THEN C.CLIENT_HOST                               ELSE MAP(BI.CLIENT_HOST, '%', 'any', BI.CLIENT_HOST)             END CLIENT_HOST,
+  CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'CLIENT_PID')   != 0 THEN TO_VARCHAR(C.CLIENT_PID)                       ELSE MAP(BI.CLIENT_PID, -1, 'any', TO_VARCHAR(BI.CLIENT_PID))       END CLIENT_PID,
+  CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'CONN_ID')      != 0 THEN TO_VARCHAR(C.CONNECTION_ID)                    ELSE MAP(BI.CONN_ID, -1, 'any', TO_VARCHAR(BI.CONN_ID))             END CONN_ID,
+  CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'TYPE')         != 0 THEN C.CONNECTION_TYPE                           ELSE MAP(BI.CONNECTION_TYPE, '%', 'any', BI.CONNECTION_TYPE)     END CONNECTION_TYPE,
+  CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'STATUS')       != 0 THEN C.CONNECTION_STATUS                         ELSE MAP(BI.CONNECTION_STATUS, '%', 'any', BI.CONNECTION_STATUS) END CONNECTION_STATUS,
+  CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'CLOSE_REASON') != 0 THEN C.CLOSE_REASON                              ELSE MAP(BI.CLOSE_REASON, '%', 'any', BI.CLOSE_REASON)           END CLOSE_REASON,
+  CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'CREATED_BY')   != 0 THEN C.CREATED_BY                                ELSE MAP(BI.CREATED_BY, '%', 'any', BI.CREATED_BY)               END CREATED_BY,
+  CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'APP_NAME')     != 0 THEN SC.APP_NAME                                 ELSE MAP(BI.APP_NAME, '%', 'any', BI.APP_NAME)                   END APP_NAME,
+  CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'APP_USER')     != 0 THEN SC.APP_USER                                 ELSE MAP(BI.APP_USER, '%', 'any', BI.APP_USER)                   END APP_USER,
+  CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'APP_VERSION')  != 0 THEN SC.APP_VERSION                              ELSE MAP(BI.APP_VERSION, '%', 'any', BI.APP_VERSION)             END APP_VERSION,
+  CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'APP_SOURCE')   != 0 THEN SC.APP_SOURCE                               ELSE MAP(BI.APP_SOURCE, '%', 'any', BI.APP_SOURCE)               END APP_SOURCE,
+  COUNT(*) CONNS,
+  SUM(CASE WHEN C.CONNECTION_ID < 0 THEN 0 ELSE 1 END) CUR_CONNS,
+  BI.ORDER_BY
+FROM
+( SELECT
+	BEGIN_TIME,
+	END_TIME,
+	TIMEZONE,
+	HOST,
+	PORT,
+	SERVICE_NAME,
+	CLIENT_HOST,
+	CLIENT_PID,
+	CONN_ID,
+	CONNECTION_TYPE,
+	CONNECTION_STATUS,
+	CLOSE_REASON,
+	CREATED_BY,
+	APP_NAME,
+	APP_USER,
+	APP_VERSION,
+	APP_SOURCE,
+	EXCLUDE_HISTORY_CONNECTIONS,
+	AGGREGATE_BY,
+	MAP(TIME_AGGREGATE_BY,
+	  'NONE',        'YYYY/MM/DD HH24:MI:SS',
+	  'HOUR',        'YYYY/MM/DD HH24',
+	  'DAY',         'YYYY/MM/DD (DY)',
+	  'HOUR_OF_DAY', 'HH24',
+	  TIME_AGGREGATE_BY ) TIME_AGGREGATE_BY,
+	ORDER_BY
+  FROM
+  ( SELECT                   /* Modification section */
+	  /*TO_TIMESTAMP('1000/10/12 01:20:00', 'YYYY/MM/DD HH24:MI:SS') BEGIN_TIME,*/
+	  add_seconds(now(),-$($checkfreq*1)) BEGIN_TIME,
+	  TO_TIMESTAMP('9999/10/12 01:20:00', 'YYYY/MM/DD HH24:MI:SS') END_TIME,
+	  'SERVER' TIMEZONE,                              /* SERVER, UTC */
+	  '%' HOST,
+	  '%' PORT,
+	  '%' SERVICE_NAME,
+	  '%' CLIENT_HOST,
+	  -1 CLIENT_PID,
+	  -1 CONN_ID,
+	  '%' CONNECTION_TYPE,
+	  '%' CONNECTION_STATUS,
+	  '%' CLOSE_REASON,
+	  '%' CREATED_BY,
+	  '%' APP_NAME,
+	  '%' APP_USER,
+	  '%' APP_VERSION,
+	  '%' APP_SOURCE,
+	  'X' EXCLUDE_HISTORY_CONNECTIONS,
+	  'NONE' AGGREGATE_BY,                  /* TIME, HOST, PORT, SERVICE, CLIENT_HOST, CLIENT_PID, TYPE, STATUS, CLOSE_REASON, CREATED_BY, APP_NAME, APP_USER, APP_VERSION, APP_SOURCE or comma separated combinations, NONE for no aggregation */
+	  'TS900' TIME_AGGREGATE_BY,                 /* HOUR, DAY, HOUR_OF_DAY or database time pattern, TS<seconds> for time slice, NONE for no aggregation */
+	  'CONNS' ORDER_BY                          /* TIME, HOST, CONNS */
+	FROM
+	  DUMMY
+  )
+) BI INNER JOIN
+  M_SERVICES S ON
+	S.HOST LIKE BI.HOST AND
+	TO_VARCHAR(S.PORT) LIKE BI.PORT AND
+	S.SERVICE_NAME LIKE BI.SERVICE_NAME INNER JOIN
+  M_CONNECTIONS C ON
+	( CASE BI.TIMEZONE WHEN 'UTC' THEN ADD_SECONDS(C.START_TIME, SECONDS_BETWEEN(CURRENT_TIMESTAMP, CURRENT_UTCTIMESTAMP)) ELSE C.START_TIME END BETWEEN BI.BEGIN_TIME AND BI.END_TIME OR
+	  CASE BI.TIMEZONE WHEN 'UTC' THEN ADD_SECONDS(IFNULL(C.END_TIME, CURRENT_TIMESTAMP), SECONDS_BETWEEN(CURRENT_TIMESTAMP, CURRENT_UTCTIMESTAMP)) ELSE IFNULL(C.END_TIME, CURRENT_TIMESTAMP) END BETWEEN BI.BEGIN_TIME AND BI.END_TIME OR
+	  CASE BI.TIMEZONE WHEN 'UTC' THEN ADD_SECONDS(C.START_TIME, SECONDS_BETWEEN(CURRENT_TIMESTAMP, CURRENT_UTCTIMESTAMP)) ELSE C.START_TIME END < BI.BEGIN_TIME AND CASE BI.TIMEZONE WHEN 'UTC' THEN ADD_SECONDS(IFNULL(C.END_TIME, CURRENT_TIMESTAMP), SECONDS_BETWEEN(CURRENT_TIMESTAMP, CURRENT_UTCTIMESTAMP)) ELSE IFNULL(C.END_TIME, CURRENT_TIMESTAMP) END > BI.END_TIME 
+	) AND
+	C.HOST LIKE BI.HOST AND
+	C.PORT = S.PORT AND
+	C.HOST = S.HOST AND
+	C.CLIENT_HOST LIKE BI.CLIENT_HOST AND
+	( BI.CLIENT_PID = -1 OR C.CLIENT_PID = BI.CLIENT_PID ) AND
+	( BI.CONN_ID = -1 OR C.CONNECTION_ID = BI.CONN_ID ) AND
+	UPPER(IFNULL(C.CONNECTION_STATUS, '')) LIKE UPPER(BI.CONNECTION_STATUS) AND
+	UPPER(C.CONNECTION_TYPE) LIKE UPPER(BI.CONNECTION_TYPE) AND
+	C.CLOSE_REASON LIKE BI.CLOSE_REASON AND
+	C.CREATED_BY LIKE BI.CREATED_BY AND
+	( BI.EXCLUDE_HISTORY_CONNECTIONS = ' ' OR C.CONNECTION_ID >= 0 ) LEFT OUTER JOIN
+ ( SELECT
+	 CONNECTION_ID,
+	 MAX(MAP(KEY, 'APPLICATION', VALUE, '')) APP_NAME,
+	 MAX(MAP(KEY, 'APPLICATIONUSER', VALUE, '')) APP_USER,
+	 MAX(MAP(KEY, 'APPLICATIONVERSION', VALUE, '')) APP_VERSION,
+	 MAX(MAP(KEY, 'APPLICATIONSOURCE', VALUE, '')) APP_SOURCE
+   FROM
+	 M_SESSION_CONTEXT
+   GROUP BY
+	 CONNECTION_ID
+  ) SC ON
+	SC.CONNECTION_ID = C.CONNECTION_ID
+  WHERE
+	SC.APP_NAME LIKE BI.APP_NAME AND
+	SC.APP_USER LIKE BI.APP_USER AND
+	SC.APP_VERSION LIKE BI.APP_VERSION AND
+	SC.APP_SOURCE LIKE BI.APP_SOURCE
+GROUP BY
+  CASE 
+	WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'TIME') != 0 THEN 
+	  CASE 
+		WHEN BI.TIME_AGGREGATE_BY LIKE 'TS%' THEN
+		  TO_VARCHAR(ADD_SECONDS(TO_TIMESTAMP('2014/01/01 00:00:00', 'YYYY/MM/DD HH24:MI:SS'), FLOOR(SECONDS_BETWEEN(TO_TIMESTAMP('2014/01/01 00:00:00', 
+		  'YYYY/MM/DD HH24:MI:SS'), CASE BI.TIMEZONE WHEN 'UTC' THEN ADD_SECONDS(C.START_TIME, SECONDS_BETWEEN(CURRENT_TIMESTAMP, CURRENT_UTCTIMESTAMP)) ELSE C.START_TIME END) / SUBSTR(BI.TIME_AGGREGATE_BY, 3)) * SUBSTR(BI.TIME_AGGREGATE_BY, 3)), 'YYYY/MM/DD HH24:MI:SS')
+		ELSE TO_VARCHAR(CASE BI.TIMEZONE WHEN 'UTC' THEN ADD_SECONDS(C.START_TIME, SECONDS_BETWEEN(CURRENT_TIMESTAMP, CURRENT_UTCTIMESTAMP)) ELSE C.START_TIME END, BI.TIME_AGGREGATE_BY)
+	  END
+	ELSE 'any' 
+  END,
+  CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'HOST')         != 0 THEN C.HOST                                      ELSE MAP(BI.HOST, '%', 'any', BI.HOST)                           END,
+  CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'PORT')         != 0 THEN TO_VARCHAR(C.PORT)                             ELSE MAP(BI.PORT, '%', 'any', BI.PORT)                           END,
+  CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'SERVICE')      != 0 THEN S.SERVICE_NAME                              ELSE MAP(BI.SERVICE_NAME, '%', 'any', BI.SERVICE_NAME)           END,
+  CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'CLIENT_HOST')  != 0 THEN C.CLIENT_HOST                               ELSE MAP(BI.CLIENT_HOST, '%', 'any', BI.CLIENT_HOST)             END,
+  CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'CLIENT_PID')   != 0 THEN TO_VARCHAR(C.CLIENT_PID)                       ELSE MAP(BI.CLIENT_PID, -1, 'any', TO_VARCHAR(BI.CLIENT_PID))       END,
+  CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'CONN_ID')      != 0 THEN TO_VARCHAR(C.CONNECTION_ID)                    ELSE MAP(BI.CONN_ID, -1, 'any', TO_VARCHAR(BI.CONN_ID))             END,
+  CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'TYPE')         != 0 THEN C.CONNECTION_TYPE                           ELSE MAP(BI.CONNECTION_TYPE, '%', 'any', BI.CONNECTION_TYPE)     END,
+  CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'STATUS')       != 0 THEN C.CONNECTION_STATUS                         ELSE MAP(BI.CONNECTION_STATUS, '%', 'any', BI.CONNECTION_STATUS) END,
+  CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'CLOSE_REASON') != 0 THEN C.CLOSE_REASON                              ELSE MAP(BI.CLOSE_REASON, '%', 'any', BI.CLOSE_REASON)           END,
+  CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'CREATED_BY')   != 0 THEN C.CREATED_BY                                ELSE MAP(BI.CREATED_BY, '%', 'any', BI.CREATED_BY)               END,
+  CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'APP_NAME')     != 0 THEN SC.APP_NAME                                 ELSE MAP(BI.APP_NAME, '%', 'any', BI.APP_NAME)                   END,
+  CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'APP_USER')     != 0 THEN SC.APP_USER                                 ELSE MAP(BI.APP_USER, '%', 'any', BI.APP_USER)                   END,
+  CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'APP_VERSION')  != 0 THEN SC.APP_VERSION                              ELSE MAP(BI.APP_VERSION, '%', 'any', BI.APP_VERSION)             END,
+  CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'APP_SOURCE')   != 0 THEN SC.APP_SOURCE                               ELSE MAP(BI.APP_SOURCE, '%', 'any', BI.APP_SOURCE)               END,
+  ORDER_BY
+)
+ORDER BY
+MAP(ORDER_BY, 'TIME', BEGIN_TIME) DESC,
+MAP(ORDER_BY, 'CONNS', CONNS) DESC,
+HOST,
+PORT
+WITH HINT (NO_JOIN_REMOVAL)
+"
+
+  $cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+		  $ds = New-Object system.Data.DataSet ;
+$ex=$null
+		  Try{
+			  $cmd.fill($ds)|out-null
+		  }
+		  Catch
+		  {
+			  $Ex=$_.Exception.MEssage
+			  write-warning  $ex 
+		  }
+
+  $Resultsinv=$null
+		  $Resultsinv=@(); 
+
+
+		  IF($ds[0].Tables.rows)
+		  {
+			  foreach ($row in $ds.Tables[0].rows)
+			  {
+				  $Resultsinv+= New-Object PSObject -Property @{
+					  HOST=$row.HOST.ToLower()
+					  Instance=$sapinstance
+					  CollectorType="Inventory"
+					  Category="Connections"
+					  Database=$defaultdb
+					  PORT=$row.PORT
+					  SERVICE=$row.Service
+					  CONN_ID=$row.CONN_ID
+					  CONNECTION_TYPE=$row.CONNECTION_TYPE
+					  CONNECTION_STATUS=$row.CONNECTION_STATUS
+					  CONNS=$row.CONNS
+					  CUR_CONNS=$row.CUR_CONNS
+					  CREATED_BY=$row.CREATED_BY
+					  APP_NAME=$row.APP_NAME
+					  APP_USER =$row.APP_USER 
+					  APP_VERSION=$row.APP_VERSION
+					  APP_SOURCE=$row.APP_SOURCE
+
+
+									  }
+			  }
+			  $Omsinvupload+=,$Resultsinv
+		  }
+
+
+
+
+$query=" SELECT  HOST,
+PORT,
+SERVICE_NAME SERVICE,
+SQL_TYPE,
+LPAD(EXECUTIONS, 10) EXECUTIONS,
+LPAD(ROUND(ELAPSED_S), 10) ELAPSED_S,
+LPAD(TO_DECIMAL(ELA_PER_EXEC_MS, 10, 2), 15) ELA_PER_EXEC_MS,
+LPAD(TO_DECIMAL(LOCK_PER_EXEC_MS, 10, 2), 16) LOCK_PER_EXEC_MS,
+LPAD(ROUND(MAX_ELA_MS), 10) MAX_ELA_MS
+FROM
+( SELECT
+  S.HOST,
+  S.PORT,
+  S.SERVICE_NAME,
+  L.SQL_TYPE,
+  CASE L.SQL_TYPE
+	WHEN 'SELECT'                THEN SUM(C.SELECT_EXECUTION_COUNT)
+	WHEN 'SELECT FOR UPDATE'     THEN SUM(C.SELECT_FOR_UPDATE_COUNT)
+	WHEN 'INSERT/UPDATE/DELETE'  THEN SUM(C.UPDATE_COUNT)
+	WHEN 'READ ONLY TRANSACTION' THEN SUM(C.READ_ONLY_TRANSACTION_COUNT)
+	WHEN 'UPDATE TRANSACTION'    THEN SUM(C.UPDATE_TRANSACTION_COUNT)
+	WHEN 'ROLLBACK'              THEN SUM(C.ROLLBACK_COUNT)
+	WHEN 'OTHERS'                THEN SUM(C.OTHERS_COUNT)
+	WHEN 'PREPARE'               THEN SUM(C.TOTAL_PREPARATION_COUNT)
+  END EXECUTIONS,
+  CASE L.SQL_TYPE
+	WHEN 'SELECT'                THEN SUM(C.SELECT_TOTAL_EXECUTION_TIME)                / 1000 / 1000
+	WHEN 'SELECT FOR UPDATE'     THEN SUM(C.SELECT_FOR_UPDATE_TOTAL_EXECUTION_TIME)     / 1000 / 1000
+	WHEN 'INSERT/UPDATE/DELETE'  THEN SUM(C.UPDATE_TOTAL_EXECUTION_TIME)                / 1000 / 1000
+	WHEN 'READ ONLY TRANSACTION' THEN SUM(C.READ_ONLY_TRANSACTION_TOTAL_EXECUTION_TIME) / 1000 / 1000
+	WHEN 'UPDATE TRANSACTION'    THEN SUM(C.UPDATE_TRANSACTION_TOTAL_EXECUTION_TIME)    / 1000 / 1000
+	WHEN 'ROLLBACK'              THEN SUM(C.ROLLBACK_TOTAL_EXECUTION_TIME)              / 1000 / 1000
+	WHEN 'OTHERS'                THEN SUM(C.OTHERS_TOTAL_EXECUTION_TIME)                / 1000 / 1000
+	WHEN 'PREPARE'               THEN SUM(C.TOTAL_PREPARATION_TIME)                     / 1000 / 1000
+  END ELAPSED_S,
+  CASE L.SQL_TYPE
+	WHEN 'SELECT'                THEN MAP(SUM(C.SELECT_EXECUTION_COUNT),      0, 0, SUM(C.SELECT_TOTAL_EXECUTION_TIME)                / 1000 / SUM(C.SELECT_EXECUTION_COUNT))
+	WHEN 'SELECT FOR UPDATE'     THEN MAP(SUM(C.SELECT_FOR_UPDATE_COUNT),     0, 0, SUM(C.SELECT_FOR_UPDATE_TOTAL_EXECUTION_TIME)     / 1000 / SUM(C.SELECT_FOR_UPDATE_COUNT))
+	WHEN 'INSERT/UPDATE/DELETE'  THEN MAP(SUM(C.UPDATE_COUNT),                0, 0, SUM(C.UPDATE_TOTAL_EXECUTION_TIME)                / 1000 / SUM(C.UPDATE_COUNT))
+	WHEN 'READ ONLY TRANSACTION' THEN MAP(SUM(C.READ_ONLY_TRANSACTION_COUNT), 0, 0, SUM(C.READ_ONLY_TRANSACTION_TOTAL_EXECUTION_TIME) / 1000 / SUM(C.READ_ONLY_TRANSACTION_COUNT))
+	WHEN 'UPDATE TRANSACTION'    THEN MAP(SUM(C.UPDATE_TRANSACTION_COUNT),    0, 0, SUM(C.UPDATE_TRANSACTION_TOTAL_EXECUTION_TIME)    / 1000 / SUM(C.UPDATE_TRANSACTION_COUNT))
+	WHEN 'ROLLBACK'              THEN MAP(SUM(C.ROLLBACK_COUNT),              0, 0, SUM(C.ROLLBACK_TOTAL_EXECUTION_TIME)              / 1000 / SUM(C.ROLLBACK_COUNT))
+	WHEN 'OTHERS'                THEN MAP(SUM(C.OTHERS_COUNT),                0, 0, SUM(C.OTHERS_TOTAL_EXECUTION_TIME)                / 1000 / SUM(C.OTHERS_COUNT))
+	WHEN 'PREPARE'               THEN MAP(SUM(C.TOTAL_PREPARATION_COUNT),     0, 0, SUM(C.TOTAL_PREPARATION_TIME)                     / 1000 / SUM(C.TOTAL_PREPARATION_COUNT))
+  END ELA_PER_EXEC_MS,
+  CASE L.SQL_TYPE
+	WHEN 'SELECT' THEN 0
+	WHEN 'SELECT FOR UPDATE'     THEN MAP(SUM(C.SELECT_FOR_UPDATE_COUNT), 0, 0, SUM(C.SELECT_FOR_UPDATE_TOTAL_LOCK_WAIT_TIME) / 1000 / SUM(C.SELECT_FOR_UPDATE_COUNT))
+	WHEN 'INSERT/UPDATE/DELETE'  THEN MAP(SUM(C.UPDATE_COUNT),            0, 0, SUM(C.UPDATE_TOTAL_LOCK_WAIT_TIME)            / 1000 / SUM(C.UPDATE_COUNT))
+	WHEN 'READ ONLY TRANSACTION' THEN 0
+	WHEN 'UPDATE TRANSACTION'    THEN 0
+	WHEN 'ROLLBACK'              THEN 0
+	WHEN 'OTHERS'                THEN MAP(SUM(C.OTHERS_COUNT),            0, 0, SUM(C.OTHERS_TOTAL_LOCK_WAIT_TIME)            / 1000 / SUM(C.OTHERS_COUNT))
+	WHEN 'PREPARE'               THEN 0
+  END LOCK_PER_EXEC_MS,
+  CASE L.SQL_TYPE
+	WHEN 'SELECT'                THEN MAX(C.SELECT_MAX_EXECUTION_TIME)                / 1000
+	WHEN 'SELECT FOR UPDATE'     THEN MAX(C.SELECT_FOR_UPDATE_MAX_EXECUTION_TIME)     / 1000
+	WHEN 'INSERT/UPDATE/DELETE'  THEN MAX(C.UPDATE_MAX_EXECUTION_TIME)                / 1000
+	WHEN 'READ ONLY TRANSACTION' THEN MAX(C.READ_ONLY_TRANSACTION_MAX_EXECUTION_TIME) / 1000
+	WHEN 'UPDATE TRANSACTION'    THEN MAX(C.UPDATE_TRANSACTION_MAX_EXECUTION_TIME)    / 1000
+	WHEN 'ROLLBACK'              THEN MAX(C.ROLLBACK_MAX_EXECUTION_TIME)              / 1000
+	WHEN 'OTHERS'                THEN MAX(C.OTHERS_MAX_EXECUTION_TIME)                / 1000
+	WHEN 'PREPARE'               THEN MAX(C.MAX_PREPARATION_TIME)                     / 1000
+  END MAX_ELA_MS
+FROM
+( SELECT                                /* Modification section */
+	'%' HOST,
+	'%' PORT,
+	'%' SERVICE_NAME,
+	-1 CONN_ID
+  FROM
+	DUMMY
+) BI,
+  M_SERVICES S,
+( SELECT 1 LINE_NO, 'SELECT' SQL_TYPE FROM DUMMY UNION ALL
+  ( SELECT 2, 'SELECT FOR UPDATE'     FROM DUMMY ) UNION ALL
+  ( SELECT 3, 'INSERT/UPDATE/DELETE'  FROM DUMMY ) UNION ALL
+  ( SELECT 4, 'READ ONLY TRANSACTION' FROM DUMMY ) UNION ALL
+  ( SELECT 5, 'UPDATE TRANSACTION'    FROM DUMMY ) UNION ALL
+  ( SELECT 6, 'ROLLBACK'              FROM DUMMY ) UNION ALL
+  ( SELECT 7, 'OTHERS'                FROM DUMMY ) UNION ALL
+  ( SELECT 8, 'PREPARE'               FROM DUMMY )
+) L,
+  M_CONNECTION_STATISTICS C
+WHERE
+  S.HOST LIKE BI.HOST AND
+  TO_VARCHAR(S.PORT) LIKE BI.PORT AND
+  S.SERVICE_NAME LIKE BI.SERVICE_NAME AND
+  C.HOST = S.HOST AND
+  C.PORT = S.PORT AND
+  ( BI.CONN_ID = -1 OR C.CONNECTION_ID = BI.CONN_ID )
+  AND c.END_TIME  > add_seconds(now(),-$($freq*60))
+GROUP BY
+  S.HOST,
+  S.PORT,
+  S.SERVICE_NAME,
+  L.SQL_TYPE,
+  L.LINE_NO
+)
+ORDER BY
+HOST,
+PORT,
+SQL_TYPE
+"
+
+  $cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+		  $ds = New-Object system.Data.DataSet ;
+$ex=$null
+		  Try{
+			  $cmd.fill($ds)|out-null
+		  }
+		  Catch
+		  {
+			  $Ex=$_.Exception.MEssage
+			  write-warning  $ex 
+		  }
+		   
+		 
+		  $Resultsperf=$null
+		  $Resultsperf=@(); 
+
+		  IF ($ds.tables[0].rows)
+		  {
+			  Foreach($row in $ds.tables[0].rows)
+			  {
+				  $Resultsperf+= New-Object PSObject -Property @{
+					  HOST=$SAPHOST
+					  Instance=$sapinstance
+					  CollectorType="Performance"
+					  PerfObject="ConnectionStatistics"
+					  PerfCounter=$row.SQL_TYPE
+					  PerfValue=$row.EXECUTIONS
+					  PerfInstance='EXECUTIONS'
+					  }
+
+				  $Resultsperf+= New-Object PSObject -Property @{
+					  HOST=$SAPHOST
+					  Instance=$sapinstance
+					  CollectorType="Performance"
+					  PerfObject="ConnectionStatistics"
+					  PerfCounter=$row.SQL_TYPE
+					  PerfValue=$row.ELAPSED_S
+					  PerfInstance='ELAPSED_S'
+					  }
+
+				  $Resultsperf+= New-Object PSObject -Property @{
+					  HOST=$SAPHOST
+					  Instance=$sapinstance
+					  CollectorType="Performance"
+					  PerfObject="ConnectionStatistics"
+					  PerfCounter=$row.SQL_TYPE
+					  PerfValue=$row.$row.ELA_PER_EXEC_MS
+					  PErfInstance='ELA_PER_EXEC_MS'   
+					  }
+
+				  $Resultsperf+= New-Object PSObject -Property @{
+					  HOST=$SAPHOST
+					  Instance=$sapinstance
+					  CollectorType="Performance"
+					  PerfObject="ConnectionStatistics"
+					  PerfCounter=$row.SQL_TYPE
+					  PerfValue=$row.LOCK_PER_EXEC_MS
+					  PerfInstance='LOCK_PER_EXEC_MS'
+					  }
+
+				  $Resultsperf+= New-Object PSObject -Property @{
+					  HOST=$SAPHOST
+					  Instance=$sapinstance
+					  CollectorType="Performance"
+					  PerfObject="ConnectionStatistics"
+					  PerfCounter=$row.SQL_TYPE
+					  PerfValue=$row.MAX_ELA_MS 
+					  PerfInstance='MAX_ELA_MS'
+					  }
+				  }
+					
+		  }
+
 
 
 			$colend=get-date

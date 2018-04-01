@@ -153,20 +153,20 @@ While ($i -le 4)
 
 $allSchedules=Get-AzureRmAutomationSchedule `
 		-AutomationAccountName $AAAccount `
-		-ResourceGroupName $AAResourceGroup |where{$_.Name -match $collectorScheduleName }
+		-ResourceGroupName $AAResourceGroup |where{$_.Name -match $mainSchedulerName}
 
 
-If ($allSchedules)
+
+foreach ($sch in  $allSchedules)
 {
-Write-output "Removing hourly schedule for this runbook as its not needed anymore  "
-Remove-AzureRmAutomationSchedule `
-		-AutomationAccountName $AAAccount `
-		-Force `
-		-Name $mainSchedulerName `
-		-ResourceGroupName $AAResourceGroup `
 
-
-}
-
+	Write-output "Removing Schedule $($sch.Name)    "
+	Remove-AzureRmAutomationSchedule `
+	-AutomationAccountName $AAAccount `
+	-Force `
+	-Name $sch.Name `
+	-ResourceGroupName $AAResourceGroup `
 	
+} 
+
 
