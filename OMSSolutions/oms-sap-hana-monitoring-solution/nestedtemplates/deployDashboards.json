@@ -1152,7 +1152,7 @@
                 },
                 {
                   "name": "Query",
-                  "value": "SAPHana_CL\n| where CollectorType_s has \"Performance\"\n| where PerfObject_s ==\"Service\" and PerfCounter_s ==\"PROCESS_CPU\" and PerfValue_d >= 0\n| summarize CPU=sum(PerfValue_d) by Port=PerfInstance_d,PAth=strcat(\"PRocessCPU:\",HOST_s), bin (TimeGenerated, 15m)\n|union (\nSAPHana_CL\n| where CollectorType_s has \"Performance\"\n| where PerfObject_s ==\"Service\" and PerfCounter_s ==\"SYSTEM_CPU\" and PerfValue_d >= 0\n| summarize CPU=avg(PerfValue_d) by Port=PerfInstance_d,PAth=strcat(\"SystemCPU:\",HOST_s), bin (TimeGenerated, 15m)\n)\n"
+                  "value": "SAPHana_CL\n| where CollectorType_s has \"Performance\"\n| where PerfObject_s ==\"Host\" and PerfCounter_s ==\"CPU_PCT\"\n| summarize CPU=avg(PerfValue_d) by Host=HOST_s, bin (TimeGenerated, 15m)\n"
                 },
                 {
                   "name": "TimeRange",
