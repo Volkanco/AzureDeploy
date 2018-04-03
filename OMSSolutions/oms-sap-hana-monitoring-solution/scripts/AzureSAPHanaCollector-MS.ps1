@@ -3148,6 +3148,158 @@ $ex=$null
 			}
 
 
+			    #volume throughput
+				$query="select v.host, v.port, v.service_name, s.type,
+				round(s.total_read_size / 1024 / 1024, 3) as `"ReadsMB`",
+				round(s.total_read_size / case s.total_read_time when 0 then -1 else
+			   s.total_read_time end, 3) as `"ReadMBpersec`",
+				round(s.total_read_time / 1000 / 1000, 3) as `"ReadTimeSec`",
+				trigger_read_ratio as `"Read Ratio`",
+				round(s.total_write_size / 1024 / 1024, 3) as `"WritesMB`",
+				round(s.total_write_size / case s.total_write_time when 0 then -1 else
+			   s.total_write_time end, 3) as `"WriteMBpersec`",
+				round(s.total_write_time / 1000 / 1000, 3) as `"WriteTimeSec`" ,
+				trigger_write_ratio as `"Write Ratio`"
+			   from `"PUBLIC`".`"M_VOLUME_IO_TOTAL_STATISTICS_RESET`" s, PUBLIC.M_VOLUMES v
+			   where s.volume_id = v.volume_id
+			   and type not in ( 'TRACE' )
+			   order by type, service_name, s.volume_id; "
+			   
+			   $cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+						   $ds = New-Object system.Data.DataSet ;
+			   $ex=$null
+						   Try{
+							   $cmd.fill($ds)
+						   }
+						   Catch
+						   {
+							   $Ex=$_.Exception.MEssage
+						   }
+							
+			   
+						   $Resultsperf=$null
+						   $Resultsperf=@(); 
+			   
+			   
+						   IF ($ds.Tables[0].rows)
+						   {
+			   
+							   Write-Output '  CollectorType="Performance" - Category="Volume" - Subcategory="IOStat" '
+							   foreach ($row in $ds.Tables[0].rows)
+							   {
+								   
+								   $Resultsperf+= New-Object PSObject -Property @{
+			   
+									   HOST=$row.HOST
+									   Instance=$sapinstance
+									   Database=$defaultdb
+									   SERVICE_NAME=$row.SERVICE_NAME
+									   TYPE=$row.TYPE 
+									   CollectorType="Performance"
+									   PerfObject="Volumes"
+									   PerfInstance=$row.Type
+									   PerfCounter="Read_MB_Sec"
+									   PerfValue=[double]$row.ReadMBpersec
+								   }
+								   $Resultsperf+= New-Object PSObject -Property @{
+			   
+									   HOST=$row.HOST
+									   Instance=$sapinstance
+									   Database=$defaultdb
+									   SERVICE_NAME=$row.SERVICE_NAME
+									   TYPE=$row.TYPE 
+									   CollectorType="Performance"
+									   PerfObject="Volumes"
+									   PerfInstance=$row.Type
+									   PerfCounter="Write_MB_Sec"
+									   PerfValue=[double]$row.WriteMBpersec
+								   }
+			   
+													 
+							   }
+			   
+							   $Omsperfupload+=,$Resultsperf
+						   }
+			   #Save Point Duration
+			   
+			   $query="select start_time, volume_id,
+				round(duration / 1000000) as `"DurationSec`",
+				round(critical_phase_duration / 1000000) as `"CriticalSeconds`",
+				round(total_size / 1024 / 1024) as `"SizeMB`",
+				round(total_size / duration) as `"Appro. MB/sec`",
+				round (flushed_rowstore_size / 1024 / 1024) as `"Row Store Part MB`"
+			   from m_savepoints where start_time  > add_seconds(now(),-$($freq*60));"
+			   
+			   
+			   $cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+						   $ds = New-Object system.Data.DataSet ;
+			   $ex=$null
+						   Try{
+							   $cmd.fill($ds)
+						   }
+						   Catch
+						   {
+							   $Ex=$_.Exception.MEssage
+						   }
+								 
+						   $Resultsperf=$null
+						   $Resultsperf=@(); 
+			   
+			   
+						   IF ($ds.Tables[0].rows)
+						   {
+			   
+							   Write-Output '  CollectorType="Performance" - Category="Volume" - Subcategory="IOStat" '
+							   foreach ($row in $ds.Tables[0].rows)
+							   {
+								   
+								   $Resultsperf+= New-Object PSObject -Property @{
+			   
+									   HOST=$row.HOST
+									   Instance=$sapinstance
+									   Database=$defaultdb
+									   TIMESTamp=$row.START_TIME
+									   VOLUME_ID =$row.VOLUME_ID 
+									   CollectorType="Performance"
+									   PerfObject="SavePoint"
+									   PerfInstance=$row.VOLUME_ID
+									   PerfCounter="DurationSec"
+									   PerfValue=[double]$row.DurationSec
+								   }
+								   $Resultsperf+= New-Object PSObject -Property @{
+			   
+									   HOST=$row.HOST
+									   Instance=$sapinstance
+									   Database=$defaultdb
+									   TIMESTamp=$row.START_TIME
+									   VOLUME_ID =$row.VOLUME_ID 
+									   CollectorType="Performance"
+									   PerfObject="SavePoint"
+									   PerfInstance=$row.VOLUME_ID
+									   PerfCounter="CriticalSeconds"
+									   PerfValue=[double]$row.CriticalSeconds
+								   }
+								   $Resultsperf+= New-Object PSObject -Property @{
+			   
+									   HOST=$row.HOST
+									   Instance=$sapinstance
+									   Database=$defaultdb
+									   TIMESTamp=$row.START_TIME
+									   VOLUME_ID =$row.VOLUME_ID 
+									   CollectorType="Performance"
+									   PerfObject="SavePoint"
+									   PerfInstance=$row.VOLUME_ID
+									   PerfCounter="SizeMB"
+									   PerfValue=[double]$row.SizeMB
+								   }
+			   
+													 
+							   }
+			   
+							   $Omsperfupload+=,$Resultsperf
+						   }
+			   
+
 			$query='Select HOST,
 PORT,
 CONNECTION_ID,
@@ -3211,7 +3363,7 @@ $ex=$null
 						DURATION_MICROSEC=$row.DURATION_MICROSEC
 						OBJECT_NAME=$row.OBJECT_NAME
 						OPERATION=$row.OPERATION
-						RECORDS=$row.RECORDS
+						RECORDS=[long]$row.RECORDS
 						STATEMENT_STRING=$row.STATEMENT_STRING
 						PARAMETERS=$row.PARAMETERS
 						ERROR_CODE=$row.ERROR_CODE
@@ -3807,8 +3959,8 @@ $ex=$null
 					   THREAD_STATE=$row.THREAD_STATE    
 					   ACTIVE=$row.ACTIVE
 					  APP_USER=$row.APP_USER 
-					  DURATION_S=$row.DURATION_S 
-					  CPU_TIME_S=$row.CPU_TIME_S
+					  DURATION_S=[double]$row.DURATION_S 
+					  CPU_TIME_S=[double]$row.CPU_TIME_S
 				  }
 			  }
 			  $Omsinvupload+=,$Resultsinv
@@ -4094,18 +4246,19 @@ ROW_NUM
 					  Category="Tables"
 					  Subcategory="Largest"
 					  Database=$defaultdb
+					  TableName=$row.TABLE_NAME
 					  StoreType=$row.S
 					  Loaded=$row.L
 					  POS=$row.POS
 					  COLS=$row.COLS
-					  RECORDS=$row.RECORDS    
+					  RECORDS=[long]$row.RECORDS    
 				  }
 			  }
 			  $Omsinvupload+=,$Resultsinv
 		  }
 
 #inventory Sessions    
-		   $query="SELECT  C.HOST,
+$query="SELECT  C.HOST,
 LPAD(C.PORT, 5) PORT,
 S.SERVICE_NAME SERVICE,
 IFNULL(LPAD(C.CONN_ID, 7), '') CONN_ID,
@@ -4228,6 +4381,7 @@ FROM
 	  MT.MIN_SNAPSHOT_TS = T.MIN_MVCC_SNAPSHOT_TIMESTAMP LEFT OUTER JOIN
 	TABLES TA ON
 	  TA.TABLE_OID = MT.TABLE_ID 
+	  WHERE (C.START_TIME  > add_seconds(now(),-$($freq*60))) OR  (C.END_TIME  > add_seconds(now(),-$($freq*60)))
 ) C
 WHERE
 S.HOST LIKE BI.HOST AND
@@ -4235,7 +4389,7 @@ TO_VARCHAR(S.PORT) LIKE BI.PORT AND
 S.SERVICE_NAME LIKE BI.SERVICE_NAME AND
 C.HOST = S.HOST AND
 C.PORT = S.PORT AND
-( BI.CONN_ID = -1 OR BI.CONN_ID = C.CONN_ID ) AND
+ ( BI.CONN_ID = -1 OR BI.CONN_ID = C.CONN_ID ) AND
 ( BI.THREAD_ID = -1 OR BI.THREAD_ID = C.THREAD_ID ) AND
 C.THREAD_STATE LIKE BI.THREAD_STATE AND
 ( BI.ONLY_ACTIVE_THREADS = ' ' OR C.THREAD_STATE NOT IN ( 'Inactive', '') ) AND
@@ -4293,12 +4447,13 @@ C.TRANSACTION_ID
 					  UPD_TID =$row.UPD_TID 
 					  CLIENT_HOST=$row.CLIENT_HOST
 					  TRANSACTION_START=$row.TRANSACTION_START
-					  ACT_DAYS=$row.ACT_DAYS
+					  ACT_DAYS=[double]$row.ACT_DAYS
 					  THREAD_TYPE=$row.THREAD_TYPE
 					  THREAD_STATE =$row.THREAD_STATE 
+					  THREAD_DETAIL=$row.THREAD_DETAIL
 					  CALLER=$row.CALLER
 					  STATEMENT_HASH =$row.STATEMENT_HASH 
-					  MEMORY_MB=$row.MEMORY_MB
+					  MEMORY_MB=[double]$row.MEMORY_MB
 					  THREAD_METHOD=$row.THREAD_METHOD
 					  TRANS_STATE=$row.TRANS_STATE
 					  TRANSACTION_TYPE =$row.TRANSACTION_TYPE 
@@ -4312,7 +4467,9 @@ C.TRANSACTION_ID
   $checkfreq=900
 IF($firstrun){$checkfreq=2592000}Else{$checkfreq=900} # decide if you change 'HOUR' TIME_AGGREGATE_BY 
 
-#backup inventory 
+#backup inventory  
+
+# not enabled 
 If($MDC)
 {
   $query="Select START_TIME,
@@ -4663,7 +4820,7 @@ WITH HINT (NO_JOIN_REMOVAL)"
 		  $ds = New-Object system.Data.DataSet ;
 $ex=$null
 		  Try{
-			  $cmd.fill($ds)|out-null
+			 # $cmd.fill($ds)|out-null
 		  }
 		  Catch
 		  {
@@ -5095,7 +5252,7 @@ $ex=$null
 					  CollectorType="Performance"
 					  PerfObject="ConnectionStatistics"
 					  PerfCounter=$row.SQL_TYPE
-					  PerfValue=$row.EXECUTIONS
+					  PerfValue=[double]$row.EXECUTIONS
 					  PerfInstance='EXECUTIONS'
 					  }
 
@@ -5105,7 +5262,7 @@ $ex=$null
 					  CollectorType="Performance"
 					  PerfObject="ConnectionStatistics"
 					  PerfCounter=$row.SQL_TYPE
-					  PerfValue=$row.ELAPSED_S
+					  PerfValue=[double]$row.ELAPSED_S
 					  PerfInstance='ELAPSED_S'
 					  }
 
@@ -5115,7 +5272,7 @@ $ex=$null
 					  CollectorType="Performance"
 					  PerfObject="ConnectionStatistics"
 					  PerfCounter=$row.SQL_TYPE
-					  PerfValue=$row.$row.ELA_PER_EXEC_MS
+					  PerfValue=[double]$row.ELA_PER_EXEC_MS
 					  PErfInstance='ELA_PER_EXEC_MS'   
 					  }
 
@@ -5125,7 +5282,7 @@ $ex=$null
 					  CollectorType="Performance"
 					  PerfObject="ConnectionStatistics"
 					  PerfCounter=$row.SQL_TYPE
-					  PerfValue=$row.LOCK_PER_EXEC_MS
+					  PerfValue=[double]$row.LOCK_PER_EXEC_MS
 					  PerfInstance='LOCK_PER_EXEC_MS'
 					  }
 
@@ -5135,12 +5292,14 @@ $ex=$null
 					  CollectorType="Performance"
 					  PerfObject="ConnectionStatistics"
 					  PerfCounter=$row.SQL_TYPE
-					  PerfValue=$row.MAX_ELA_MS 
+					  PerfValue=[double]$row.MAX_ELA_MS 
 					  PerfInstance='MAX_ELA_MS'
 					  }
 				  }
+				  $OmsPerfupload+=,$Resultsperf
 					
 		  }
+
 
 
 

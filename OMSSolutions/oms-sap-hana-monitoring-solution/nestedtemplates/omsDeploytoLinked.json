@@ -1107,7 +1107,7 @@
                                 "OverviewTile": {
                                     "Id": "LineChartCalloutBuilderTile",
                                     "Type": "OverviewTile",
-                                    "Version": 2,
+                                    "Version": 0,
                                     "Configuration": {
                                         "LineChart": {
                                             "Query": "SAPHana_CL |  where CollectorType_s has \"Performance\" | where PerfObject_s ==\"Host\" and PerfCounter_s ==\"CPU_PCT\"  | summarize CPU=avg(PerfValue_d) by Host=HOST_s, bin (TimeGenerated, 15m)",
