@@ -8,6 +8,27 @@
                 "description": "Used to create unique deployment names for subsequent deployments"
             }
         },
+        "logAnalyticsNewOrExisting": {
+            "type": "string",
+            "defaultValue": "new",
+            "allowedValues": [
+              "new",
+              "existing"
+            ],
+            "metadata": {
+              "description": "Identify whether to use a new or existing vnet"
+            }
+          },"azureAutomationNewOrExisting": {
+            "type": "string",
+            "defaultValue": "new",
+            "allowedValues": [
+              "new",
+              "existing"
+            ],
+            "metadata": {
+              "description": "Identify whether to use a new or existing vnet"
+            }
+          },
         "logAnalyticsWorkspaceName": {
             "type": "string",
             "metadata": {
