@@ -2855,12 +2855,9 @@ $ex=$null
 
 			<#
 
-			Double check viw IO_perf or io_total or M_VOLUME_IO_DETAILED_STATs   
-			time in micro seconds
+			Depreciated view  do not use this 
+			USe detail and total ststistics instead 
 
-			SELECT HOST, PORT, TYPE, round(MAX_IO_BUFFER_SIZE / 1024, 3) “Maximum buffer size in KB”,    TRIGGER_ASYNC_WRITE_COUNT, AVG_TRIGGER_ASYNC_WRITE_TIME as “Avg Write Time in  Microsecond” from “PUBLIC”.”M_VOLUME_IO_DETAILED_STATISTICS” where type = ‘LOG’   and VOLUME_ID in (select VOLUME_ID from PUBLIC.M_VOLUMES where SERVICE_NAME = ‘indexserver’ and  AVG_TRIGGER_ASYNC_WRITE_TIME > 0)
-
-#>
 
 			$query="SELECT * FROM SYS.M_volume_io_performance_statistics"
 			$cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
@@ -3213,6 +3210,156 @@ $ex=$null
 				$Omsperfupload+=,$Resultsperf
 			}
 
+			#>
+
+			#volume IO Latency
+
+				    #volume throughput
+					$query="select host, port ,type,
+					round(max_io_buffer_size / 1024,0) `"MaxBufferinKB`",
+					trigger_async_write_count,
+					avg_trigger_async_write_time as `"AvgTriggerAsyncWriteMicroS`",
+					write_count, avg_write_time as `"AvgWriteTimeMicros`"
+					,trigger_async_read_count,
+					avg_trigger_async_read_time as `"AvgTriggerAsyncReadicroS`",
+					read_count, avg_read_time as `"AvgReadTimeMicros`"
+					
+					from `"PUBLIC`".`"M_VOLUME_IO_DETAILED_STATISTICS_RESET`"
+					where  volume_id in (select volume_id from m_volumes where service_name = 'indexserver')
+					and (write_count <> 0 or read_count <> 0  or avg_trigger_async_write_time <> 0 or avg_trigger_async_read_time <> 0)
+					"
+								   
+				   $cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+				   $ds = New-Object system.Data.DataSet ;
+				   $ex=$null
+				   Try{
+					   $cmd.fill($ds)
+					   }
+				   Catch
+				   {
+					   $Ex=$_.Exception.MEssage
+				   }
+							
+				   IF ($ds.Tables[0].rows)
+				   {
+	   
+					   Write-Output '  CollectorType="Performance" - Category="Volume" - Subcategory="IOStat" '
+					   foreach ($row in $ds.Tables[0].rows)
+					   {
+
+								$Resultsperf+= New-Object PSObject -Property @{
+			
+									HOST=$row.HOST
+									Instance=$sapinstance
+									Database=$Hanadb
+									SERVICE_NAME="indexserver"
+									CollectorType="Performance"
+									PerfObject="Volumes"
+									PerfCounter="TRIGGER_ASYNC_WRITE_COUNT"
+									PerfValue=[double]$row.TRIGGER_ASYNC_WRITE_COUNT
+									PerfInstance=$row.Type+"|"+$row.MaxBufferinKB+"KB"
+									TYPE=$row.TYPE 
+								}
+								$Resultsperf+= New-Object PSObject -Property @{
+			
+									HOST=$row.HOST
+									Instance=$sapinstance
+									Database=$Hanadb
+									SERVICE_NAME="indexserver"
+									CollectorType="Performance"
+									PerfObject="Volumes"
+									PerfCounter="AVG_TRIGGER_ASYNC_WRITE_MICROS"
+									PerfValue=[double]$row.AvgTriggerAsyncWriteMicroS 
+									PerfInstance=$row.Type+"|"+$row.MaxBufferinKB+"KB"
+									TYPE=$row.TYPE 
+								}
+								$Resultsperf+= New-Object PSObject -Property @{
+			
+									HOST=$row.HOST
+									Instance=$sapinstance
+									Database=$Hanadb
+									SERVICE_NAME="indexserver"
+									CollectorType="Performance"
+									PerfObject="Volumes"
+									PerfCounter="WRITE_COUNT"
+									PerfValue=[double]$row.WRITE_COUNT
+									PerfInstance=$row.Type+"|"+$row.MaxBufferinKB+"KB"
+									TYPE=$row.TYPE 
+								}
+								
+								$Resultsperf+= New-Object PSObject -Property @{
+			
+									HOST=$row.HOST
+									Instance=$sapinstance
+									Database=$Hanadb
+									SERVICE_NAME="indexserver"
+									CollectorType="Performance"
+									PerfObject="Volumes"
+									PerfCounter="AVG_WRITE_TIME_MICROS"
+									PerfValue=[double]$row.AvgWriteTimeMicros
+									PerfInstance=$row.Type+"|"+$row.MaxBufferinKB+"KB"
+									TYPE=$row.TYPE 
+								}
+
+								#read
+								$Resultsperf+= New-Object PSObject -Property @{
+			
+									HOST=$row.HOST
+									Instance=$sapinstance
+									Database=$Hanadb
+									SERVICE_NAME="indexserver"
+									CollectorType="Performance"
+									PerfObject="Volumes"
+									PerfCounter="TRIGGER_ASYNC_READ_COUNT"
+									PerfValue=[double]$row.TRIGGER_ASYNC_READ_COUNT
+									PerfInstance=$row.Type+"|"+$row.MaxBufferinKB+"KB"
+									TYPE=$row.TYPE 
+								}
+								$Resultsperf+= New-Object PSObject -Property @{
+			
+								HOST=$row.HOST
+								Instance=$sapinstance
+								Database=$Hanadb
+								SERVICE_NAME="indexserver"
+								CollectorType="Performance"
+								PerfObject="Volumes"
+								PerfCounter="AVG_TRIGGER_ASYNC_READ_MICROS"
+								PerfValue=[double]$row.AvgTriggerAsyncReadMicroS 
+								PerfInstance=$row.Type+"|"+$row.MaxBufferinKB+"KB"
+								TYPE=$row.TYPE 
+								}
+								$Resultsperf+= New-Object PSObject -Property @{
+				
+									HOST=$row.HOST
+									Instance=$sapinstance
+									Database=$Hanadb
+									SERVICE_NAME="indexserver"
+									CollectorType="Performance"
+									PerfObject="Volumes"
+									PerfCounter="READ_COUNT"
+									PerfValue=[double]$row.READ_COUNT
+									PerfInstance=$row.Type+"|"+$row.MaxBufferinKB+"KB"
+									TYPE=$row.TYPE 
+								}
+								
+								$Resultsperf+= New-Object PSObject -Property @{
+				
+									HOST=$row.HOST
+									Instance=$sapinstance
+									Database=$Hanadb
+									SERVICE_NAME="indexserver"
+									CollectorType="Performance"
+									PerfObject="Volumes"
+									PerfCounter="AVG_READ_TIME_MICROS"
+									PerfValue=[double]$row.AvgReadTimeMicros
+									PerfInstance=$row.Type+"|"+$row.MaxBufferinKB+"KB"
+									TYPE=$row.TYPE 
+								}			
+	   									 
+					   }
+	   
+					   $Omsperfupload+=,$Resultsperf
+				   }
 
 			    #volume throughput
 				$query="select v.host, v.port, v.service_name, s.type,
