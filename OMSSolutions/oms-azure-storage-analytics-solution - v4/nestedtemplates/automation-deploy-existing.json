@@ -215,7 +215,7 @@
     "resources": [
          {
             "name": "[variables('azureSubscriptionId')]",
-            "type": "variables",
+            "type": "Microsoft.Automation/automationAccounts/variables",
             "apiVersion": "2015-10-31",
             "location": "[parameters('automationRegion')]",
             "dependsOn": [
@@ -231,7 +231,7 @@
         },
         {
             "name": "[variables('opsInsightWorkspaceID')]",
-            "type": "variables",
+            "type": "Microsoft.Automation/automationAccounts/variables",
             "apiVersion": "2015-10-31",
             "dependsOn": [
                 "[concat('Microsoft.Automation/automationAccounts/', parameters('automationAccountName'))]"
@@ -246,7 +246,7 @@
         },
         {
             "name": "[variables('opsInsightWorkspaceKey') ]",
-            "type": "variables",
+            "type": "Microsoft.Automation/automationAccounts/variables",
             "apiVersion": "2015-10-31",
             "dependsOn": [
                 "[concat('Microsoft.Automation/automationAccounts/', parameters('automationAccountName'))]"
@@ -261,7 +261,7 @@
         },
         {
             "name": "[variables('createScheduleAutomationAccountName')]",
-            "type": "variables",
+            "type": "Microsoft.Automation/automationAccounts/variables",
             "apiVersion": "2015-10-31",
             "dependsOn": [
                 "[concat('Microsoft.Automation/automationAccounts/', parameters('automationAccountName'))]"
@@ -276,7 +276,7 @@
         },
         {
             "name": "[variables('createScheduleResourceGroupName')]",
-            "type": "variables",
+            "type": "Microsoft.Automation/automationAccounts/variables",
             "apiVersion": "2015-10-31",
             "dependsOn": [
                 "[concat('Microsoft.Automation/automationAccounts/', parameters('automationAccountName'))]"
@@ -291,7 +291,7 @@
         },
         {
             "name": "[variables('runbooks').ingestMetricsRunbook.name]",
-            "type": "runbooks",
+            "type": "Microsoft.Automation/automationAccounts/runbooks",
             "apiVersion": "2015-10-31",
             "location": "[parameters('automationRegion')]",
             "dependsOn": [
@@ -314,7 +314,7 @@
         },
         {
             "name": "[variables('runbooks').ingestSchedulerRunbook.name]",
-            "type": "runbooks",
+            "type": "Microsoft.Automation/automationAccounts/runbooks",
             "apiVersion": "2015-10-31",
             "location": "[parameters('automationRegion')]",
             "dependsOn": [
@@ -337,7 +337,7 @@
         },
         {
             "name": "[variables('runbooks').ingestMetricsEnablerRunbook.name]",
-            "type": "runbooks",
+            "type": "Microsoft.Automation/automationAccounts/runbooks",
             "apiVersion": "2015-10-31",
             "location": "[parameters('automationRegion')]",
             "dependsOn": [
