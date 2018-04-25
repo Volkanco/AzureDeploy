@@ -168,9 +168,9 @@
     },
     "variables": {
         "nestedTemplates": {
-            "laDeploymentTemplateWithAuditLogs": "[concat(parameters('_artifactsLocation'),'/nestedtemplates/,'la-deploy-',parameters('logAnalyticsNewOrExisting'),'-withLogs','.json')]",
-            "laDeploymentTemplateWithoutAuditLogs": "[concat(parameters('_artifactsLocation'),'/nestedtemplates/,'la-deploy-',parameters('logAnalyticsNewOrExisting'),'-withoutLogs','.json')]",
-            "automationDeploymentTemplateBase": "[concat(parameters('_artifactsLocation'),'/nestedtemplates/,'automation-deploy-',parameters('automationAccountNewOrExisting','.json')]"               
+            "laDeploymentTemplateWithAuditLogs": "[concat(parameters('_artifactsLocation'),'/nestedtemplates/','la-deploy-',parameters('logAnalyticsNewOrExisting'),'-withLogs','.json')]",
+            "laDeploymentTemplateWithoutAuditLogs": "[concat(parameters('_artifactsLocation'),'/nestedtemplates/','la-deploy-',parameters('logAnalyticsNewOrExisting'),'-withoutLogs','.json')]",
+            "automationDeploymentTemplateBase": "[concat(parameters('_artifactsLocation'),'/nestedtemplates/','automation-deploy-',parameters('automationAccountNewOrExisting','.json')]"               
         }
     },
     "resources": [
