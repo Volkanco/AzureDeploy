@@ -45,7 +45,7 @@
                 "description": "Specify the SKU for Log Analytics"
             }
         },
-        "omsAutomationAccountName": {
+        "automationAccountName": {
             "type": "string",
             "metadata": {
                 "description": "Use an existing Automation account or create a new"
@@ -2820,7 +2820,7 @@
             "condition": "[equals(parameters('azureAutomationNewOrExisting'), 'new')]",
             "apiversion": "2015-10-31",
             "location": "[parameters('automationRegion')]",
-            "name": "[parameters('omsAutomationAccountName')]",
+            "name": "[parameters('automationAccountName')]",
             "type": "Microsoft.Automation/automationAccounts",
             "properties": {
                 "sku": {
@@ -2833,7 +2833,7 @@
                     "type": "variables",
                     "apiVersion": "2015-10-31",
                     "dependsOn": [
-                        "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'))]"
+                        "[concat('Microsoft.Automation/automationAccounts/', parameters('automationAccountName'))]"
                     ],
                     "tags": {},
                     "properties": {
@@ -2848,7 +2848,7 @@
                     "type": "variables",
                     "apiVersion": "2015-10-31",
                     "dependsOn": [
-                        "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'))]"
+                        "[concat('Microsoft.Automation/automationAccounts/', parameters('automationAccountName'))]"
                     ],
                     "tags": {},
                     "properties": {
@@ -2863,14 +2863,14 @@
                     "type": "variables",
                     "apiVersion": "2015-10-31",
                     "dependsOn": [
-                        "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'))]"
+                        "[concat('Microsoft.Automation/automationAccounts/', parameters('automationAccountName'))]"
                     ],
                     "tags": {},
                     "properties": {
                         "description": "[variables('createScheduleAutomationAccountDescription')]",
                         "isEncrypted": 0,
                         "type": "[variables('createScheduleAutomationAccountType')]",
-                        "value": "[concat('\"', parameters('omsAutomationAccountName'),'\"')]"
+                        "value": "[concat('\"', parameters('automationAccountName'),'\"')]"
                     }
                 },
                 {
@@ -2878,7 +2878,7 @@
                     "type": "variables",
                     "apiVersion": "2015-10-31",
                     "dependsOn": [
-                        "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'))]"
+                        "[concat('Microsoft.Automation/automationAccounts/', parameters('automationAccountName'))]"
                     ],
                     "tags": {},
                     "properties": {
@@ -2894,9 +2894,9 @@
                     "apiVersion": "2015-10-31",
                     "location": "[parameters('automationRegion')]",
                     "dependsOn": [
-                        "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'))]",
-                        "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'), '/variables/', variables('opsInsightWorkspaceID'))]",
-                        "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'), '/variables/', variables('opsInsightWorkspaceKey'))]"
+                        "[concat('Microsoft.Automation/automationAccounts/', parameters('automationAccountName'))]",
+                        "[concat('Microsoft.Automation/automationAccounts/', parameters('automationAccountName'), '/variables/', variables('opsInsightWorkspaceID'))]",
+                        "[concat('Microsoft.Automation/automationAccounts/', parameters('automationAccountName'), '/variables/', variables('opsInsightWorkspaceKey'))]"
                     ],
                     "tags": {},
                     "properties": {
@@ -2916,9 +2916,9 @@
                     "apiVersion": "2015-10-31",
                     "location": "[parameters('automationRegion')]",
                     "dependsOn": [
-                        "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'))]",
-                        "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'), '/variables/', variables('opsInsightWorkspaceID'))]",
-                        "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'), '/variables/', variables('opsInsightWorkspaceKey'))]"
+                        "[concat('Microsoft.Automation/automationAccounts/', parameters('automationAccountName'))]",
+                        "[concat('Microsoft.Automation/automationAccounts/', parameters('automationAccountName'), '/variables/', variables('opsInsightWorkspaceID'))]",
+                        "[concat('Microsoft.Automation/automationAccounts/', parameters('automationAccountName'), '/variables/', variables('opsInsightWorkspaceKey'))]"
                     ],
                     "tags": {},
                     "properties": {
@@ -2933,13 +2933,13 @@
                     }
                 },
                 {
-                    "name": "[concat(parameters('omsAutomationAccountName'), '/', variables('ingestscheduleName'),'-',variables('ingestSchedulerGuid'))]",
+                    "name": "[concat(parameters('automationAccountName'), '/', variables('ingestscheduleName'),'-',variables('ingestSchedulerGuid'))]",
                     "type": "microsoft.automation/automationAccounts/schedules",
                     "apiVersion": "2015-10-31",
                     "location": "[parameters('automationRegion')]",
                     "dependsOn": [
-                        "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'))]",
-                        "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'), '/runbooks/', variables('runbooks').ingestSchedulerRunbook.name)]"
+                        "[concat('Microsoft.Automation/automationAccounts/', parameters('automationAccountName'))]",
+                        "[concat('Microsoft.Automation/automationAccounts/', parameters('automationAccountName'), '/runbooks/', variables('runbooks').ingestSchedulerRunbook.name)]"
                     ],
                     "tags": {},
                     "properties": {
@@ -2951,14 +2951,14 @@
                     }
                 },
                 {
-                    "name": "[concat(parameters('omsAutomationAccountName'), '/', variables('ingestSchedulerGuid'))]",
+                    "name": "[concat(parameters('automationAccountName'), '/', variables('ingestSchedulerGuid'))]",
                     "type": "microsoft.automation/automationAccounts/jobSchedules",
                     "apiVersion": "2015-10-31",
                     "location": "[parameters('automationRegion')]",
                     "dependsOn": [
-                        "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'), '/schedules/', variables('ingestscheduleName'),'-',variables('ingestSchedulerGuid'))]",
-                        "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'), '/runbooks/', variables('runbooks').ingestSchedulerRunbook.name)]",
-                        "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'))]"
+                        "[concat('Microsoft.Automation/automationAccounts/', parameters('automationAccountName'), '/schedules/', variables('ingestscheduleName'),'-',variables('ingestSchedulerGuid'))]",
+                        "[concat('Microsoft.Automation/automationAccounts/', parameters('automationAccountName'), '/runbooks/', variables('runbooks').ingestSchedulerRunbook.name)]",
+                        "[concat('Microsoft.Automation/automationAccounts/', parameters('automationAccountName'))]"
                     ],
                     "tags": {},
                     "properties": {
@@ -2982,7 +2982,7 @@
             "condition": "[equals(parameters('azureAutomationNewOrExisting'), 'existing')]",
             "apiversion": "2015-10-31",
             "location": "[parameters('automationRegion')]",
-            "name": "[parameters('omsAutomationAccountName')]",
+            "name": "[parameters('automationAccountName')]",
             "type": "Microsoft.Automation/automationAccounts",
             "properties": {
             },
@@ -2992,7 +2992,7 @@
                     "type": "variables",
                     "apiVersion": "2015-10-31",
                     "dependsOn": [
-                        "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'))]"
+                        "[concat('Microsoft.Automation/automationAccounts/', parameters('automationAccountName'))]"
                     ],
                     "tags": {},
                     "properties": {
@@ -3007,7 +3007,7 @@
                     "type": "variables",
                     "apiVersion": "2015-10-31",
                     "dependsOn": [
-                        "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'))]"
+                        "[concat('Microsoft.Automation/automationAccounts/', parameters('automationAccountName'))]"
                     ],
                     "tags": {},
                     "properties": {
@@ -3022,14 +3022,14 @@
                     "type": "variables",
                     "apiVersion": "2015-10-31",
                     "dependsOn": [
-                        "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'))]"
+                        "[concat('Microsoft.Automation/automationAccounts/', parameters('automationAccountName'))]"
                     ],
                     "tags": {},
                     "properties": {
                         "description": "[variables('createScheduleAutomationAccountDescription')]",
                         "isEncrypted": 0,
                         "type": "[variables('createScheduleAutomationAccountType')]",
-                        "value": "[concat('\"', parameters('omsAutomationAccountName'),'\"')]"
+                        "value": "[concat('\"', parameters('automationAccountName'),'\"')]"
                     }
                 },
                 {
@@ -3037,7 +3037,7 @@
                     "type": "variables",
                     "apiVersion": "2015-10-31",
                     "dependsOn": [
-                        "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'))]"
+                        "[concat('Microsoft.Automation/automationAccounts/', parameters('automationAccountName'))]"
                     ],
                     "tags": {},
                     "properties": {
@@ -3053,9 +3053,9 @@
                     "apiVersion": "2015-10-31",
                     "location": "[parameters('automationRegion')]",
                     "dependsOn": [
-                        "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'))]",
-                        "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'), '/variables/', variables('opsInsightWorkspaceID'))]",
-                        "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'), '/variables/', variables('opsInsightWorkspaceKey'))]"
+                        "[concat('Microsoft.Automation/automationAccounts/', parameters('automationAccountName'))]",
+                        "[concat('Microsoft.Automation/automationAccounts/', parameters('automationAccountName'), '/variables/', variables('opsInsightWorkspaceID'))]",
+                        "[concat('Microsoft.Automation/automationAccounts/', parameters('automationAccountName'), '/variables/', variables('opsInsightWorkspaceKey'))]"
                     ],
                     "tags": {},
                     "properties": {
@@ -3075,9 +3075,9 @@
                     "apiVersion": "2015-10-31",
                     "location": "[parameters('automationRegion')]",
                     "dependsOn": [
-                        "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'))]",
-                        "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'), '/variables/', variables('opsInsightWorkspaceID'))]",
-                        "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'), '/variables/', variables('opsInsightWorkspaceKey'))]"
+                        "[concat('Microsoft.Automation/automationAccounts/', parameters('automationAccountName'))]",
+                        "[concat('Microsoft.Automation/automationAccounts/', parameters('automationAccountName'), '/variables/', variables('opsInsightWorkspaceID'))]",
+                        "[concat('Microsoft.Automation/automationAccounts/', parameters('automationAccountName'), '/variables/', variables('opsInsightWorkspaceKey'))]"
                     ],
                     "tags": {},
                     "properties": {
@@ -3092,13 +3092,13 @@
                     }
                 },
                 {
-                    "name": "[concat(parameters('omsAutomationAccountName'), '/', variables('ingestscheduleName'),'-',variables('ingestSchedulerGuid'))]",
+                    "name": "[concat(parameters('automationAccountName'), '/', variables('ingestscheduleName'),'-',variables('ingestSchedulerGuid'))]",
                     "type": "microsoft.automation/automationAccounts/schedules",
                     "apiVersion": "2015-10-31",
                     "location": "[parameters('automationRegion')]",
                     "dependsOn": [
-                        "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'))]",
-                        "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'), '/runbooks/', variables('runbooks').ingestSchedulerRunbook.name)]"
+                        "[concat('Microsoft.Automation/automationAccounts/', parameters('automationAccountName'))]",
+                        "[concat('Microsoft.Automation/automationAccounts/', parameters('automationAccountName'), '/runbooks/', variables('runbooks').ingestSchedulerRunbook.name)]"
                     ],
                     "tags": {},
                     "properties": {
@@ -3110,14 +3110,14 @@
                     }
                 },
                 {
-                    "name": "[concat(parameters('omsAutomationAccountName'), '/', variables('ingestSchedulerGuid'))]",
+                    "name": "[concat(parameters('automationAccountName'), '/', variables('ingestSchedulerGuid'))]",
                     "type": "microsoft.automation/automationAccounts/jobSchedules",
                     "apiVersion": "2015-10-31",
                     "location": "[parameters('automationRegion')]",
                     "dependsOn": [
-                        "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'), '/schedules/', variables('ingestscheduleName'),'-',variables('ingestSchedulerGuid'))]",
-                        "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'), '/runbooks/', variables('runbooks').ingestSchedulerRunbook.name)]",
-                        "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'))]"
+                        "[concat('Microsoft.Automation/automationAccounts/', parameters('automationAccountName'), '/schedules/', variables('ingestscheduleName'),'-',variables('ingestSchedulerGuid'))]",
+                        "[concat('Microsoft.Automation/automationAccounts/', parameters('automationAccountName'), '/runbooks/', variables('runbooks').ingestSchedulerRunbook.name)]",
+                        "[concat('Microsoft.Automation/automationAccounts/', parameters('automationAccountName'))]"
                     ],
                     "tags": {},
                     "properties": {
@@ -3144,7 +3144,7 @@
             "apiVersion": "2015-11-01-preview",
             "location": "[parameters('logAnalyticsRegion')]",
             "properties": {
-                "resourceId": "[resourceId('Microsoft.Automation/automationAccounts/',parameters('omsAutomationAccountName'))]"
+                "resourceId": "[resourceId('Microsoft.Automation/automationAccounts/',parameters('automationAccountName'))]"
             },
             "dependsOn": []
         },
@@ -3155,10 +3155,10 @@
             "location": "[parameters('logAnalyticsRegion')]",
             "dependsOn": [
                 "[concat('Microsoft.OperationalInsights/workspaces/', parameters('logAnalyticsWorkspaceName'))]",
-                "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'))]",
+                "[concat('Microsoft.Automation/automationAccounts/', parameters('automationAccountName'))]",
                 "[concat('Microsoft.OperationalInsights/workspaces/', parameters('logAnalyticsWorkspaceName'), '/views/', variables('omsSolutions').customSolution.name)]",
-                "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'), '/runbooks/', variables('runbooks').ingestSchedulerRunbook.name)]",
-                "[concat('Microsoft.Automation/automationAccounts/', parameters('omsAutomationAccountName'), '/runbooks/', variables('runbooks').ingestParentRunbook.name)]"
+                "[concat('Microsoft.Automation/automationAccounts/', parameters('automationAccountName'), '/runbooks/', variables('runbooks').ingestSchedulerRunbook.name)]",
+                "[concat('Microsoft.Automation/automationAccounts/', parameters('automationAccountName'), '/runbooks/', variables('runbooks').ingestParentRunbook.name)]"
             ],
             "plan": {
                 "name": "[variables('omsSolutions').customSolution.solutionName]",
@@ -3171,12 +3171,12 @@
                 "referencedResources": [],
                 "containedResources": [
                     "[resourceId('Microsoft.OperationalInsights/workspaces/views/', parameters('logAnalyticsWorkspaceName'), variables('omsSolutions').customSolution.name)]",
-                    "[resourceId('Microsoft.Automation/automationAccounts/runbooks/', parameters('omsAutomationAccountName'), variables('runbooks').ingestSchedulerRunbook.name)]",
-                    "[resourceId('Microsoft.Automation/automationAccounts/runbooks/', parameters('omsAutomationAccountName'), variables('runbooks').ingestParentRunbook.name)]",
-                    "[resourceId('Microsoft.Automation/automationAccounts/variables/', parameters('omsAutomationAccountName'), variables('opsInsightWorkspaceID'))]",
-                    "[resourceId('Microsoft.Automation/automationAccounts/variables/', parameters('omsAutomationAccountName'), variables('opsInsightWorkspaceKey'))]",
-                    "[resourceId('Microsoft.Automation/automationAccounts/variables/', parameters('omsAutomationAccountName'), variables('createScheduleAutomationAccountName'))]",
-                    "[resourceId('Microsoft.Automation/automationAccounts/variables/', parameters('omsAutomationAccountName'), variables('createScheduleResourceGroupName'))]"
+                    "[resourceId('Microsoft.Automation/automationAccounts/runbooks/', parameters('automationAccountName'), variables('runbooks').ingestSchedulerRunbook.name)]",
+                    "[resourceId('Microsoft.Automation/automationAccounts/runbooks/', parameters('automationAccountName'), variables('runbooks').ingestParentRunbook.name)]",
+                    "[resourceId('Microsoft.Automation/automationAccounts/variables/', parameters('automationAccountName'), variables('opsInsightWorkspaceID'))]",
+                    "[resourceId('Microsoft.Automation/automationAccounts/variables/', parameters('automationAccountName'), variables('opsInsightWorkspaceKey'))]",
+                    "[resourceId('Microsoft.Automation/automationAccounts/variables/', parameters('automationAccountName'), variables('createScheduleAutomationAccountName'))]",
+                    "[resourceId('Microsoft.Automation/automationAccounts/variables/', parameters('automationAccountName'), variables('createScheduleResourceGroupName'))]"
                 ]
             }
         },
