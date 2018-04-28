@@ -1,7 +1,9 @@
 param
 (
+[Parameter(Mandatory=$false)] [bool] $collectqueryperf=$false,
 [Parameter(Mandatory=$false)] [bool] $collecttableinv=$false,
-[Parameter(Mandatory=$false)] [string] $configfolder="C:\HanaMonitor"
+[Parameter(Mandatory=$true)] [string] $configfolder="C:\HanaMonitor",
+[Parameter(Mandatory=$true)] [int] $freq=15
 )
 
 
@@ -21,20 +23,18 @@ try
         -TenantId $servicePrincipalConnection.TenantId `
         -ApplicationId $servicePrincipalConnection.ApplicationId `
         -CertificateThumbprint $servicePrincipalConnection.CertificateThumbprint 
-
-        $connectedtoAzure=$true
 }
 catch {
     if (!$servicePrincipalConnection)
     {
         $ErrorMessage = "Connection $connectionName not found."
-       write-warning $ErrorMessage
+        throw $ErrorMessage
     } else{
-         
-        write-warning $_.Exception
+        Write-Error -Message $_.Exception
+        throw $_.Exception
     }
-    $connectedtoAzure=$false
 }
+
 
 $AAResourceGroup = Get-AutomationVariable -Name 'AzureSAPHanaMonitoring-AzureAutomationResourceGroup-MS-Mgmt'
 $AAAccount = Get-AutomationVariable -Name 'AzureSAPHanaMonitoring-AzureAutomationAccount-MS-Mgmt'
@@ -68,9 +68,6 @@ $Starttimer=get-date
 # Hana Client Dll
 
 $sapdll="Sap.Data.Hana.v4.5.dll" 
-
-#config folder
-if(!$configfolder){$configfolder="C:\HanaMonitor"}
 
 #endregion
 
@@ -235,23 +232,7 @@ $ex=$null
 		$conn=$null
 		$conn = new-object Sap.Data.Hana.HanaConnection($constring);
 		$hanadb=$null
-		$hanadb=$ins.Database
-		
-		#first test ping 
-		IF( Test-Path -Path C:\HanaMonitor\PSTools\psping.exe)
-		{
-        $ps = new-object System.Diagnostics.Process
-        $ps.StartInfo.Filename = "C:\HanaMonitor\PSTools\psping.exe"
-        $ps.StartInfo.Arguments = "-n 5 -i 1 mscerthdb 22"
-        $ps.StartInfo.RedirectStandardOutput = $True
-        $ps.StartInfo.UseShellExecute = $false
-        $ps.start()
-        $ps.WaitForExit()
-         $ping=$out=$null
-        [string] $Out = $ps.StandardOutput.ReadToEnd();
-        [double]$ping=$Out.substring($Out.LastIndexOf('Average =')+9,$out.Length-$Out.LastIndexOf('Average =')-9).replace('ms','')
-		}
-
+        $hanadb=$ins.Database
 		$ex=$null
 
 		Try
@@ -275,7 +256,6 @@ $ex=$null
 				SubCategory="Host"
 				Connection="Failed"
 				ErrorMessage=$ex
-				Pingms=$ping
 			}
 			)
 		}
@@ -292,7 +272,6 @@ $ex=$null
 				Category="Connectivity"
 				SubCategory="Host"
 				Connection="Successful"
-				Pingms=$ping
 				
 				})
 
@@ -305,7 +284,7 @@ $ex=$null
 			$rbvariablename=$null
 			$rbvariablename="LastRun-$saphost-$hanadb"
 
-			$ex1=$null
+			$ex=$null
 			Try{
 					$lasttimestamp=$null
 				$lasttimestamp=Get-AzureRmAutomationVariable `
@@ -315,9 +294,9 @@ $ex=$null
 			}
 			Catch
 			{
-				$Ex1=$_.Exception.MEssage
+				$Ex=$_.Exception.MEssage
 			}
-			$query="/* OMS */SELECT CURRENT_TIMESTAMP ,add_seconds(CURRENT_TIMESTAMP,-900 ) as LastTime  FROM DUMMY"
+			$query="SELECT CURRENT_TIMESTAMP ,add_seconds(CURRENT_TIMESTAMP,-900) as LastTime  FROM DUMMY"
 			$cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
 			$ds = New-Object system.Data.DataSet ;
 			$ex=$null
@@ -329,7 +308,7 @@ $ex=$null
 				$Ex=$_.Exception.MEssage
 			}
 
-			if($ex1 -ne $null -OR $lasttimestamp -eq $null )
+			if($ex -ne $null -OR $lasttimestamp -eq $null )
 			{
 				write-warning "Last Run Time not found for $saphost-$hanadb : $ex"
 				$lastruntime=$ds.Tables[0].rows[0].LastTime # we will use this to mark lasst data collection time in HANA
@@ -337,11 +316,9 @@ $ex=$null
 			{
 				$lastruntime=$lasttimestamp  # we will use this to mark lasst data collection time in HANA				
 			}
-				$currentruntime=($ds.Tables[0].rows[0].CURRENT_TIMESTAMP).tostring('yyyy-MM-dd HH:mm:ss.FF')  #format ddate to Hana timestamp YYYY-MM-DD HH24:MI:SS.FF7. FF
-				$timespan=([datetime]$currentruntime-[datetime]$lastruntime).Totalseconds
-				Write-Output "Last Collection time was $lastruntime and currenttime is  $currentruntime , timespan $timespan seconds"
+				$currentruntime=$ds.Tables[0].rows[0].CURRENT_TIMESTAMP
 
-				
+				Write-Output "Last Collection time was $lastruntime and currenttime is  $currentruntime "
 			#region Collect instance data and databases 
 			$query='SELECT * FROM SYS.M_HOST_INFORMATION'
 					$cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
@@ -374,15 +351,9 @@ $ex=$null
 			{
 				if ($row.key -notin ('net_nameserver_bindings','build_githash','ssfs_masterkey_changed','crypto_fips_version','crypto_provider','ssfs_masterkey_systempki_changed','crypto_provider_version'))
 				{
-					IF ($row.VALUE -match "^\d+$") # is number 
-					{
-						$cu|Add-Member -MemberType NoteProperty -Name $row.key  -Value $row.value.ToInt64($null)
-					}Else
-					{
-						$cu|Add-Member -MemberType NoteProperty -Name $row.key  -Value $row.VALUE
-					}
+					$cu|Add-Member -MemberType NoteProperty -Name $row.key  -Value $row.VALUE
 					$Rowcount++
-					If ($rowcount -gt 48  ){Break}
+					If ($rowcount -gt 48   ){Break}
 
 				}
 
@@ -396,7 +367,7 @@ $ex=$null
 
 			$cu=$null
 
-			$query="/* OMS */SELECT * from  SYS.M_SYSTEM_OVERVIEW"
+			$query="SELECT * from  SYS.M_SYSTEM_OVERVIEW"
 			$cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
 			$ds = New-Object system.Data.DataSet ;
 			$cmd.fill($ds)
@@ -546,7 +517,7 @@ $ex=$null
 
 			$Omsinvupload+=,$Resultsinv
 
-			$query="/* OMS */SELECT * FROM SYS.M_SERVICES"
+			$query="SELECT * FROM SYS.M_SERVICES"
 			$cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
 			$ds = New-Object system.Data.DataSet ;
 			$ex=$null
@@ -596,12 +567,27 @@ $ex=$null
 
 
 
-		
+			$query="SELECT * from SYS.M_HOST_RESOURCE_UTILIZATION"
+			$cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds = New-Object system.Data.DataSet ;
+			$ex=$null
+            Try{
+				$cmd.fill($ds)
+			}
+			Catch
+			{
+				$Ex=$_.Exception.MEssage
+                write-warning  $ex 
+                
+			
+			} 
+
+			$Resultsperf=$null
+			$Resultsperf=@(); 
 
 #this is used to calculate UTC time conversion in data collection 
 #			$utcdiff=NEW-TIMESPAN –Start $ds[0].Tables[0].rows[0].UTC_TIMESTAMP  –End $ds[0].Tables[0].rows[0].SYS_TIMESTAMP 
-			$query="/* OMS */
-			SELECT 
+			$query="SELECT 
 			O.HOST,
 			N.VALUE TIMEZONE_NAME,
 			LPAD(O.VALUE, 17) TIMEZONE_OFFSET_S
@@ -650,22 +636,6 @@ $ex=$null
 
 
 			Write-Output '  CollectorType="Performance" - Category="Host" - Subcategory="OverallUsage" '
-
-			$query="/* OMS */SELECT * from SYS.M_HOST_RESOURCE_UTILIZATION"
-			$cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds = New-Object system.Data.DataSet ;
-			$ex=$null
-            Try{
-				$cmd.fill($ds)
-			}
-			Catch
-			{
-				$Ex=$_.Exception.MEssage
-                write-warning  $ex 
-                
-			
-			} 
-
 
 			$Resultsperf=$null
 			$Resultsperf=@(); 
@@ -832,7 +802,7 @@ $ex=$null
 #CollectorType="Inventory" or "Performance"
 
 
-			$query="/* OMS */SELECT * FROM SYS.M_BACKUP_CATALOG where SYS_START_TIME    > add_seconds('"+$currentruntime+"',-$timespan)"
+			$query="SELECT * FROM SYS.M_BACKUP_CATALOG where SYS_START_TIME    > add_seconds(now(),-$($freq*60))"
 			$cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
 			$ds = New-Object system.Data.DataSet ;
 			$ex=$null
@@ -857,7 +827,7 @@ $ex=$null
 					Instance=$sapinstance
 					CollectorType="Inventory"
 					Category="BackupCatalog"
-					Database=$Hanadb                 
+					Database=$defaultdb                   
 					ENTRY_ID=$row.ENTRY_ID
 					ENTRY_TYPE_NAME=$row.ENTRY_TYPE_NAME
 					BACKUP_ID=$row.BACKUP_ID
@@ -907,7 +877,7 @@ $ex=$null
 					Instance=$sapinstance
 					CollectorType="Inventory"
 					Category="Backup"
-					Database=$Hanadb
+					Database=$defaultdb
 					PORT=$row.PORT
 					SERVICE_NAME=$row.SERVICE_NAME 
 					ENTRY_TYPE_NAME=$row.ENTRY_TYPE_NAME
@@ -1031,11 +1001,11 @@ $ex=$null
 				$Resultsperf+= New-Object PSObject -Property @{
 					HOST=$row.HOST
 					Instance=$sapinstance
-					Database=$Hanadb
+					Database=$defaultdb
 					CollectorType="Performance"
 					PerfObject="Disk"
 					PerfCounter="USED_SIZE"
-					PerfInstance=$Hanadb
+					PerfInstance=$defaultdb
 					USAGE_TYPE=$row.USAGE_TYPE 
 					PerfValue=$row.USED_SIZE
 				}
@@ -1045,7 +1015,7 @@ $ex=$null
 
 
 
-			$query="/* OMS */SELECT * FROM SYS.M_LICENSE"
+			$query="SELECT * FROM SYS.M_LICENSE"
 			$cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
 			$ds = New-Object system.Data.DataSet ;
 $ex=$null
@@ -1128,7 +1098,7 @@ $ex=$null
 					Instance=$sapinstance
 					CollectorType="Inventory"
 					Category="Tables"
-					Database=$Hanadb
+					Database=$defaultdb
 					PORT=$row.PORT
 					LOADED=$row.LOADED
 					TABLE_NAME=$row.TABLE_NAME
@@ -1171,7 +1141,7 @@ $ex=$null
 					Instance=$sapinstance
 					CollectorType="Inventory"
 					Category="Alerts"
-					Database=$Hanadb
+					Database=$defaultdb
 					ALERT_ID=$row.ALERT_ID
 					INDEX=$row.INDEX
 					ALERT_HOST=$row.ALERT_HOST
@@ -1225,7 +1195,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						SYS_TIMESTAMP=([datetime]$row.SYS_TIMESTAMP).addseconds([int]$utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Service"
@@ -1237,7 +1207,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						SYS_TIMESTAMP=([datetime]$row.SYS_TIMESTAMP).addseconds([int]$utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Service"
@@ -1249,7 +1219,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						SYS_TIMESTAMP=([datetime]$row.SYS_TIMESTAMP).addseconds([int]$utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Service"
@@ -1261,7 +1231,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						SYS_TIMESTAMP=([datetime]$row.SYS_TIMESTAMP).addseconds([int]$utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Service"
@@ -1273,7 +1243,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						SYS_TIMESTAMP=([datetime]$row.SYS_TIMESTAMP).addseconds([int]$utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Service"
@@ -1285,7 +1255,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						SYS_TIMESTAMP=([datetime]$row.SYS_TIMESTAMP).addseconds([int]$utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Service"
@@ -1297,7 +1267,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						SYS_TIMESTAMP=([datetime]$row.SYS_TIMESTAMP).addseconds([int]$utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Service"
@@ -1309,7 +1279,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						SYS_TIMESTAMP=([datetime]$row.SYS_TIMESTAMP).addseconds([int]$utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Service"
@@ -1321,7 +1291,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						SYS_TIMESTAMP=([datetime]$row.SYS_TIMESTAMP).addseconds([int]$utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Service"
@@ -1333,7 +1303,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						SYS_TIMESTAMP=([datetime]$row.SYS_TIMESTAMP).addseconds([int]$utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Service"
@@ -1345,7 +1315,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						SYS_TIMESTAMP=([datetime]$row.SYS_TIMESTAMP).addseconds([int]$utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Service"
@@ -1357,7 +1327,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						SYS_TIMESTAMP=([datetime]$row.SYS_TIMESTAMP).addseconds([int]$utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Service"
@@ -1369,7 +1339,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						SYS_TIMESTAMP=([datetime]$row.SYS_TIMESTAMP).addseconds([int]$utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Service"
@@ -1381,7 +1351,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						SYS_TIMESTAMP=([datetime]$row.SYS_TIMESTAMP).addseconds([int]$utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Service"
@@ -1393,7 +1363,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						SYS_TIMESTAMP=([datetime]$row.SYS_TIMESTAMP).addseconds([int]$utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Service"
@@ -1405,7 +1375,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						SYS_TIMESTAMP=([datetime]$row.SYS_TIMESTAMP).addseconds([int]$utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Service"
@@ -1417,7 +1387,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						SYS_TIMESTAMP=([datetime]$row.SYS_TIMESTAMP).addseconds([int]$utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Service"
@@ -1429,7 +1399,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						SYS_TIMESTAMP=([datetime]$row.SYS_TIMESTAMP).addseconds([int]$utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Service"
@@ -1446,7 +1416,7 @@ $ex=$null
 #Updated CPU statictics collection 
 
 
-			$query="/* OMS */SELECT SAMPLE_TIME,HOST,
+			$query="SELECT SAMPLE_TIME,HOST,
 LPAD(ROUND(CPU_PCT), 7) CPU_PCT,
 LPAD(TO_DECIMAL(USED_MEM_GB, 10, 2), 11) USED_MEM_GB,
 LPAD(ROUND(USED_MEM_PCT), 7) MEM_PCT,
@@ -1506,7 +1476,7 @@ FROM
 	FROM
 	( SELECT                      /* Modification section */
 		/*TO_TIMESTAMP('2014/05/08 09:48:00', 'YYYY/MM/DD HH24:MI:SS') BEGIN_TIME,  */
-		add_seconds('"+$currentruntime+"',-$timespan) BEGIN_TIME,
+		add_seconds(now(),-$($freq*60)) BEGIN_TIME,
 		TO_TIMESTAMP('9999/05/06 09:00:00', 'YYYY/MM/DD HH24:MI:SS') END_TIME,
 		'%' HOST,
 		'TIME,HOST' AGGREGATE_BY,      
@@ -1564,7 +1534,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						SYS_TIMESTAMP=([datetime]$row.SAMPLE_TIME).addseconds([int]$utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Host"
@@ -1579,7 +1549,7 @@ $ex=$null
 			$Omsperfupload+=,$Resultsperf
 
 
-			$query="/* OMS */Select SAMPLE_TIME ,
+			$query="Select SAMPLE_TIME ,
 HOST,
 LPAD(PORT, 5) PORT,
 LPAD(ROUND(PING_MS), 7) PING_MS,
@@ -1681,7 +1651,7 @@ FROM
 	FROM
 	( SELECT                      /* Modification section */
 		/*TO_TIMESTAMP('2014/05/08 09:48:00', 'YYYY/MM/DD HH24:MI:SS') BEGIN_TIME,  */
-		add_seconds('"+$currentruntime+"',-$timespan) BEGIN_TIME, 
+		add_seconds(now(),-900) BEGIN_TIME, 
 		TO_TIMESTAMP('9999/05/06 09:00:00', 'YYYY/MM/DD HH24:MI:SS') END_TIME,
 		'%' HOST,
 		'%' PORT,
@@ -1758,7 +1728,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						SYS_TIMESTAMP=([datetime]$row.SAMPLE_TIME).addseconds([int]$utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Service"
@@ -1770,7 +1740,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						SYS_TIMESTAMP=([datetime]$row.SAMPLE_TIME).addseconds([int]$utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Service"
@@ -1782,7 +1752,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						SYS_TIMESTAMP=([datetime]$row.SAMPLE_TIME).addseconds([int]$utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Service"
@@ -1794,7 +1764,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						SYS_TIMESTAMP=([datetime]$row.SAMPLE_TIME).addseconds([int]$utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Service"
@@ -1806,7 +1776,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						SYS_TIMESTAMP=([datetime]$row.SAMPLE_TIME).addseconds([int]$utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Service"
@@ -1818,7 +1788,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						SYS_TIMESTAMP=([datetime]$row.SAMPLE_TIME).addseconds([int]$utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Service"
@@ -1830,7 +1800,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						SYS_TIMESTAMP=([datetime]$row.SAMPLE_TIME).addseconds([int]$utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Service"
@@ -1843,7 +1813,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						SYS_TIMESTAMP=([datetime]$row.SAMPLE_TIME).addseconds([int]$utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Service"
@@ -1855,7 +1825,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						SYS_TIMESTAMP=([datetime]$row.SAMPLE_TIME).addseconds([int]$utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Service"
@@ -1867,7 +1837,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						SYS_TIMESTAMP=([datetime]$row.SAMPLE_TIME).addseconds([int]$utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Service"
@@ -1879,7 +1849,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						SYS_TIMESTAMP=([datetime]$row.SAMPLE_TIME).addseconds([int]$utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Service"
@@ -1898,7 +1868,7 @@ $ex=$null
 
 			Write-Output '  CollectorType="Performance" - Category="Memory" - Subcategory="OverallUsage" '
 
-			$query="/* OMS */SELECT * FROM SYS.M_MEMORY Where PORT=30003" ###HArdcoded change this
+			$query="SELECT * FROM SYS.M_MEMORY Where PORT=30003" ###HArdcoded change this
 			$cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
 			$ds = New-Object system.Data.DataSet ;
 $ex=$null
@@ -2083,7 +2053,7 @@ $ex=$null
 			$Omsperfupload+=,$Resultsperf
 
 
-			$query="/* OMS */SELECT * FROM SYS.M_SERVICE_MEMORY"
+			$query="SELECT * FROM SYS.M_SERVICE_MEMORY"
 			$cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
 			$ds = New-Object system.Data.DataSet ;
 $ex=$null
@@ -2108,7 +2078,7 @@ $ex=$null
 
 					HOST=$row.HOST
 					Instance=$sapinstance
-					Database=$Hanadb
+					Database=$defaultdb
 					CollectorType="Performance"
 					PerfObject="ServiceMemory"
 					PerfInstance=$row.PORT
@@ -2119,7 +2089,7 @@ $ex=$null
 
 					HOST=$row.HOST
 					Instance=$sapinstance
-					Database=$Hanadb
+					Database=$defaultdb
 					CollectorType="Performance"
 					PerfObject="ServiceMemory"
 					PerfInstance=$row.PORT
@@ -2130,7 +2100,7 @@ $ex=$null
 
 					HOST=$row.HOST
 					Instance=$sapinstance
-					Database=$Hanadb
+					Database=$defaultdb
 					CollectorType="Performance"
 					PerfObject="ServiceMemory"
 					PerfInstance=$row.PORT
@@ -2142,7 +2112,7 @@ $ex=$null
 
 					HOST=$row.HOST
 					Instance=$sapinstance
-					Database=$Hanadb
+					Database=$defaultdb
 					CollectorType="Performance"
 					PerfObject="ServiceMemory"
 					PerfInstance=$row.PORT
@@ -2154,7 +2124,7 @@ $ex=$null
 
 					HOST=$row.HOST
 					Instance=$sapinstance
-					Database=$Hanadb
+					Database=$defaultdb
 					CollectorType="Performance"
 					PerfObject="ServiceMemory"
 					PerfInstance=$row.PORT
@@ -2166,7 +2136,7 @@ $ex=$null
 
 					HOST=$row.HOST
 					Instance=$sapinstance
-					Database=$Hanadb
+					Database=$defaultdb
 					CollectorType="Performance"
 					PerfObject="ServiceMemory"
 					PerfInstance=$row.PORT
@@ -2177,7 +2147,7 @@ $ex=$null
 
 					HOST=$row.HOST
 					Instance=$sapinstance
-					Database=$Hanadb
+					Database=$defaultdb
 					CollectorType="Performance"
 					PerfObject="ServiceMemory"
 					PerfInstance=$row.PORT
@@ -2190,7 +2160,7 @@ $ex=$null
 
 					HOST=$row.HOST
 					Instance=$sapinstance
-					Database=$Hanadb
+					Database=$defaultdb
 					CollectorType="Performance"
 					PerfObject="ServiceMemory"
 					PerfInstance=$row.PORT
@@ -2201,7 +2171,7 @@ $ex=$null
 
 					HOST=$row.HOST
 					Instance=$sapinstance
-					Database=$Hanadb
+					Database=$defaultdb
 					CollectorType="Performance"
 					PerfObject="ServiceMemory"
 					PerfInstance=$row.PORT
@@ -2212,7 +2182,7 @@ $ex=$null
 
 					HOST=$row.HOST
 					Instance=$sapinstance
-					Database=$Hanadb
+					Database=$defaultdb
 					CollectorType="Performance"
 					PerfObject="ServiceMemory"
 					PerfInstance=$row.PORT
@@ -2224,7 +2194,7 @@ $ex=$null
 
 					HOST=$row.HOST
 					Instance=$sapinstance
-					Database=$Hanadb
+					Database=$defaultdb
 					CollectorType="Performance"
 					PerfObject="ServiceMemory"
 					PerfInstance=$row.PORT
@@ -2235,7 +2205,7 @@ $ex=$null
 
 					HOST=$row.HOST
 					Instance=$sapinstance
-					Database=$Hanadb
+					Database=$defaultdb
 					CollectorType="Performance"
 					PerfObject="ServiceMemory"
 					PerfInstance=$row.PORT
@@ -2246,7 +2216,7 @@ $ex=$null
 
 					HOST=$row.HOST
 					Instance=$sapinstance
-					Database=$Hanadb
+					Database=$defaultdb
 					CollectorType="Performance"
 					PerfObject="ServiceMemory"
 					PerfInstance=$row.PORT
@@ -2259,16 +2229,16 @@ $ex=$null
 #int ext connection count does not exit check version
 
 
-			$query="/* OMS */SELECT  HOST , PORT , to_varchar(time, 'YYYY-MM-DD HH24:MI') as TIME, ROUND(AVG(CPU),0)as PROCESS_CPU , ROUND(AVG(SYSTEM_CPU),0) as SYSTEM_CPU , 
+			$query="SELECT  HOST , PORT , to_varchar(time, 'YYYY-MM-DD HH24:MI') as TIME, ROUND(AVG(CPU),0)as PROCESS_CPU , ROUND(AVG(SYSTEM_CPU),0) as SYSTEM_CPU , 
 MAX(MEMORY_USED) as MEMORY_USED , MAX(MEMORY_ALLOCATION_LIMIT) as MEMORY_ALLOCATION_LIMIT , SUM(HANDLE_COUNT) as HANDLE_COUNT , 
 ROUND(AVG(PING_TIME),0) as PING_TIME, MAX(SWAP_IN) as SWAP_IN ,SUM(CONNECTION_COUNT) as CONNECTION_COUNT, SUM(TRANSACTION_COUNT)  as TRANSACTION_COUNT,  SUM(BLOCKED_TRANSACTION_COUNT) as BLOCKED_TRANSACTION_COUNT , SUM(STATEMENT_COUNT) as STATEMENT_COUNT
 from SYS.M_LOAD_HISTORY_SERVICE 
-WHERE TIME > add_seconds('"+$currentruntime+"',-$timespan)
+WHERE TIME > add_seconds(now(),-$($freq*60))
 Group by  HOST , PORT,to_varchar(time, 'YYYY-MM-DD HH24:MI')"
 
 #double check and remove seconday CPU
 			$sqcondcpu="SELECT  Time,sum(CPU) from SYS.M_LOAD_HISTORY_SERVICE 
-WHERE TIME > add_seconds('"+$currentruntime+"',-$timespan)
+WHERE TIME > add_seconds(now(),-$($freq*60))
 group by Host,Time
 order by Time desc"
 			$cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
@@ -2294,7 +2264,7 @@ $ex=$null
 
 					HOST=$row.HOST
 					Instance=$sapinstance
-					Database=$Hanadb
+					Database=$defaultdb
 					SYS_TIMESTAMP=([datetime]$row.TIME).addseconds([int]$utcdiff*(-1))
 					CollectorType="Performance"
 					PerfObject="Service"
@@ -2306,7 +2276,7 @@ $ex=$null
 
 					HOST=$row.HOST
 					Instance=$sapinstance
-					Database=$Hanadb
+					Database=$defaultdb
 					SYS_TIMESTAMP=([datetime]$row.TIME).addseconds([int]$utcdiff*(-1))
 					CollectorType="Performance"
 					PerfObject="Service"
@@ -2318,7 +2288,7 @@ $ex=$null
 
 					HOST=$row.HOST
 					Instance=$sapinstance
-					Database=$Hanadb
+					Database=$defaultdb
 					SYS_TIMESTAMP=([datetime]$row.TIME).addseconds([int]$utcdiff*(-1))
 					CollectorType="Performance"
 					PerfObject="Service"
@@ -2330,7 +2300,7 @@ $ex=$null
 
 					HOST=$row.HOST
 					Instance=$sapinstance
-					Database=$Hanadb
+					Database=$defaultdb
 					SYS_TIMESTAMP=([datetime]$row.TIME).addseconds([int]$utcdiff*(-1))
 					CollectorType="Performance"
 					PerfObject="Service"
@@ -2342,7 +2312,7 @@ $ex=$null
 
 					HOST=$row.HOST
 					Instance=$sapinstance
-					Database=$Hanadb
+					Database=$defaultdb
 					SYS_TIMESTAMP=([datetime]$row.TIME).addseconds([int]$utcdiff*(-1))
 					CollectorType="Performance"
 					PerfObject="Service"
@@ -2354,7 +2324,7 @@ $ex=$null
 
 					HOST=$row.HOST
 					Instance=$sapinstance
-					Database=$Hanadb
+					Database=$defaultdb
 					SYS_TIMESTAMP=([datetime]$row.TIME).addseconds([int]$utcdiff*(-1))
 					CollectorType="Performance"
 					PerfObject="Service"
@@ -2366,7 +2336,7 @@ $ex=$null
 
 					HOST=$row.HOST
 					Instance=$sapinstance
-					Database=$Hanadb
+					Database=$defaultdb
 					SYS_TIMESTAMP=([datetime]$row.TIME).addseconds([int]$utcdiff*(-1))
 					CollectorType="Performance"
                     Category='LoadHistory'
@@ -2379,7 +2349,7 @@ $ex=$null
 
 					HOST=$row.HOST
 					Instance=$sapinstance
-					Database=$Hanadb
+					Database=$defaultdb
 					SYS_TIMESTAMP=([datetime]$row.TIME).addseconds([int]$utcdiff*(-1))
 					CollectorType="Performance"
 					PerfObject="Service"
@@ -2391,7 +2361,7 @@ $ex=$null
 
 					HOST=$row.HOST
 					Instance=$sapinstance
-					Database=$Hanadb
+					Database=$defaultdb
 					SYS_TIMESTAMP=([datetime]$row.TIME).addseconds([int]$utcdiff*(-1))
 					CollectorType="Performance"
 					PerfObject="Service"
@@ -2403,7 +2373,7 @@ $ex=$null
 
 					HOST=$row.HOST
 					Instance=$sapinstance
-					Database=$Hanadb
+					Database=$defaultdb
 					SYS_TIMESTAMP=([datetime]$row.TIME).addseconds([int]$utcdiff*(-1))
 					CollectorType="Performance"
 					PerfObject="Service"
@@ -2416,7 +2386,7 @@ $ex=$null
 
 					HOST=$row.HOST
 					Instance=$sapinstance
-					Database=$Hanadb
+					Database=$defaultdb
 					SYS_TIMESTAMP=([datetime]$row.TIME).addseconds([int]$utcdiff*(-1))
 					CollectorType="Performance"
 					PerfObject="Service"
@@ -2429,7 +2399,7 @@ $ex=$null
 
 					HOST=$row.HOST
 					Instance=$sapinstance
-					Database=$Hanadb
+					Database=$defaultdb
 					SYS_TIMESTAMP=([datetime]$row.TIME).addseconds([int]$utcdiff*(-1))
 					CollectorType="Performance"
 					PerfObject="Service"
@@ -2442,7 +2412,7 @@ $ex=$null
 
 					HOST=$row.HOST
 					Instance=$sapinstance
-					Database=$Hanadb
+					Database=$defaultdb
 					SYS_TIMESTAMP=([datetime]$row.TIME).addseconds([int]$utcdiff*(-1))
 					CollectorType="Performance"
 					PerfObject="Service"
@@ -2454,7 +2424,7 @@ $ex=$null
 
 					HOST=$row.HOST
 					Instance=$sapinstance
-					Database=$Hanadb
+					Database=$defaultdb
 					SYS_TIMESTAMP=([datetime]$row.TIME).addseconds([int]$utcdiff*(-1))
 					CollectorType="Performance"
 					PerfObject="Service"
@@ -2468,7 +2438,7 @@ $ex=$null
 
 					HOST=$row.HOST
 					Instance=$sapinstance
-					Database=$Hanadb
+					Database=$defaultdb
 					SYS_TIMESTAMP=([datetime]$row.TIME).addseconds([int]$utcdiff*(-1))
 					CollectorType="Performance"
 					PerfObject="Service"
@@ -2480,7 +2450,7 @@ $ex=$null
 
 					HOST=$row.HOST
 					Instance=$sapinstance
-					Database=$Hanadb
+					Database=$defaultdb
 					SYS_TIMESTAMP=([datetime]$row.TIME).addseconds([int]$utcdiff*(-1))
 					CollectorType="Performance"
 					PerfObject="Service"
@@ -2492,7 +2462,7 @@ $ex=$null
 
 					HOST=$row.HOST
 					Instance=$sapinstance
-					Database=$Hanadb
+					Database=$defaultdb
 					SYS_TIMESTAMP=([datetime]$row.TIME).addseconds([int]$utcdiff*(-1))
 					CollectorType="Performance"
 					PerfObject="Service"
@@ -2504,14 +2474,14 @@ $ex=$null
 			$Omsperfupload+=,$Resultsperf
 
 
-			$query="/* OMS */SELECT  HOST,to_varchar(time, 'YYYY-MM-DD HH24:MI') as TIME, ROUND(AVG(CPU),0)as CPU_Total ,
+			$query="SELECT  HOST,to_varchar(time, 'YYYY-MM-DD HH24:MI') as TIME, ROUND(AVG(CPU),0)as CPU_Total ,
 ROUND(AVG(Network_IN)/1024/1024,2)as Network_IN_MB,ROUND(AVG(Network_OUT)/1024/1024,2) as Network_OUT_MB,
 MAX(MEMORY_RESIDENT)/1024/1024/1024 as ResidentGB,MAX(MEMORY_TOTAL_RESIDENT/1024/1024/1024 )as TotalResidentGB
 ,MAX(MEMORY_USED/1024/1024/1024) as UsedMemoryGB
 ,MAX(MEMORY_RESIDENT-MEMORY_TOTAL_RESIDENT)/1024/1024/1024 as Database_ResidentGB
 ,MAX(MEMORY_ALLOCATION_LIMIT)/1024/1024/1024 as AllocationLimitGB
 from SYS.M_LOAD_HISTORY_HOST
-WHERE TIME > add_seconds('"+$currentruntime+"',-$timespan)
+WHERE TIME > add_seconds(now(),-$($freq*60))
 Group by  HOST ,to_varchar(time, 'YYYY-MM-DD HH24:MI')"
 			$cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
 			$ds = New-Object system.Data.DataSet ;
@@ -2541,7 +2511,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						SYS_TIMESTAMP=([datetime]$row.TIME).addseconds([int]$utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Host"
@@ -2553,7 +2523,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						SYS_TIMESTAMP=([datetime]$row.TIME).addseconds([int]$utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Host"
@@ -2565,7 +2535,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						SYS_TIMESTAMP=([datetime]$row.TIME).addseconds([int]$utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Host"
@@ -2577,7 +2547,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						SYS_TIMESTAMP=([datetime]$row.TIME).addseconds([int]$utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Host"
@@ -2591,7 +2561,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						SYS_TIMESTAMP=([datetime]$row.TIME).addseconds([int]$utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Host"
@@ -2603,7 +2573,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						SYS_TIMESTAMP=([datetime]$row.TIME).addseconds([int]$utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Host"
@@ -2616,7 +2586,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						SYS_TIMESTAMP=([datetime]$row.TIME).addseconds([int]$utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Host"
@@ -2629,7 +2599,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						SYS_TIMESTAMP=([datetime]$row.TIME).addseconds([int]$utcdiff*(-1))
 						CollectorType="Performance"
 						PerfObject="Host"
@@ -2818,7 +2788,7 @@ $ex=$null
 						HOST=$row.Host
 						Instance=$sapinstance
 						CollectorType="Performance"
-						Database=$Hanadb
+						Database=$defaultdb
 						PerfObject="Compression"
 						PerfCounter="RECORD_COUNT"
 						PerfInstance=$row.Schema_NAme
@@ -2829,7 +2799,7 @@ $ex=$null
 						HOST=$row.Host
 						Instance=$sapinstance
 						CollectorType="Performance"
-						Database=$Hanadb
+						Database=$defaultdb
 						PerfObject="Compression"
 						PerfCounter="COMPRESSED_SIZE"
 						PerfInstance=$row.Schema_NAme
@@ -2839,7 +2809,7 @@ $ex=$null
 					$Resultsperf+= New-Object PSObject -Property @{
 						HOST=$row.Host
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						CollectorType="Performance"
 						PerfObject="Compression"
 						PerfCounter="UNCOMPRESSED_SIZE"
@@ -2851,7 +2821,7 @@ $ex=$null
 						HOST=$row.Host
 						Instance=$sapinstance
 						CollectorType="Performance"
-						Database=$Hanadb
+						Database=$defaultdb
 						PerfObject="Compression"
 						PerfCounter="COMPRESSION_RATIO"
 						PerfInstance=$row.Schema_NAme
@@ -2862,7 +2832,7 @@ $ex=$null
 						HOST=$row.Host
 						Instance=$sapinstance
 						CollectorType="Performance"
-						Database=$Hanadb
+						Database=$defaultdb
 						PerfObject="Compression"
 						PerfCounter="COMPRESSION_PERCENTAGE"
 						PerfInstance=$row.Schema_NAme
@@ -2883,11 +2853,14 @@ $ex=$null
 
 			<#
 
-			Depreciated view  do not use this 
-			USe detail and total ststistics instead 
+			Double check viw IO_perf or io_total or M_VOLUME_IO_DETAILED_STATs   
+			time in micro seconds
 
+			SELECT HOST, PORT, TYPE, round(MAX_IO_BUFFER_SIZE / 1024, 3) “Maximum buffer size in KB”,    TRIGGER_ASYNC_WRITE_COUNT, AVG_TRIGGER_ASYNC_WRITE_TIME as “Avg Write Time in  Microsecond” from “PUBLIC”.”M_VOLUME_IO_DETAILED_STATISTICS” where type = ‘LOG’   and VOLUME_ID in (select VOLUME_ID from PUBLIC.M_VOLUMES where SERVICE_NAME = ‘indexserver’ and  AVG_TRIGGER_ASYNC_WRITE_TIME > 0)
 
-			$query="/* OMS */SELECT * FROM SYS.M_volume_io_performance_statistics"
+#>
+
+			$query="SELECT * FROM SYS.M_volume_io_performance_statistics"
 			$cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
 			$ds = New-Object system.Data.DataSet ;
 $ex=$null
@@ -2918,7 +2891,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						
 						CollectorType="Performance"
 						PerfObject="Volumes"
@@ -2930,7 +2903,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						
 						CollectorType="Performance"
 						PerfObject="Volumes"
@@ -2942,7 +2915,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						
 						CollectorType="Performance"
 						PerfObject="Volumes"
@@ -2954,7 +2927,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						
 						CollectorType="Performance"
 						PerfObject="Volumes"
@@ -2966,7 +2939,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						
 						CollectorType="Performance"
 						PerfObject="Volumes"
@@ -2978,7 +2951,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						
 						CollectorType="Performance"
 						PerfObject="Volumes"
@@ -2990,7 +2963,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						
 						CollectorType="Performance"
 						PerfObject="Volumes"
@@ -3002,7 +2975,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						
 						CollectorType="Performance"
 						PerfObject="Volumes"
@@ -3014,7 +2987,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						
 						CollectorType="Performance"
 						PerfObject="Volumes"
@@ -3026,7 +2999,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						
 						CollectorType="Performance"
 						PerfObject="Volumes"
@@ -3038,7 +3011,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						
 						CollectorType="Performance"
 						PerfObject="Volumes"
@@ -3050,7 +3023,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						
 						CollectorType="Performance"
 						PerfObject="Volumes"
@@ -3063,7 +3036,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						
 						CollectorType="Performance"
 						PerfObject="Volumes"
@@ -3075,7 +3048,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						
 						CollectorType="Performance"
 						PerfObject="Volumes"
@@ -3087,7 +3060,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						
 						CollectorType="Performance"
 						PerfObject="Volumes"
@@ -3100,7 +3073,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						
 						CollectorType="Performance"
 						PerfObject="Volumes"
@@ -3112,7 +3085,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						
 						CollectorType="Performance"
 						PerfObject="Volumes"
@@ -3125,7 +3098,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						
 						CollectorType="Performance"
 						PerfObject="Volumes"
@@ -3137,7 +3110,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						
 						CollectorType="Performance"
 						PerfObject="Volumes"
@@ -3149,7 +3122,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						
 						CollectorType="Performance"
 						PerfObject="Volumes"
@@ -3162,7 +3135,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						
 						CollectorType="Performance"
 						PerfObject="Volumes"
@@ -3176,7 +3149,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						
 						CollectorType="Performance"
 						PerfObject="Volumes"
@@ -3188,7 +3161,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						
 						CollectorType="Performance"
 						PerfObject="Volumes"
@@ -3200,7 +3173,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						
 						CollectorType="Performance"
 						PerfObject="Volumes"
@@ -3213,7 +3186,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						
 						CollectorType="Performance"
 						PerfObject="Volumes"
@@ -3225,7 +3198,7 @@ $ex=$null
 
 						HOST=$row.HOST
 						Instance=$sapinstance
-						Database=$Hanadb
+						Database=$defaultdb
 						
 						CollectorType="Performance"
 						PerfObject="Volumes"
@@ -3238,159 +3211,9 @@ $ex=$null
 				$Omsperfupload+=,$Resultsperf
 			}
 
-			#>
-
-			#volume IO Latency
-
-				    #volume throughput
-					$query="/* OMS */select host, port ,type,
-					round(max_io_buffer_size / 1024,0) `"MaxBufferinKB`",
-					trigger_async_write_count,
-					avg_trigger_async_write_time as `"AvgTriggerAsyncWriteMicroS`",
-					write_count, avg_write_time as `"AvgWriteTimeMicros`"
-					,trigger_async_read_count,
-					avg_trigger_async_read_time as `"AvgTriggerAsyncReadicroS`",
-					read_count, avg_read_time as `"AvgReadTimeMicros`"
-					
-					from `"PUBLIC`".`"M_VOLUME_IO_DETAILED_STATISTICS_RESET`"
-					where  volume_id in (select volume_id from m_volumes where service_name = 'indexserver')
-					and (write_count <> 0 or read_count <> 0  or avg_trigger_async_write_time <> 0 or avg_trigger_async_read_time <> 0)
-					"
-								   
-				   $cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-				   $ds = New-Object system.Data.DataSet ;
-				   $ex=$null
-				   Try{
-					   $cmd.fill($ds)
-					   }
-				   Catch
-				   {
-					   $Ex=$_.Exception.MEssage
-				   }
-							
-				   IF ($ds.Tables[0].rows)
-				   {
-	   
-					   Write-Output '  CollectorType="Performance" - Category="Volume" - Subcategory="IOStat" '
-					   foreach ($row in $ds.Tables[0].rows)
-					   {
-
-								$Resultsperf+= New-Object PSObject -Property @{
-			
-									HOST=$row.HOST
-									Instance=$sapinstance
-									Database=$Hanadb
-									SERVICE_NAME="indexserver"
-									CollectorType="Performance"
-									PerfObject="Volumes"
-									PerfCounter="TRIGGER_ASYNC_WRITE_COUNT"
-									PerfValue=[double]$row.TRIGGER_ASYNC_WRITE_COUNT
-									PerfInstance=$row.Type+"|"+$row.MaxBufferinKB+"KB"
-									TYPE=$row.TYPE 
-								}
-								$Resultsperf+= New-Object PSObject -Property @{
-			
-									HOST=$row.HOST
-									Instance=$sapinstance
-									Database=$Hanadb
-									SERVICE_NAME="indexserver"
-									CollectorType="Performance"
-									PerfObject="Volumes"
-									PerfCounter="AVG_TRIGGER_ASYNC_WRITE_MICROS"
-									PerfValue=[double]$row.AvgTriggerAsyncWriteMicroS 
-									PerfInstance=$row.Type+"|"+$row.MaxBufferinKB+"KB"
-									TYPE=$row.TYPE 
-								}
-								$Resultsperf+= New-Object PSObject -Property @{
-			
-									HOST=$row.HOST
-									Instance=$sapinstance
-									Database=$Hanadb
-									SERVICE_NAME="indexserver"
-									CollectorType="Performance"
-									PerfObject="Volumes"
-									PerfCounter="WRITE_COUNT"
-									PerfValue=[double]$row.WRITE_COUNT
-									PerfInstance=$row.Type+"|"+$row.MaxBufferinKB+"KB"
-									TYPE=$row.TYPE 
-								}
-								
-								$Resultsperf+= New-Object PSObject -Property @{
-			
-									HOST=$row.HOST
-									Instance=$sapinstance
-									Database=$Hanadb
-									SERVICE_NAME="indexserver"
-									CollectorType="Performance"
-									PerfObject="Volumes"
-									PerfCounter="AVG_WRITE_TIME_MICROS"
-									PerfValue=[double]$row.AvgWriteTimeMicros
-									PerfInstance=$row.Type+"|"+$row.MaxBufferinKB+"KB"
-									TYPE=$row.TYPE 
-								}
-
-								#read
-								$Resultsperf+= New-Object PSObject -Property @{
-			
-									HOST=$row.HOST
-									Instance=$sapinstance
-									Database=$Hanadb
-									SERVICE_NAME="indexserver"
-									CollectorType="Performance"
-									PerfObject="Volumes"
-									PerfCounter="TRIGGER_ASYNC_READ_COUNT"
-									PerfValue=[double]$row.TRIGGER_ASYNC_READ_COUNT
-									PerfInstance=$row.Type+"|"+$row.MaxBufferinKB+"KB"
-									TYPE=$row.TYPE 
-								}
-								$Resultsperf+= New-Object PSObject -Property @{
-			
-								HOST=$row.HOST
-								Instance=$sapinstance
-								Database=$Hanadb
-								SERVICE_NAME="indexserver"
-								CollectorType="Performance"
-								PerfObject="Volumes"
-								PerfCounter="AVG_TRIGGER_ASYNC_READ_MICROS"
-								PerfValue=[double]$row.AvgTriggerAsyncReadMicroS 
-								PerfInstance=$row.Type+"|"+$row.MaxBufferinKB+"KB"
-								TYPE=$row.TYPE 
-								}
-								$Resultsperf+= New-Object PSObject -Property @{
-				
-									HOST=$row.HOST
-									Instance=$sapinstance
-									Database=$Hanadb
-									SERVICE_NAME="indexserver"
-									CollectorType="Performance"
-									PerfObject="Volumes"
-									PerfCounter="READ_COUNT"
-									PerfValue=[double]$row.READ_COUNT
-									PerfInstance=$row.Type+"|"+$row.MaxBufferinKB+"KB"
-									TYPE=$row.TYPE 
-								}
-								
-								$Resultsperf+= New-Object PSObject -Property @{
-				
-									HOST=$row.HOST
-									Instance=$sapinstance
-									Database=$Hanadb
-									SERVICE_NAME="indexserver"
-									CollectorType="Performance"
-									PerfObject="Volumes"
-									PerfCounter="AVG_READ_TIME_MICROS"
-									PerfValue=[double]$row.AvgReadTimeMicros
-									PerfInstance=$row.Type+"|"+$row.MaxBufferinKB+"KB"
-									TYPE=$row.TYPE 
-								}			
-	   									 
-					   }
-	   
-					   $Omsperfupload+=,$Resultsperf
-				   }
 
 			    #volume throughput
-				$query="/* OMS */select v.host, v.port, v.service_name, s.type,
+				$query="select v.host, v.port, v.service_name, s.type,
 				round(s.total_read_size / 1024 / 1024, 3) as `"ReadsMB`",
 				round(s.total_read_size / case s.total_read_time when 0 then -1 else
 			   s.total_read_time end, 3) as `"ReadMBpersec`",
@@ -3433,7 +3256,7 @@ $ex=$null
 			   
 									   HOST=$row.HOST
 									   Instance=$sapinstance
-									   Database=$Hanadb
+									   Database=$defaultdb
 									   SERVICE_NAME=$row.SERVICE_NAME
 									   TYPE=$row.TYPE 
 									   CollectorType="Performance"
@@ -3446,7 +3269,7 @@ $ex=$null
 			   
 									   HOST=$row.HOST
 									   Instance=$sapinstance
-									   Database=$Hanadb
+									   Database=$defaultdb
 									   SERVICE_NAME=$row.SERVICE_NAME
 									   TYPE=$row.TYPE 
 									   CollectorType="Performance"
@@ -3463,13 +3286,13 @@ $ex=$null
 						   }
 			   #Save Point Duration
 			   
-			   $query="/* OMS */select start_time, volume_id,
+			   $query="select start_time, volume_id,
 				round(duration / 1000000) as `"DurationSec`",
 				round(critical_phase_duration / 1000000) as `"CriticalSeconds`",
 				round(total_size / 1024 / 1024) as `"SizeMB`",
 				round(total_size / duration) as `"Appro. MB/sec`",
 				round (flushed_rowstore_size / 1024 / 1024) as `"Row Store Part MB`"
-			   from m_savepoints where start_time  > add_seconds('"+$currentruntime+"',-$timespan);"
+			   from m_savepoints where start_time  > add_seconds(now(),-$($freq*60));"
 			   
 			   
 			   $cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
@@ -3498,7 +3321,7 @@ $ex=$null
 			   
 									   HOST=$row.HOST
 									   Instance=$sapinstance
-									   Database=$Hanadb
+									   Database=$defaultdb
 									   TIMESTamp=$row.START_TIME
 									   VOLUME_ID =$row.VOLUME_ID 
 									   CollectorType="Performance"
@@ -3511,7 +3334,7 @@ $ex=$null
 			   
 									   HOST=$row.HOST
 									   Instance=$sapinstance
-									   Database=$Hanadb
+									   Database=$defaultdb
 									   TIMESTamp=$row.START_TIME
 									   VOLUME_ID =$row.VOLUME_ID 
 									   CollectorType="Performance"
@@ -3524,7 +3347,7 @@ $ex=$null
 			   
 									   HOST=$row.HOST
 									   Instance=$sapinstance
-									   Database=$Hanadb
+									   Database=$defaultdb
 									   TIMESTamp=$row.START_TIME
 									   VOLUME_ID =$row.VOLUME_ID 
 									   CollectorType="Performance"
@@ -3541,7 +3364,7 @@ $ex=$null
 						   }
 			   
 
-			$query="/* OMS */Select HOST,
+			$query='Select HOST,
 PORT,
 CONNECTION_ID,
 TRANSACTION_ID,
@@ -3563,7 +3386,7 @@ ALLOC_MEM_SIZE_ROWSTORE,
 ALLOC_MEM_SIZE_COLSTORE,
 MEMORY_SIZE,
 REUSED_MEMORY_SIZE,
-CPU_TIME FROM PUBLIC.M_EXPENSIVE_STATEMENTS WHERE  START_TIME> add_seconds('"+$currentruntime+"',-$timespan)"
+CPU_TIME FROM PUBLIC.M_EXPENSIVE_STATEMENTS WHERE ERROR_CODE >0  and START_TIME> add_seconds(now(),-$($freq*60))'
 
 			$cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
 			$ds = New-Object system.Data.DataSet ;
@@ -3593,7 +3416,7 @@ $ex=$null
 						Instance=$sapinstance
 						CollectorType="Inventory"
 						Category="ExpensiveStatements"
-						Database=$Hanadb
+						Database=$defaultdb
 						PORT=$row.Port
 						CONNECTION_ID=$row.CONNECTION_ID
 						TRANSACTION_ID=$row.TRANSACTION_ID
@@ -3626,99 +3449,468 @@ $ex=$null
 			{
 
 				Write-Output " Query Collection Enabled"
-				
+				$Resultsperf=$null
+				$Resultsperf=@()
 
-			$query="/* OMS */SELECT 
-			HOST,
-			PORT,
-			SCHEMA_NAME,
-			STATEMENT_HASH,
-			STATEMENT_STRING,
-			USER_NAME,
-			ACCESSED_TABLE_NAMES,
-			TABLE_TYPES STORE,
-			PLAN_SHARING_TYPE SHARING_TYPE,
-			LAST_EXECUTION_TIMESTAMP,
-			IS_DISTRIBUTED_EXECUTION,
-			IS_INTERNAL,PLAN_ID,
-			TABLE_LOCATIONS TABLE_LOCATION,
-			EXECUTION_COUNT,TOTAL_EXECUTION_TIME,AVG_EXECUTION_TIME,
-			TOTAL_RESULT_RECORD_COUNT,
-			TOTAL_EXECUTION_TIME + TOTAL_PREPARATION_TIME TOTAL_ELAPSED_TIME,
-			TOTAL_PREPARATION_TIME,
-			TOTAL_LOCK_WAIT_DURATION,
-			TOTAL_LOCK_WAIT_COUNT,
-			TOTAL_SERVICE_NETWORK_REQUEST_DURATION,
-			TOTAL_CALLED_THREAD_COUNT, 
-			TOTAL_EXECUTION_MEMORY_SIZE
+				$query="Select * from M_SQL_PLAN_CACHE  where AVG_EXECUTION_TIME > 0 AND LAST_EXECUTION_TIMESTAMP >  add_seconds(now(),-$($freq*60))"
+# where LAST_EXECUTION_TIMESTAMP >  add_seconds(now(),-900)
+				$cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+				$ds = New-Object system.Data.DataSet ;
+$ex=$null
+				Try{
+					$cmd.fill($ds)
+				}
+				Catch
+				{
+					$Ex=$_.Exception.MEssage
+                    write-warning  $ex 
+				}
+				 
 
-			FROM
-			M_SQL_PLAN_CACHE where LAST_EXECUTION_TIMESTAMP >  add_seconds('"+$currentruntime+"',-$timespan)"
+				$Resultsperf=$null
+				$Resultsperf=@(); 
 
+				foreach ($row in $ds.Tables[0].rows)
+				{
+					
+					
+
+					$Resultsperf+= New-Object PSObject -Property @{
+
+						HOST=$row.HOST
+						Instance=$sapinstance
+						Database=$defaultdb
+						Schema_Name=$row.SCHEMA_NAME
+						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addseconds([int]$utcdiff*(-1))
+						CollectorType="Performance"
+						PerfObject="Query"
+						PerfInstance=$row.STATEMENT_HASH
+						PerfCounter="TOTAL_TABLE_LOAD_TIME_DURING_PREPARATION"
+						PerfValue=$row.TOTAL_TABLE_LOAD_TIME_DURING_PREPARATION/1000000 
+					}
+					$Resultsperf+= New-Object PSObject -Property @{
+
+						HOST=$row.HOST
+						Instance=$sapinstance
+						Database=$defaultdb
+						Schema_Name=$row.SCHEMA_NAME
+						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addseconds([int]$utcdiff*(-1))
+						CollectorType="Performance"
+						PerfObject="Query"
+						PerfInstance=$row.STATEMENT_HASH
+						PerfCounter="AVG_TABLE_LOAD_TIME_DURING_PREPARATION"
+						PerfValue=$row.AVG_TABLE_LOAD_TIME_DURING_PREPARATION/1000000 
+					}
+					$Resultsperf+= New-Object PSObject -Property @{
+
+						HOST=$row.HOST
+						Instance=$sapinstance
+						Database=$defaultdb
+						Schema_Name=$row.SCHEMA_NAME
+						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addseconds([int]$utcdiff*(-1))
+						CollectorType="Performance"
+						PerfObject="Query"
+						PerfInstance=$row.STATEMENT_HASH
+						PerfCounter="LAST_EXECUTION_TIMESTAMP"
+						PerfValue=$row.LAST_EXECUTION_TIMESTAMP
+					}
+					$Resultsperf+= New-Object PSObject -Property @{
+
+						HOST=$row.HOST
+						Instance=$sapinstance
+						Database=$defaultdb
+						Schema_Name=$row.SCHEMA_NAME
+						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addseconds([int]$utcdiff*(-1))
+						CollectorType="Performance"
+						PerfObject="Query"
+						PerfInstance=$row.STATEMENT_HASH
+						PerfCounter="TOTAL_LOCK_WAIT_COUNT"
+						PerfValue=$row.TOTAL_LOCK_WAIT_COUNT
+					}
+
+
+					$Resultsperf+= New-Object PSObject -Property @{
+
+						HOST=$row.HOST
+						Instance=$sapinstance
+						Database=$defaultdb
+						Schema_Name=$row.SCHEMA_NAME
+						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addseconds([int]$utcdiff*(-1))
+						CollectorType="Performance"
+						PerfObject="Query"
+						PerfInstance=$row.STATEMENT_HASH
+						PerfCounter="TOTAL_PREPARATION_TIME"
+						PerfValue=$row.TOTAL_PREPARATION_TIME/1000000 
+					}
+					$Resultsperf+= New-Object PSObject -Property @{
+
+						HOST=$row.HOST
+						Instance=$sapinstance
+						Database=$defaultdb
+						Schema_Name=$row.SCHEMA_NAME
+						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addseconds([int]$utcdiff*(-1))
+						CollectorType="Performance"
+						PerfObject="Query"
+						PerfInstance=$row.STATEMENT_HASH
+						PerfCounter="AVG_EXECUTION_MEMORY_SIZE"
+						PerfValue=$row.AVG_EXECUTION_MEMORY_SIZE
+					}
+					$Resultsperf+= New-Object PSObject -Property @{
+
+						HOST=$row.HOST
+						Instance=$sapinstance
+						Database=$defaultdb
+						Schema_Name=$row.SCHEMA_NAME
+						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addseconds([int]$utcdiff*(-1))
+						CollectorType="Performance"
+						PerfObject="Query"
+						PerfInstance=$row.STATEMENT_HASH
+						PerfCounter="EXECUTION_COUNT"
+						PerfValue=$row.EXECUTION_COUNT
+					}
+					$Resultsperf+= New-Object PSObject -Property @{
+
+						HOST=$row.HOST
+						Instance=$sapinstance
+						Database=$defaultdb
+						Schema_Name=$row.SCHEMA_NAME
+						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addseconds([int]$utcdiff*(-1))
+						CollectorType="Performance"
+						PerfObject="Query"
+						PerfInstance=$row.STATEMENT_HASH
+						PerfCounter="REFERENCE_COUNT"
+						PerfValue=$row.REFERENCE_COUNT
+					}
+					$Resultsperf+= New-Object PSObject -Property @{
+
+						HOST=$row.HOST
+						Instance=$sapinstance
+						Database=$defaultdb
+						Schema_Name=$row.SCHEMA_NAME
+						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addseconds([int]$utcdiff*(-1))
+						CollectorType="Inventory"
+						Category="Statement"
+						STATEMENT_HASH=$row.STATEMENT_HASH
+						STATEMENT_STRING=$row.STATEMENT_STRING
+						USER_NAME=$row.USER_NAME
+						IS_INTERNAL=$row.IS_INTERNAL
+						SESSION_USER_NAME=$row.SESSION_USER_NAME
+						IS_PINNED_PLAN=$row.IS_PINNED_PLAN
+						IS_VALID=$row.IS_VALID
+						VOLUME_ID=$row.VOLUME_ID
+						IS_DISTRIBUTED_EXECUTION=$row.IS_DISTRIBUTED_EXECUTION
+						PLAN_SHARING_TYPE=$row.PLAN_SHARING_TYPE
+
+					}
+					$Resultsperf+= New-Object PSObject -Property @{
+
+						HOST=$row.HOST
+						Instance=$sapinstance
+						Database=$defaultdb
+						Schema_Name=$row.SCHEMA_NAME
+						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addseconds([int]$utcdiff*(-1))
+						CollectorType="Performance"
+						PerfObject="Query"
+						PerfInstance=$row.STATEMENT_HASH
+						PerfCounter="TOTAL_LOCK_WAIT_DURATION"
+						PerfValue=$row.TOTAL_LOCK_WAIT_DURATION/1000000 
+					}
+
+
+					$Resultsperf+= New-Object PSObject -Property @{
+
+						HOST=$row.HOST
+						Instance=$sapinstance
+						Database=$defaultdb
+						Schema_Name=$row.SCHEMA_NAME
+						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addseconds([int]$utcdiff*(-1))
+						CollectorType="Performance"
+						PerfObject="Query"
+						PerfInstance=$row.STATEMENT_HASH
+						PerfCounter="EXECUTION_COUNT_BY_ROUTING"
+						PerfValue=$row.EXECUTION_COUNT_BY_ROUTING
+					}
+
+
+					$Resultsperf+= New-Object PSObject -Property @{
+
+						HOST=$row.HOST
+						Instance=$sapinstance
+						Database=$defaultdb
+						Schema_Name=$row.SCHEMA_NAME
+						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addseconds([int]$utcdiff*(-1))
+						CollectorType="Performance"
+						PerfObject="Query"
+						PerfInstance=$row.STATEMENT_HASH
+						PerfCounter="TOTAL_EXECUTION_MEMORY_SIZE"
+						PerfValue=$row.TOTAL_EXECUTION_MEMORY_SIZE
+					}
+
+					$Resultsperf+= New-Object PSObject -Property @{
+
+						HOST=$row.HOST
+						Instance=$sapinstance
+						Database=$defaultdb
+						Schema_Name=$row.SCHEMA_NAME
+						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addseconds([int]$utcdiff*(-1))
+						CollectorType="Performance"
+						PerfObject="Query"
+						PerfInstance=$row.STATEMENT_HASH
+						PerfCounter="AVG_CURSOR_DURATION"
+						PerfValue=$row.AVG_CURSOR_DURATION/1000000
+					}
+
+					
+					
+					$Resultsperf+= New-Object PSObject -Property @{
+
+						HOST=$row.HOST
+						Instance=$sapinstance
+						Database=$defaultdb
+						Schema_Name=$row.SCHEMA_NAME
+						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addseconds([int]$utcdiff*(-1))
+						CollectorType="Performance"
+						PerfObject="Query"
+						PerfInstance=$row.STATEMENT_HASH
+						PerfCounter="AVG_EXECUTION_FETCH_TIME"
+						PerfValue=$row.AVG_EXECUTION_FETCH_TIME/1000000
+					}
+					$Resultsperf+= New-Object PSObject -Property @{
+
+						HOST=$row.HOST
+						Instance=$sapinstance
+						Database=$defaultdb
+						Schema_Name=$row.SCHEMA_NAME
+						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addseconds([int]$utcdiff*(-1))
+						CollectorType="Performance"
+						PerfObject="Query"
+						PerfInstance=$row.STATEMENT_HASH
+						PerfCounter="TOTAL_EXECUTION_TIME"
+						PerfValue=$row.TOTAL_EXECUTION_TIME/1000000
+					}
+					$Resultsperf+= New-Object PSObject -Property @{
+
+						HOST=$row.HOST
+						Instance=$sapinstance
+						Database=$defaultdb
+						Schema_Name=$row.SCHEMA_NAME
+						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addseconds([int]$utcdiff*(-1))
+						CollectorType="Performance"
+						PerfObject="Query"
+						PerfInstance=$row.STATEMENT_HASH
+						PerfCounter="AVG_EXECUTION_CLOSE_TIME"
+						PerfValue=$row.AVG_EXECUTION_CLOSE_TIME/1000000
+					}
+
+					
+					$Resultsperf+= New-Object PSObject -Property @{
+
+						HOST=$row.HOST
+						Instance=$sapinstance
+						Database=$defaultdb
+						Schema_Name=$row.SCHEMA_NAME
+						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addseconds([int]$utcdiff*(-1))
+						CollectorType="Performance"
+						PerfObject="Query"
+						PerfInstance=$row.STATEMENT_HASH
+						PerfCounter="PREPARATION_COUNT"
+						PerfValue=$row.PREPARATION_COUNT
+					}
+					$Resultsperf+= New-Object PSObject -Property @{
+
+						HOST=$row.HOST
+						Instance=$sapinstance
+						Database=$defaultdb
+						Schema_Name=$row.SCHEMA_NAME
+						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addseconds([int]$utcdiff*(-1))
+						CollectorType="Performance"
+						PerfObject="Query"
+						PerfInstance=$row.STATEMENT_HASH
+						PerfCounter="AVG_EXECUTION_TIME"
+						PerfValue=$row.AVG_EXECUTION_TIME/1000000
+					}
+					$Resultsperf+= New-Object PSObject -Property @{
+
+						HOST=$row.HOST
+						Instance=$sapinstance
+						Database=$defaultdb
+						Schema_Name=$row.SCHEMA_NAME
+						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addseconds([int]$utcdiff*(-1))
+						CollectorType="Performance"
+						PerfObject="Query"
+						PerfInstance=$row.STATEMENT_HASH
+						PerfCounter="AVG_EXECUTION_OPEN_TIME"
+						PerfValue=$row.AVG_EXECUTION_OPEN_TIME/1000000
+					}
+
+					
+
+					$Resultsperf+= New-Object PSObject -Property @{
+
+						HOST=$row.HOST
+						Instance=$sapinstance
+						Database=$defaultdb
+						Schema_Name=$row.SCHEMA_NAME
+						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addseconds([int]$utcdiff*(-1))
+						CollectorType="Performance"
+						PerfObject="Query"
+						PerfInstance=$row.STATEMENT_HASH
+						PerfCounter="TOTAL_CURSOR_DURATION"
+						PerfValue=$row.TOTAL_CURSOR_DURATION/1000000
+					}
+					$Resultsperf+= New-Object PSObject -Property @{
+
+						HOST=$row.HOST
+						Instance=$sapinstance
+						Database=$defaultdb
+						Schema_Name=$row.SCHEMA_NAME
+						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addseconds([int]$utcdiff*(-1))
+						CollectorType="Performance"
+						PerfObject="Query"
+						PerfInstance=$row.STATEMENT_HASH
+						PerfCounter="AVG_SERVICE_NETWORK_REQUEST_DURATION"
+						PerfValue=$row.AVG_SERVICE_NETWORK_REQUEST_DURATION/1000000
+					}
+					$Resultsperf+= New-Object PSObject -Property @{
+
+						HOST=$row.HOST
+						Instance=$sapinstance
+						Database=$defaultdb
+						Schema_Name=$row.SCHEMA_NAME
+						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addseconds([int]$utcdiff*(-1))
+						CollectorType="Performance"
+						PerfObject="Query"
+						PerfInstance=$row.STATEMENT_HASH
+						PerfCounter="TOTAL_RESULT_RECORD_COUNT"
+						PerfValue=$row.TOTAL_RESULT_RECORD_COUNT
+					}
+
+					
+					
+					$Resultsperf+= New-Object PSObject -Property @{
+
+						HOST=$row.HOST
+						Instance=$sapinstance
+						Database=$defaultdb
+						Schema_Name=$row.SCHEMA_NAME
+						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addseconds([int]$utcdiff*(-1))
+						CollectorType="Performance"
+						PerfObject="Query"
+						PerfInstance=$row.STATEMENT_HASH
+						PerfCounter="PLAN_MEMORY_SIZE"
+						PerfValue=$row.PLAN_MEMORY_SIZE
+					}
+
+
+					
+					
+					$Resultsperf+= New-Object PSObject -Property @{
+
+						HOST=$row.HOST
+						Instance=$sapinstance
+						Database=$defaultdb
+						Schema_Name=$row.SCHEMA_NAME
+						SYS_TIMESTAMP=([datetime]$row.LAST_PREPARATION_TIMESTAMP).addseconds([int]$utcdiff*(-1))
+						CollectorType="Performance"
+						PerfObject="Query"
+						PerfInstance=$row.STATEMENT_HASH
+						PerfCounter="AVG_PREPARATION_TIME"
+						PerfValue=$row.AVG_PREPARATION_TIME/1000000
+					}
+				}
+				$Omsperfupload+=,$Resultsperf
+
+			}
+
+
+
+
+
+			$query="Select SUM(EXECUTION_COUNT) as EXECUTION_COUNT ,HOST from M_SQL_PLAN_CACHE  where  LAST_EXECUTION_TIMESTAMP >  add_seconds(now(),-900) group by HOST"
+# where LAST_EXECUTION_TIMESTAMP >  add_seconds(now(),-900)
 			$cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-					$ds = New-Object system.Data.DataSet ;
-			$ex=$null
-		  Try{
-			  $cmd.fill($ds)
-		  }
-		  Catch
-		  {
-			  $Ex=$_.Exception.MEssage
-			  write-warning  $ex 
-		  }
-		   
+			$ds = New-Object system.Data.DataSet ;
+$ex=$null
+			Try{
+				$cmd.fill($ds)|out-null
+			}
+			Catch
+			{
+				$Ex=$_.Exception.MEssage
+                write-warning  $ex 
+			}
+			 
 
-		  $Resultsinv=$null
-		  $Resultsinv=@(); 
+			$Resultsperf=$null
+			$Resultsperf=@(); 
 
-		  foreach ($row in $ds.Tables[0].rows)
-		  {
+			IF($ds.Tables[0].rows)
+			{
+				foreach ($row in $ds.Tables[0].rows)
+				{
+					$Resultsperf+= New-Object PSObject -Property @{
+						HOST=$row.HOST.ToLower()
+						Instance=$sapinstance
+						CollectorType="Performance"
+						Database=$defaultdb
+						PerfObject="Query"
+						PerfInstance=$row.HOST
+						PerfCounter="TOTAL_EXECUTION_COUNT"
+						PerfValue=$row.EXECUTION_COUNT     
 
-				  $Resultsinv+= New-Object PSObject -Property @{
-
-				  HOST=$row.HOST
-				  Instance=$sapinstance
-				  Database=$Hanadb
-				  PORT=$row.PORT
-				  Schema_Name=$row.SCHEMA_NAME
-				  SYS_TIMESTAMP=([datetime]$row.LAST_EXECUTION_TIMESTAMP).addseconds([int]$utcdiff*(-1))
-				  CollectorType="Inventory"
-				  Category="Statement"
-				  STATEMENT_HASH=$row.STATEMENT_HASH
-				  STATEMENT_STRING=$row.STATEMENT_STRING
-				  USER_NAME=$row.USER_NAME
-				  ACCESSED_TABLE_NAMES=$row.ACCESSED_TABLE_NAMES 
-				  STORE=$row.STORE
-				  SHARING_TYPE=$row.SHARING_TYPE
-				  LAST_EXECUTION_TIMESTAMP=$row.LAST_EXECUTION_TIMESTAMP
-				  IS_DISTRIBUTED_EXECUTION=$row.IS_DISTRIBUTED_EXECUTION 
-				  IS_INTERNAL =$row.IS_INTERNAL
-				  IS_PINNED_PLAN=$row.IS_PINNED_PLAN
-				  PLAN_ID=$row.PLAN_ID
-				  TABLE_LOCATION=$row.TABLE_LOCATION
-				  EXECUTION_COUNT=$row.EXECUTION_COUNT  
-				  TOTAL_EXECUTION_TIME=$row.TOTAL_EXECUTION_TIME
-				  AVG_EXECUTION_TIME=$row.AVG_EXECUTION_TIME
-				  TOTAL_RESULT_RECORD_COUNT=$row.TOTAL_RESULT_RECORD_COUNT
-				  TOTAL_ELAPSED_TIME=$row.TOTAL_ELAPSED_TIME
-				  TOTAL_PREPARATION_TIME =$row.TOTAL_PREPARATION_TIME
-				  TOTAL_LOCK_WAIT_DURATION=$row.TOTAL_LOCK_WAIT_DURATION
-				  TOTAL_LOCK_WAIT_COUNT=$row.TOTAL_LOCK_WAIT_COUNT
-				  TOTAL_SERVICE_NETWORK_REQUEST_DURATION =$row.TOTAL_SERVICE_NETWORK_REQUEST_DURATION
-				  TOTAL_CALLED_THREAD_COUNT=$row.TOTAL_CALLED_THREAD_COUNT
-				  TOTAL_EXECUTION_MEMORY_SIZE=$row.TOTAL_EXECUTION_MEMORY_SIZE                                   
-			   }
-		  }
-		  $Omsinvupload+=,$Resultsinv
-
-	}
+					}
+				}
+				$Omsperfupload+=,$Resultsperf
+			}
 
 
-				
+
+
+			$query="Select SUM(EXECUTION_COUNT*AVG_EXECUTION_TIME) as TOTAL_EXECUTION_TIME ,HOST from M_SQL_PLAN_CACHE  where  LAST_EXECUTION_TIMESTAMP >  add_seconds(now(),-$($freq*60)) group by HOST"
+# where LAST_EXECUTION_TIMESTAMP >  add_seconds(now(),-900)
+			$cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds = New-Object system.Data.DataSet ;
+$ex=$null
+			Try{
+				$cmd.fill($ds)|out-null
+			}
+			Catch
+			{
+				$Ex=$_.Exception.MEssage
+                write-warning  $ex 
+			}
+			 
+
+
+
+			$Resultsperf=$null
+			$Resultsperf=@(); 
+
+			IF($ds[0].Tables.rows)
+			{
+				foreach ($row in $ds.Tables[0].rows)
+				{
+					$Resultsperf+= New-Object PSObject -Property @{
+						HOST=$row.HOST.ToLower()
+						Instance=$sapinstance
+						CollectorType="Performance"
+						Category="Query"
+						Subcategory="TotalTime"
+						Database=$defaultdb
+						PerfObject="Query"
+						PerfInstance=$row.HOST
+						PerfCounter="TOTAL_EXECUTION_TIME"
+						PerfValue=$row.TOTAL_EXECUTION_TIME /1000000    
+						
+					}
+				}
+				$Omsperfupload+=,$Resultsperf
+			}
+
 			#######################################################################################
 #added queries 
 
-$query="/* OMS */SELECT HOST,
+$query="SELECT HOST,
 LPAD(PORT, 5) PORT,
 SERVICE_NAME SERVICE,
 LPAD(NUM, 5) NUM,
@@ -3821,7 +4013,7 @@ $ex=$null
 					  CollectorType="Inventory"
 					  Category="Thread"
 					  Subcategory="Current"
-					  Database=$Hanadb
+					  Database=$defaultdb
 					  PORT=$row.PORT
 					  SERVICE=$row.SERVICE
 					  NUM=$row.Num
@@ -3838,7 +4030,7 @@ $ex=$null
 			  $Omsinvupload+=,$Resultsinv
 		  }
 # Tables - LArgest Inventory 
-	  $query="/* OMS */SELECT OWNER,
+	  $query="SELECT OWNER,
 TABLE_NAME,
 S,                                        /* 'C' --> column store, 'R' --> row store */
 LOADED L,                                 /* 'Y' --> fully loaded, 'P' --> partially loaded, 'N' --> not loaded */
@@ -4117,7 +4309,7 @@ ROW_NUM
 					  CollectorType="Inventory"
 					  Category="Tables"
 					  Subcategory="Largest"
-					  Database=$Hanadb
+					  Database=$defaultdb
 					  TableName=$row.TABLE_NAME
 					  StoreType=$row.S
 					  Loaded=$row.L
@@ -4130,7 +4322,7 @@ ROW_NUM
 		  }
 
 #inventory Sessions    
-$query="/* OMS */SELECT  C.HOST,
+$query="SELECT  C.HOST,
 LPAD(C.PORT, 5) PORT,
 S.SERVICE_NAME SERVICE,
 IFNULL(LPAD(C.CONN_ID, 7), '') CONN_ID,
@@ -4253,7 +4445,7 @@ FROM
 	  MT.MIN_SNAPSHOT_TS = T.MIN_MVCC_SNAPSHOT_TIMESTAMP LEFT OUTER JOIN
 	TABLES TA ON
 	  TA.TABLE_OID = MT.TABLE_ID 
-	  WHERE (C.START_TIME  > add_seconds('"+$currentruntime+"',-$timespan)) OR  (C.END_TIME  > add_seconds('"+$currentruntime+"',-$timespan))
+	  WHERE (C.START_TIME  > add_seconds(now(),-$($freq*60))) OR  (C.END_TIME  > add_seconds(now(),-$($freq*60)))
 ) C
 WHERE
 S.HOST LIKE BI.HOST AND
@@ -4310,7 +4502,7 @@ C.TRANSACTION_ID
 					  Instance=$sapinstance
 					  CollectorType="Inventory"
 					  Category="Sessions"
-					  Database=$Hanadb
+					  Database=$defaultdb
 					  PORT=$row.PORT
 					  SERVICE=$row.Service
 					  CONN_ID=$row.CONN_ID
@@ -4336,15 +4528,15 @@ C.TRANSACTION_ID
 			  $Omsinvupload+=,$Resultsinv
 		  }
 
-  $checkfreq=$timespan 
-IF($firstrun){$checkfreq=2592000}Else{$checkfreq=$timespan } # decide if you change 'HOUR' TIME_AGGREGATE_BY 
+  $checkfreq=900
+IF($firstrun){$checkfreq=2592000}Else{$checkfreq=900} # decide if you change 'HOUR' TIME_AGGREGATE_BY 
 
 #backup inventory  
 
 # not enabled 
 If($MDC)
 {
-  $query="/* OMS */Select START_TIME,
+  $query="Select START_TIME,
 HOST,
 SERVICE_NAME,
 DATABASE_NAME DB_NAME,
@@ -4520,7 +4712,7 @@ WITH HINT (NO_JOIN_REMOVAL)
 "
 }Else
 {
-  $query="/* OMS */SELECT   START_TIME,
+  $query="SELECT   START_TIME,
 HOST,
 SERVICE_NAME,
 LPAD(BACKUP_ID, 13) BACKUP_ID,
@@ -4612,7 +4804,7 @@ FROM
 	FROM
 	( SELECT                                                                  /* Modification section */
 		/*TO_TIMESTAMP('1900/01/01 12:00:00', 'YYYY/MM/DD HH24:MI:SS') BEGIN_TIME,*/
-		add_seconds('"+$currentruntime+"',-$($checkfreq*1)) BEGIN_TIME,
+		add_seconds(now(),-$($checkfreq*1)) BEGIN_TIME,
 		TO_TIMESTAMP('9999/01/13 12:00:00', 'YYYY/MM/DD HH24:MI:SS') END_TIME,
 		'SERVER' TIMEZONE,                              /* SERVER, UTC */
 		'%' HOST,
@@ -4707,10 +4899,10 @@ $ex=$null
 
 #FIX TIME
 
-	  $checkfreq=$timespan 
-IF($firstrun){$checkfreq=2592000}Else{$checkfreq=$timespan } 
+	  $checkfreq=900
+IF($firstrun){$checkfreq=2592000}Else{$checkfreq=900} 
 
-$query="/* OMS */SELECT   BEGIN_TIME,
+$query="SELECT   BEGIN_TIME,
 HOST,
 LPAD(PORT, 5) PORT,
 SERVICE_NAME SERVICE,
@@ -4787,7 +4979,7 @@ FROM
   FROM
   ( SELECT                   /* Modification section */
 	  /*TO_TIMESTAMP('1000/10/12 01:20:00', 'YYYY/MM/DD HH24:MI:SS') BEGIN_TIME,*/
-	  add_seconds('"+$currentruntime+"',-$($checkfreq*1)) BEGIN_TIME,
+	  add_seconds(now(),-$($checkfreq*1)) BEGIN_TIME,
 	  TO_TIMESTAMP('9999/10/12 01:20:00', 'YYYY/MM/DD HH24:MI:SS') END_TIME,
 	  'SERVER' TIMEZONE,                              /* SERVER, UTC */
 	  '%' HOST,
@@ -4909,14 +5101,14 @@ $ex=$null
 					  Instance=$sapinstance
 					  CollectorType="Inventory"
 					  Category="Connections"
-					  Database=$Hanadb
-					  PORT=[int]$row.PORT
+					  Database=$defaultdb
+					  PORT=$row.PORT
 					  SERVICE=$row.Service
-					  CONN_ID=[int32]$row.CONN_ID
+					  CONN_ID=$row.CONN_ID
 					  CONNECTION_TYPE=$row.CONNECTION_TYPE
 					  CONNECTION_STATUS=$row.CONNECTION_STATUS
-					  CONNS=[int32]$row.CONNS
-					  CUR_CONNS=[int32]$row.CUR_CONNS
+					  CONNS=$row.CONNS
+					  CUR_CONNS=$row.CUR_CONNS
 					  CREATED_BY=$row.CREATED_BY
 					  APP_NAME=$row.APP_NAME
 					  APP_USER =$row.APP_USER 
@@ -4932,7 +5124,7 @@ $ex=$null
 
 
 
-$query="/* OMS */ SELECT  HOST,
+$query=" SELECT  HOST,
 PORT,
 SERVICE_NAME SERVICE,
 SQL_TYPE,
@@ -5024,7 +5216,7 @@ WHERE
   C.HOST = S.HOST AND
   C.PORT = S.PORT AND
   ( BI.CONN_ID = -1 OR C.CONNECTION_ID = BI.CONN_ID )
-  AND c.END_TIME  > add_seconds('"+$currentruntime+"',-$timespan)
+  AND c.END_TIME  > add_seconds(now(),-$($freq*60))
 GROUP BY
   S.HOST,
   S.PORT,

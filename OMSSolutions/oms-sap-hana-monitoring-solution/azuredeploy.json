@@ -196,6 +196,9 @@
                     "logAnalyticsWorkspaceName": {
                         "value": "[parameters('logAnalyticsWorkspaceName')]"
                     },
+                    "logAnalyticsNewOrExisting": {
+                        "value": "[parameters('logAnalyticsNewOrExisting')]"
+                    },
                     "logAnalyticsRegion": {
                         "value": "[parameters('logAnalyticsRegion')]"
                     },
@@ -204,6 +207,9 @@
                     },
                     "automationAccountName": {
                         "value": "[parameters('automationAccountName')]"
+                    },
+                    "azureAutomationNewOrExisting": {
+                        "value": "[parameters('azureAutomationNewOrExisting')]"
                     },
                     "automationRegion": {
                         "value": "[parameters('automationRegion')]"
@@ -248,6 +254,9 @@
                     "logAnalyticsWorkspaceName": {
                         "value": "[parameters('logAnalyticsWorkspaceName')]"
                     },
+                    "logAnalyticsNewOrExisting": {
+                        "value": "[parameters('logAnalyticsNewOrExisting')]"
+                    },
                     "logAnalyticsRegion": {
                         "value": "[parameters('logAnalyticsRegion')]"
                     },
@@ -256,6 +265,9 @@
                     },
                     "automationAccountName": {
                         "value": "[parameters('automationAccountName')]"
+                    },
+                    "azureAutomationNewOrExisting": {
+                        "value": "[parameters('azureAutomationNewOrExisting')]"
                     },
                     "automationRegion": {
                         "value": "[parameters('automationRegion')]"

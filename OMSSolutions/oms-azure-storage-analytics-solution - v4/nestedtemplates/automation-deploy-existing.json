@@ -210,7 +210,7 @@
         "createScheduleResourceGroupDescription": "The name of the resource group",
         "ingestScheduleName": "AzureSA-Scheduler-Hourly",
         "ingestInterval": "1",
-        "ingestFrequency": "hour",
+        "ingestFrequency": "hour"
     },
     "resources": [
          {
