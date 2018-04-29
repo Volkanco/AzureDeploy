@@ -221,7 +221,7 @@
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
-                    "uri": "[variables('nestedTemplates').automationSolutionTemplate]",
+                    "uri": "[variables('nestedTemplates').laDeploymentTemplate]",
                     "contentVersion": "1.0.0.0"
                 },
                 "parameters": {
@@ -234,7 +234,7 @@
                     "logAnalyticsRegion": {
                         "value": "[parameters('logAnalyticsRegion')]"
                     },
-                    "linkedWorkspaceSKU-LogAnalytics-Automation": {
+                    "linkedWorkspaceSKU-LogAnalytics-AutomationkspaceName": {
                         "value": "[parameters('linkedWorkspaceSKU-LogAnalytics-Automation')]"
                     }
                 }
