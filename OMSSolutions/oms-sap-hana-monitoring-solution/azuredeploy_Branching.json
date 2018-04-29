@@ -183,11 +183,11 @@
     "variables": {
         "solutionName":"SAP HANA Monitor",
         "nestedTemplates": {
-            "laDeploymentTemplate": "[concat(parameters('_artifactsLocation'),'/nestedtemplates/,'la-deploy-',parameters('logAnalyticsNewOrExisting'),'.json')]",
-            "automationDeploymentTemplate": "[concat(parameters('_artifactsLocation'),'/nestedtemplates/,'automation-deploy-',parameters('automationAccountNewOrExisting'),'.json')]",
-            "linkworkspaceTemplate": "[concat(parameters('_artifactsLocation'),'/nestedtemplates/,'Link-LAtoAutomation.json')]",
-            "automationSolutionTemplate": "[concat(parameters('_artifactsLocation'),'/nestedtemplates/,'Deploy-AutomationSolution.json')]",
-            "sapHanaMonitorTemplate": "[concat(parameters('_artifactsLocation'),'/nestedtemplates/,'Deploy-Hana-Solution.json')]"
+            "laDeploymentTemplate": "[concat(parameters('_artifactsLocation'),'/nestedtemplates/','la-deploy-',parameters('logAnalyticsNewOrExisting'),'.json')]",
+            "automationDeploymentTemplate": "[concat(parameters('_artifactsLocation'),'/nestedtemplates/','automation-deploy-',parameters('automationAccountNewOrExisting'),'.json')]",
+            "linkworkspaceTemplate": "[concat(parameters('_artifactsLocation'),'/nestedtemplates/','Link-LAtoAutomation','.json')]",
+            "automationSolutionTemplate": "[concat(parameters('_artifactsLocation'),'/nestedtemplates/','Deploy-AutomationSolution','.json')]",
+            "sapHanaMonitorTemplate": "[concat(parameters('_artifactsLocation'),'/nestedtemplates/','Deploy-Hana-Solution','.json')]"
         }
     },
     "resources": [
@@ -201,7 +201,7 @@
                 "mode": "Incremental",
                 "templateLink": {
                     "uri": "[variables('nestedTemplates').automationDeploymentTemplate]",
-                    "contentVersion": "1.0.0.0"
+                    "contentVersion": "2.0.0.0"
                 },
                 "parameters": {
                     "automationAccountName": {
@@ -234,7 +234,7 @@
                     "logAnalyticsRegion": {
                         "value": "[parameters('logAnalyticsRegion')]"
                     },
-                    "logAnalyticsWorlinkedWorkspaceSKU-LogAnalytics-AutomationkspaceName": {
+                    "linkedWorkspaceSKU-LogAnalytics-Automation": {
                         "value": "[parameters('linkedWorkspaceSKU-LogAnalytics-Automation')]"
                     }
                 }
@@ -276,11 +276,11 @@
                     "contentVersion": "1.0.0.0"
                 },
                 "parameters": {
+                       "location": {
+                        "value": "[parameters('logAnalyticsRegion')]"
+                    },
                     "logAnalyticsWorkspaceName": {
                         "value": "[parameters('logAnalyticsWorkspaceName')]"
-                    },
-                    "location": {
-                        "value": "[parameters('logAnalyticsRegion')]"
                     }
                 }
             }
