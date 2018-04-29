@@ -184,97 +184,71 @@
         "solutionName":"SAP HANA Monitor",
         "nestedTemplates": {
             "laDeploymentTemplate": "[concat(parameters('_artifactsLocation'),'/nestedtemplates/,'la-deploy-',parameters('logAnalyticsNewOrExisting'),'.json')]",
-            "automationDeploymentTemplateBase": "[concat(parameters('_artifactsLocation'),'/nestedtemplates/,'automation-deploy-',parameters('automationAccountNewOrExisting')]",
-            "sapHanaMonitorTemplate": "[concat(parameters('_artifactsLocation'),'/nestedtemplates/,'solution-deploy',variables('solutionName'),'.json')]"
+            "automationDeploymentTemplate": "[concat(parameters('_artifactsLocation'),'/nestedtemplates/,'automation-deploy-',parameters('automationAccountNewOrExisting'),'.json')]",
+            "linkworkspaceTemplate": "[concat(parameters('_artifactsLocation'),'/nestedtemplates/,'Link-LAtoAutomation.json')]",
+            "automationSolutionTemplate": "[concat(parameters('_artifactsLocation'),'/nestedtemplates/,'Deploy-AutomationSolution.json')]",
+            "sapHanaMonitorTemplate": "[concat(parameters('_artifactsLocation'),'/nestedtemplates/,'Deploy-Hana-Solution.json')]"
         }
     },
     "resources": [
-        {
+           {
+            "apiVersion": "2017-05-10",
+            "name": "[concat('Deployto-',parameters('automationAccountNewOrExisting'),'-Automation')]",
             "type": "Microsoft.Resources/deployments",
-            "apiVersion": "2016-02-01",
-            "name": "[concat('Deployto-',parameters('logAnalyticsNewOrExisting'),'-LogAnalytics')]",
+            "resourceGroup": "[parameters('automationAccountResourceGroup')]",
             "dependsOn": [],
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
-                    "uri": "[variables('nestedTemplates').laDeploymentTemplate]",
+                    "uri": "[variables('nestedTemplates').automationDeploymentTemplate]",
                     "contentVersion": "1.0.0.0"
                 },
                 "parameters": {
-                    "logAnalyticsWorkspaceName": {
-                        "value": "[parameters('logAnalyticsWorkspaceName')]"
-                    },
-                    "logAnalyticsRegion": {
-                        "value": "[parameters('logAnalyticsRegion')]"
-                    },
-                    "logAnalyticsSku": {
-                        "value": "[parameters('logAnalyticsSku')]"
-                    }
-                }
-            }
-        },
-        {
-            "condition": "[equals(parameters('isLogAnalyticsLinkedtoAutomation'), 'Linked')]",
-            "type": "Microsoft.Resources/deployments",
-            "apiVersion": "2016-02-01",
-            "name": "[concat('Linked-',parameters('logAnalyticsNewOrExisting'),'-LA-',parameters('automationAccountNewOrExisting'),'-Automation-',parameters('deploymentNameSuffix'))]",
-            "dependsOn": [],
-            "properties": {
-                "mode": "Incremental",
-                "templateLink": {
-                    "uri": "[concat(variables('nestedTemplates').automationDeploymentTemplateBase,'-LinkedtoAnalytics.json']",
-                    "contentVersion": "1.0.0.0"
-                },
-                "parameters": {
-                    "logAnalyticsWorkspaceName": {
-                        "value": "[parameters('logAnalyticsWorkspaceName')]"
-                    },
-                    "logAnalyticsRegion": {
-                        "value": "[parameters('logAnalyticsRegion')]"
-                    },
-                    "logAnalyticsSku": {
-                        "value": "[parameters('logAnalyticsSku')]"
-                    },
                     "automationAccountName": {
                         "value": "[parameters('automationAccountName')]"
                     },
                     "automationRegion": {
                         "value": "[parameters('automationRegion')]"
-                    },
-                    "workspaceType": {
-                        "value": "[parameters('workspaceType')]"
-                    },
-                    "linkedWorkspaceSKU": {
-                        "value": "[parameters('linkedWorkspaceSKU')]"
-                    },
-                    "sapHanaMonitorUser": {
-                        "value": "[parameters('sapHanaMonitorUser')]"
-                    },
-                    "sapHanaMonitorPassword": {
-                        "value": "[parameters('sapHanaMonitorPassword')]"
-                    },
-                    "hybridWorkerGroup": {
-                        "value": "[parameters('hybridWorkerGroup')]"
-                    },
-                    "collectQueryPerformance": {
-                        "value": "[parameters('collectQueryPerformance')]"
-                    },
-                    "collectHanaTableInventory": {
-                        "value": "[parameters('collectHanaTableInventory')]"
                     }
                 }
             }
         },
         {
-            "condition": "[equals(parameters('workspaceType'), 'Notlinked')]",
+            "apiVersion": "2017-05-10",
+            "name": "[concat('Deploy-',parameters('logAnalyticsNewOrExisting'),'-LogAnalyticsWS')]",
             "type": "Microsoft.Resources/deployments",
-            "apiVersion": "2016-02-01",
-            "name": "[concat('omsDeploytoUnlinked-',parameters('deploymentNameSuffix'))]",
             "dependsOn": [],
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
-                    "uri": "[concat(variables('nestedTemplates').automationDeploymentTemplateBase,'-NotLinkedtoAnalytics.json']",
+                    "uri": "[variables('nestedTemplates').automationSolutionTemplate]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "logAnalyticsNewOrExisting": {
+                        "value": "[parameters('logAnalyticsNewOrExisting')]"
+                    },
+                    "logAnalyticsWorkspaceName": {
+                        "value": "[parameters('logAnalyticsWorkspaceName')]"
+                    },
+                    "logAnalyticsRegion": {
+                        "value": "[parameters('logAnalyticsRegion')]"
+                    },
+                    "logAnalyticsWorlinkedWorkspaceSKU-LogAnalytics-AutomationkspaceName": {
+                        "value": "[parameters('linkedWorkspaceSKU-LogAnalytics-Automation')]"
+                    }
+                }
+            }
+        },
+        {
+            "apiVersion": "2017-05-10",
+            "name": "Link-Automation-LogAnalyticsWS",
+            "type": "Microsoft.Resources/deployments",
+            "dependsOn": [],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('nestedTemplates').linkworkspaceTemplate]",
                     "contentVersion": "1.0.0.0"
                 },
                 "parameters": {
@@ -284,35 +258,29 @@
                     "logAnalyticsRegion": {
                         "value": "[parameters('logAnalyticsRegion')]"
                     },
-                    "logAnalyticsSku": {
-                        "value": "[parameters('logAnalyticsSku')]"
-                    },
                     "automationAccountName": {
                         "value": "[parameters('automationAccountName')]"
+                    }
+                }
+            }
+        },
+        {
+            "apiVersion": "2017-05-10",
+            "name": "Deploy-AutomationSolution",
+            "type": "Microsoft.Resources/deployments",
+            "dependsOn": [],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('nestedTemplates').automationSolutionTemplate]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "logAnalyticsWorkspaceName": {
+                        "value": "[parameters('logAnalyticsWorkspaceName')]"
                     },
-                    "automationRegion": {
-                        "value": "[parameters('automationRegion')]"
-                    },
-                    "automationSku": {
-                        "value": "[parameters('automationSku')]"
-                    },
-                    "workspaceType": {
-                        "value": "[parameters('workspaceType')]"
-                    },
-                    "sapHanaMonitorUser": {
-                        "value": "[parameters('sapHanaMonitorUser')]"
-                    },
-                    "sapHanaMonitorPassword": {
-                        "value": "[parameters('sapHanaMonitorPassword')]"
-                    },
-                    "hybridWorkerGroup": {
-                        "value": "[parameters('hybridWorkerGroup')]"
-                    },
-                    "collectQueryPerformance": {
-                        "value": "[parameters('collectQueryPerformance')]"
-                    },
-                    "collectHanaTableInventory": {
-                        "value": "[parameters('collectHanaTableInventory')]"
+                    "location": {
+                        "value": "[parameters('logAnalyticsRegion')]"
                     }
                 }
             }
