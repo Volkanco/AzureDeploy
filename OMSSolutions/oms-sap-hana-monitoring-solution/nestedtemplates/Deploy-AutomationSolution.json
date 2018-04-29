@@ -20,9 +20,9 @@
     
     "resources": [
         {
-            "id": "[Concat(variables('resourcegroupName').id, '/providers/Microsoft.OperationsManagement/solutions/', variables('solutionTypes')[copyIndex()], '(', parameters('workspaceName'), ')')]",
+            "id": "[Concat(variables('resourcegroupName').id, '/providers/Microsoft.OperationsManagement/solutions/', variables('solutionTypes')[copyIndex()], '(', parameters('logAnalyticsWorkspaceName'), ')')]",
             "type": "Microsoft.OperationsManagement/solutions",
-            "name": "[Concat(variables('solutionTypes')[copyIndex()], '(', parameters('workspaceName'), ')')]",
+            "name": "[Concat(variables('solutionTypes')[copyIndex()], '(', parameters('logAnalyticsWorkspaceName'), ')')]",
             "apiVersion": "2015-11-01-preview",
             "location": "[parameters('location')]",
             "copy": {
@@ -30,13 +30,13 @@
                 "count": "[length(variables('solutionTypes'))]"
             },
             "plan": {
-                "name": "[Concat(variables('solutionTypes')[copyIndex()], '(', parameters('workspaceName'), ')')]",
+                "name": "[Concat(variables('solutionTypes')[copyIndex()], '(', parameters('logAnalyticsWorkspaceName'), ')')]",
                 "product": "[Concat('OMSGallery/', variables('solutionTypes')[copyIndex()])]",
                 "promotionCode": "",
                 "publisher": "Microsoft"
             },
             "properties": {
-                "workspaceResourceId": "[Concat('/subscriptions/', parameters('subscriptionId'), '/resourceGroups/', parameters('resourcegroupName'), '/providers/Microsoft.OperationalInsights/workspaces/', parameters('workspaceName'))]"
+                "workspaceResourceId": "[Concat(variables('resourcegroupName').id, '/providers/Microsoft.OperationalInsights/workspaces/', parameters('logAnalyticsWorkspaceName'))]"
             }
         }
     ]
