@@ -234,7 +234,7 @@
                     "logAnalyticsRegion": {
                         "value": "[parameters('logAnalyticsRegion')]"
                     },
-                    "linkedWorkspaceSKU-LogAnalytics-AutomationkspaceName": {
+                    "linkedWorkspaceSKU-LogAnalytics-Automation": {
                         "value": "[parameters('linkedWorkspaceSKU-LogAnalytics-Automation')]"
                     }
                 }
@@ -244,7 +244,10 @@
             "apiVersion": "2017-05-10",
             "name": "Link-Automation-LogAnalyticsWS",
             "type": "Microsoft.Resources/deployments",
-            "dependsOn": [],
+            "dependsOn": [
+                "[concat('Microsoft.Resources/deployments/', 'Deploy-',parameters('logAnalyticsNewOrExisting'),'-LogAnalyticsWS')]",
+                "[concat('Microsoft.Resources/deployments/', 'Deployto-',parameters('automationAccountNewOrExisting'),'-Automation')]"
+            ],
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
@@ -268,7 +271,9 @@
             "apiVersion": "2017-05-10",
             "name": "Deploy-AutomationSolution",
             "type": "Microsoft.Resources/deployments",
-            "dependsOn": [],
+            "dependsOn": [
+                "[concat('Microsoft.Resources/deployments/', 'Link-Automation-LogAnalyticsWS')]"
+            ],
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
