@@ -238,30 +238,44 @@ $ex=$null
 		$hanadb=$ins.Database
 		
 		#first test ping 
-		IF( Test-Path -Path C:\HanaMonitor\PSTools\psping.exe)
+		IF(Test-Path -Path C:\HanaMonitor\PSTools\psping.exe)
 		{
-			$ping=$out=$null
-			$arg="-n 100  -i 0 -q  {0} 22  -accepteula" -f $ins.HanaServer
-        $ps = new-object System.Diagnostics.Process
-        $ps.StartInfo.Filename = "C:\HanaMonitor\PSTools\psping.exe"
-        $ps.StartInfo.Arguments = $arg
-        $ps.StartInfo.RedirectStandardOutput = $True
-        $ps.StartInfo.UseShellExecute = $false
-        $ps.start()
-        $ps.WaitForExit()
+            $tcpclient = new-Object system.Net.Sockets.TcpClient
+            $tcpConnection=$tcpclient.BeginConnect($ins.HanaServer,22,$null,$null)
+            $conntest=$tcpConnection.AsyncWaitHandle.WaitOne(2000,$false) # we will test if HAna server reachable before performing  latency test 
+
+            If($conntest)
+            {
+
+                $ping=$out=$null
+                $arg="-n 100  -i 0 -q  {0} 22  -accepteula" -f $ins.HanaServer        
+                $ps = new-object System.Diagnostics.Process
+                $ps.StartInfo.Filename = "C:\HanaMonitor\PSTools\psping.exe"
+                $ps.StartInfo.Arguments = $arg
+                $ps.StartInfo.RedirectStandardOutput = $True
+                $ps.StartInfo.UseShellExecute = $false
+                $ps.StartInfo.CreateNoWindow=$True
+                $ps.start()
+                $ps.WaitForExit()
         
-		 
-		if ($ps.ExitCode  -eq 0)
-		{
-			   $pingresult=$null
-			   $pingresult="Success"
-			[string] $Out = $ps.StandardOutput.ReadToEnd();
-			[double]$ping=$Out.substring($Out.LastIndexOf('Average =')+9,$out.Length-$Out.LastIndexOf('Average =')-9).replace('ms','')
-		}Else
-		  {
-			   $pingresult="Fail"
-		   }
-		}
+                if ($ps.ExitCode  -eq 0)
+                {
+                    $pingresult=$null
+                    $pingresult="Success"
+                    [string] $Out = $ps.StandardOutput.ReadToEnd();
+                    $out
+                    [double]$ping=$Out.substring($Out.LastIndexOf('Average =')+9,$out.Length-$Out.LastIndexOf('Average =')-9).replace('ms','')
+                }Else
+                {
+                    $pingresult="Fail"
+                }
+            }Else
+            {
+                Write-warning "Failed to connect $($ins.HanaServer) on port 22"
+                $pingresult="Fail"
+            }
+
+        }
 
 		$ex=$null
 
@@ -276,6 +290,7 @@ $ex=$null
 		
 		IF($ex)
 		{
+			Write-Warning  "Failed to conect to  $hanadb on  $($ins.HanaServer):$($ins.Port)"
 			write-warning $ex
 			$omsStateupload+= @(New-Object PSObject -Property @{
 				HOST=$saphost
@@ -287,6 +302,7 @@ $ex=$null
 				Connection="Failed"
 				ErrorMessage=$ex
 				PingResult=$pingresult
+				Latency=$ping
                 
 			}
 			)
@@ -295,7 +311,7 @@ $ex=$null
 		IF ($conn.State -eq 'open')
 		{	    
 			
-            Write-Output "Succesfully connected to $($ins.HanaServer):$($ins.Port)"
+            Write-Output "Succesfully connected to $hanadb on  $($ins.HanaServer):$($ins.Port)"
             $Omsstateupload+=, @(New-Object PSObject -Property @{
 				HOST=$saphost
 				 PORT=$sapport
@@ -309,11 +325,7 @@ $ex=$null
 				
 				})
 
-			#define all queries in a variable and loop them, this can be exported to an external file part of the config 
-			
-			$hanaQueries=@()
-			
-			#get last run time 
+					
 
 			$rbvariablename=$null
 			$rbvariablename="LastRun-$saphost-$hanadb"
@@ -2765,6 +2777,7 @@ $ex=$null
 				Write-Output '  CollectorType="Performance" - Category="MEmory" - Subcategory="Usage" '
 				$Resultsperf+= New-Object PSObject -Property @{
 					HOST=$ds.tables[0].rows[0].HOST
+					Database=$hanadb
 					CollectorType="Performance"
 					Instance=$sapinstance
 					PerfObject="Memory"
@@ -2775,6 +2788,7 @@ $ex=$null
 				}
 				$Resultsperf+= New-Object PSObject -Property @{
 					HOST=$ds.tables[0].rows[0].HOST
+					Database=$hanadb
 					CollectorType="Performance"
 					Instance=$sapinstance
 					PerfObject="Memory"
@@ -2785,6 +2799,7 @@ $ex=$null
 				}
 				$Resultsperf+= New-Object PSObject -Property @{
 					HOST=$ds.tables[0].rows[0].HOST
+					Database=$hanadb
 					Instance=$sapinstance
 					CollectorType="Performance"
 					PerfObject="Memory"

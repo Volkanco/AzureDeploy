@@ -131,28 +131,28 @@
         "runbooks": {
             "ingestMetricsRunbook": {
                 "name": "AzureSAIngestionMetrics-MS-Mgmt-SA",
-                "version": "1.0.0.1",
+                "version": "1.0.0.3",
                 "description": "Runbook to automatically ingest Azure Storage Inventory data and events into OMS Log Analytics",
                 "type": "PowerShell",
                 "Id": ""
             },
             "ingestLogsRunbook": {
                 "name": "AzureSAIngestionLogs-MS-Mgmt-SA",
-                "version": "1.0.0.1",
+                "version": "1.0.0.3",
                 "description": "Runbook to automatically ingest Azure Storage Audit Logs  into OMS Log Analytics",
                 "type": "PowerShell",
                 "Id": ""
             },
             "ingestMetricsEnablerRunbook": {
                 "name": "AzureSAMetricsEnabler-MS-Mgmt-SA",
-                "version": "1.0.0.1",
+                "version": "1.0.0.3",
                 "description": "Runbook to enable Storage Analytics metrics",
                 "type": "PowerShell",
                 "Id": ""
             },
             "ingestSchedulerRunbook": {
                 "name": "AzureSACreateSchedules-MS-Mgmt-SA",
-                "version": "1.0.0.1",
+                "version": "1.0.0.3",
                 "description": "Runbook to automatically create required schedules for OMS Log Analytics ingestion",
                 "type": "PowerShell",
                 "Id": ""
