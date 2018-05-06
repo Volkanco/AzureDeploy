@@ -289,6 +289,29 @@
                     }
                 }
             }
+        },
+        {
+            "apiVersion": "2017-05-10",
+            "name": "Deploy-HanaMonitoringSolution",
+            "type": "Microsoft.Resources/deployments",
+            "dependsOn": [
+                "[concat('Microsoft.Resources/deployments/', 'Deploy-AutomationSolution')]"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('nestedTemplates').sapHanaMonitorTemplate]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                       "location": {
+                        "value": "[parameters('logAnalyticsRegion')]"
+                    },
+                    "logAnalyticsWorkspaceName": {
+                        "value": "[parameters('logAnalyticsWorkspaceName')]"
+                    }
+                }
+            }
         }
     ],
     "outputs": {}
