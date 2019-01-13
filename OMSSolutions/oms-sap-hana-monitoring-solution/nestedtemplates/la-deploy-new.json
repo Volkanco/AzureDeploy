@@ -1,0 +1,86 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "logAnalyticsNewOrExisting": {
+            "type": "string",
+            "defaultValue": "new",
+            "allowedValues": [
+              "new",
+              "existing"
+            ],
+            "metadata": {
+              "description": "Identify whether to use a new or existing vnet"
+            }
+          },
+        "logAnalyticsWorkspaceName": {
+            "type": "string",
+            "metadata": {
+                "description": "Create new or use an existing Log Analytic Workspace"
+            }
+        },
+        "logAnalyticsRegion": {
+            "type": "string",
+            "allowedValues": [
+                "westeurope",
+                "eastus",
+                "southeastasia",
+                "australiasoutheast",
+                "wescentralus"
+            ],
+            "metadata": {
+                "description": "Specify the Azure Region for your new or existing OMS workspace"
+            }
+        },
+        "linkedWorkspaceSKU-LogAnalytics-Automation": {
+            "type": "array",
+            "defaultValue": [
+                "pernode",
+                "OMS"
+            ],
+            "allowedValues": [
+                [
+                    "pernode",
+                    "OMS"
+                ],
+                [
+                    "free",
+                    "free"
+                ]
+            ],
+            "metadata": {
+                "description": "Choose the SKU for linked workspace  , only valid  if workspaceType is Linked otherwise ignored."
+            }
+        },
+        "_artifactsLocation": {
+            "type": "string",
+            "defaultValue": "https://raw.githubusercontent.com/Volkanco/AzureDeploy/master/OMSSolutions/oms-sap-hana-monitoring-solution",
+            "metadata": {
+                "description": "The base URI where artifacts required by this template are located"
+            }
+        },
+        "_artifactsLocationSasToken": {
+            "type": "securestring",
+            "defaultValue": "",
+            "metadata": {
+                "description": "The sasToken required to access _artifactsLocation.  When the template is deployed using the accompanying scripts, a sasToken will be automatically generated."
+            }
+        }
+    },
+    "variables": {},
+    "resources": [
+        {
+            "name": "[parameters('logAnalyticsWorkspaceName')]",
+            "type": "Microsoft.OperationalInsights/workspaces",
+            "apiVersion": "2015-11-01-preview",
+            "location": "[parameters('logAnalyticsRegion')]",
+            "properties": {
+                "sku": {
+                    "name": "[first(parameters('linkedWorkspaceSKU-LogAnalytics-Automation'))]"
+                }
+            },
+            "resources": [
+            ]
+        }
+    ]
+}

@@ -1,0 +1,1825 @@
+{
+  "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+      "logAnalyticsWorkspaceName": {
+          "type": "string"
+      }
+  },
+  "variables": {
+    "dashboard1Name":"HanaDashboard1",
+    "dashboard1DisplayName":"Hana Dashboard Full"
+  }
+  ,
+  "resources": [
+      {
+  "properties": {
+    "lenses": {
+      "0": {
+        "order": 0,
+        "parts": {
+          "0": {
+            "position": {
+              "x": 0,
+              "y": 0,
+              "colSpan": 6,
+              "rowSpan": 4
+            },
+            "metadata": {
+              "inputs": [
+                {
+                  "name": "ComponentId",
+                  "value": {
+                    "SubscriptionId": "[subscription().subscriptionId]",
+                    "ResourceGroup": "[resourceGroup().name]",
+                    "Name": "[parameters('logAnalyticsWorkspaceName')]"
+                  }
+                },
+                {
+                  "name": "Query",
+                  "value": "SAPHana_CL\n| where  CollectorType_s == \"State\" and Category==\"Connectivity\" and SubCategory_s ==\"Host\"\n| summarize arg_max(TimeGenerated, *) by HOST_s\n|project Host=HOST_s, Metric=CollectorType_s ,Status=Connection_s,Error=ErrorMessage_s\n| project Host, Metric, Status, Error\n|summarize count(Host) by Status\n\n"
+                },
+                {
+                  "name": "TimeRange",
+                  "value": "PT1H"
+                },
+                {
+                  "name": "Dimensions",
+                  "value": {
+                    "xAxis": {
+                      "name": "Status",
+                      "type": "String"
+                    },
+                    "yAxis": [
+                      {
+                        "name": "count_Host",
+                        "type": "Int64"
+                      }
+                    ],
+                    "splitBy": [],
+                    "aggregation": "Sum"
+                  }
+                },
+                {
+                  "name": "Version",
+                  "value": "1.0"
+                },
+                {
+                  "name": "DashboardId",
+                  "value": "[concat(resourceGroup().id,'/providers/Microsoft.Portal/dashboards/', variables('dashboard1Name'))]"
+                },      
+                {
+                  "name": "PartId",
+                  "value": "3a9aa29f-b70a-40ee-b82e-f3a50e5a4f65"
+                },
+                {
+                  "name": "PartTitle",
+                  "value": "Analytics"
+                },
+                {
+                  "name": "PartSubTitle",
+                  "value": "[parameters('logAnalyticsWorkspaceName')]"
+                },
+                {
+                  "name": "resourceTypeMode",
+                  "value": "workspace"
+                }
+              ],
+              "type": "Extension/AppInsightsExtension/PartType/AnalyticsDonutPart",
+              "settings": {
+                "content": {
+                  "dashboardPartTitle": "Collectors Online",
+                  "dashboardPartSubTitle": "Hana Collector"
+                }
+              },
+              "asset": {
+                "idInputName": "ComponentId",
+                "type": "ApplicationInsights"
+              }
+            }
+          },
+          "1": {
+            "position": {
+              "x": 6,
+              "y": 0,
+              "colSpan": 6,
+              "rowSpan": 4
+            },
+            "metadata": {
+              "inputs": [
+                {
+                  "name": "ComponentId",
+                  "value": {
+                    "SubscriptionId": "[subscription().subscriptionId]",
+                    "ResourceGroup": "[resourceGroup().name]",
+                    "Name": "[parameters('logAnalyticsWorkspaceName')]"
+                  }
+                },
+                {
+                  "name": "Query",
+                  "value": "SAPHana_CL\n| where CollectorType_s == \"State\" and Category== \"Connectivity\"\n| summarize LastCall=arg_max(TimeGenerated,*) by HOST_s\n| project Host=HOST_s,MinSinceLastData=datetime_diff('Minute',now(),LastCall),IsCollectorOnline=iff(LastCall< ago(1h),\"Offline\",\"Online\"),LastStatus=Connection_s\n | project Host, MinSinceLastData, IsCollectorOnline, LastStatus"
+                },
+                {
+                  "name": "TimeRange",
+                  "value": "P1D"
+                },
+                {
+                  "name": "Version",
+                  "value": "1.0"
+                },
+                {
+                  "name": "DashboardId",
+                  "value": "[concat(resourceGroup().id,'/providers/Microsoft.Portal/dashboards/', variables('dashboard1Name'))]"
+                },
+                {
+                  "name": "PartId",
+                  "value": "954346bc-9ced-48de-aa9d-0000de66fe0b"
+                },
+                {
+                  "name": "PartTitle",
+                  "value": "Analytics"
+                },
+                {
+                  "name": "PartSubTitle",
+                  "value": "[parameters('logAnalyticsWorkspaceName')]"
+                },
+                {
+                  "name": "resourceTypeMode",
+                  "value": "workspace"
+                }
+              ],
+              "type": "Extension/AppInsightsExtension/PartType/AnalyticsGridPart",
+              "settings": {
+                "content": {
+                  "dashboardPartTitle": "Hana Connectivity",
+                  "dashboardPartSubTitle": "SAPHANA"
+                }
+              },
+              "asset": {
+                "idInputName": "ComponentId",
+                "type": "ApplicationInsights"
+              }
+            }
+          },
+          "2": {
+            "position": {
+              "x": 12,
+              "y": 0,
+              "colSpan": 6,
+              "rowSpan": 4
+            },
+            "metadata": {
+              "inputs": [
+                {
+                  "name": "ComponentId",
+                  "value": {
+                    "SubscriptionId": "[subscription().subscriptionId]",
+                    "ResourceGroup": "[resourceGroup().name]",
+                    "Name": "[parameters('logAnalyticsWorkspaceName')]"
+                  }
+                },
+                {
+                  "name": "Query",
+                  "value": "SAPHana_CL\n| where  Category==\"Alerts\"\n|summarize arg_max(TimeGenerated, *) by ALERT_HOST_s,\t  Database_s,ALERT_ID_d\n|summarize count() by ALERT_HOST_s,Database_s,ALERT_DETAILS_s\n|project DB=strcat(ALERT_HOST_s,':',\t  Database_s),ALERT=ALERT_DETAILS_s\n| project DB, ALERT\n | project DB, ALERT"
+                },
+                {
+                  "name": "TimeRange",
+                  "value": "P1D"
+                },
+                {
+                  "name": "Version",
+                  "value": "1.0"
+                },
+                {
+                  "name": "DashboardId",
+                  "value": "[concat(resourceGroup().id,'/providers/Microsoft.Portal/dashboards/', variables('dashboard1Name'))]"
+                },
+                {
+                  "name": "PartId",
+                  "value": "26322d53-aeaa-4cf0-8004-aece48987618"
+                },
+                {
+                  "name": "PartTitle",
+                  "value": "Analytics"
+                },
+                {
+                  "name": "PartSubTitle",
+                  "value": "[parameters('logAnalyticsWorkspaceName')]"
+                },
+                {
+                  "name": "resourceTypeMode",
+                  "value": "workspace"
+                }
+              ],
+              "type": "Extension/AppInsightsExtension/PartType/AnalyticsGridPart",
+              "settings": {
+                "content": {
+                  "dashboardPartTitle": "Alerts",
+                  "dashboardPartSubTitle": "[parameters('logAnalyticsWorkspaceName')]"
+                }
+              },
+              "asset": {
+                "idInputName": "ComponentId",
+                "type": "ApplicationInsights"
+              }
+            }
+          },
+          "3": {
+            "position": {
+              "x": 18,
+              "y": 0,
+              "colSpan": 6,
+              "rowSpan": 4
+            },
+            "metadata": {
+              "inputs": [
+                {
+                  "name": "ComponentId",
+                  "value": {
+                    "SubscriptionId": "[subscription().subscriptionId]",
+                    "ResourceGroup": "[resourceGroup().name]",
+                    "Name": "[parameters('logAnalyticsWorkspaceName')]"
+                  }
+                },
+                {
+                  "name": "Query",
+                  "value": "SAPHana_CL\n| where CollectorType_s ==\"Inventory\" and Category== \"Disks\"\n| summarize arg_max(TimeGenerated, *) by PATH_s,SUBPATH_s,DEVICE_ID_d\n|project Host=strcat(HOST_s,\" : \" ,USAGE_TYPE_s), Path=PATH_s,SizeinGb=round(TOTAL_SIZE_d,0),UsedGB=round(USED_SIZE_d,0)\n| project Host, Path, SizeinGb, UsedGB\n | project Host, Path, SizeinGb, UsedGB"
+                },
+                {
+                  "name": "TimeRange",
+                  "value": "P1D"
+                },
+                {
+                  "name": "Version",
+                  "value": "1.0"
+                },
+                {
+                  "name": "DashboardId",
+                  "value": "[concat(resourceGroup().id,'/providers/Microsoft.Portal/dashboards/', variables('dashboard1Name'))]"
+                },
+                {
+                  "name": "PartId",
+                  "value": "9af3b898-b0fc-4e8c-98a2-20fa6e1481c4"
+                },
+                {
+                  "name": "PartTitle",
+                  "value": "Analytics"
+                },
+                {
+                  "name": "PartSubTitle",
+                  "value": "[parameters('logAnalyticsWorkspaceName')]"
+                },
+                {
+                  "name": "resourceTypeMode",
+                  "value": "workspace"
+                }
+              ],
+              "type": "Extension/AppInsightsExtension/PartType/AnalyticsGridPart",
+              "settings": {
+                "content": {
+                  "dashboardPartTitle": "Disks",
+                  "dashboardPartSubTitle": "[parameters('logAnalyticsWorkspaceName')]"
+                }
+              },
+              "asset": {
+                "idInputName": "ComponentId",
+                "type": "ApplicationInsights"
+              }
+            }
+          },
+          "4": {
+            "position": {
+              "x": 24,
+              "y": 0,
+              "colSpan": 6,
+              "rowSpan": 4
+            },
+            "metadata": {
+              "inputs": [
+                {
+                  "name": "ComponentId",
+                  "value": {
+                    "SubscriptionId": "[subscription().subscriptionId]",
+                    "ResourceGroup": "[resourceGroup().name]",
+                    "Name": "[parameters('logAnalyticsWorkspaceName')]"
+                  }
+                },
+                {
+                  "name": "Query",
+                  "value": "SAPHana_CL\n| where CollectorType_s ==\"Inventory\" and Category== \"Volumes\"\n| summarize arg_max(TimeGenerated, *) by HOST_s,FILE_NAME_s\n|project PAth=strcat(HOST_s,\": \",FILE_NAME_s) ,SizeinGB=round(SIZE_d/1024/1024/1024,2)\n"
+                },
+                {
+                  "name": "TimeRange",
+                  "value": "P1D"
+                },
+                {
+                  "name": "Dimensions",
+                  "value": {
+                    "xAxis": {
+                      "name": "PAth",
+                      "type": "String"
+                    },
+                    "yAxis": [
+                      {
+                        "name": "SizeinGB",
+                        "type": "Double"
+                      }
+                    ],
+                    "splitBy": [],
+                    "aggregation": "Sum"
+                  }
+                },
+                {
+                  "name": "Version",
+                  "value": "1.0"
+                },
+                {
+                  "name": "DashboardId",
+                  "value": "[concat(resourceGroup().id,'/providers/Microsoft.Portal/dashboards/', variables('dashboard1Name'))]"
+                },
+                {
+                  "name": "PartId",
+                  "value": "66f71d37-4898-4ce1-84ab-385df5c589a2"
+                },
+                {
+                  "name": "PartTitle",
+                  "value": "Analytics"
+                },
+                {
+                  "name": "PartSubTitle",
+                  "value": "[parameters('logAnalyticsWorkspaceName')]"
+                },
+                {
+                  "name": "resourceTypeMode",
+                  "value": "workspace"
+                }
+              ],
+              "type": "Extension/AppInsightsExtension/PartType/AnalyticsBarChartPart",
+              "settings": {
+                "content": {
+                  "dashboardPartTitle": "Volumes",
+                  "dashboardPartSubTitle": "[parameters('logAnalyticsWorkspaceName')]"
+                }
+              },
+              "asset": {
+                "idInputName": "ComponentId",
+                "type": "ApplicationInsights"
+              }
+            }
+          },
+          "5": {
+            "position": {
+              "x": 30,
+              "y": 0,
+              "colSpan": 6,
+              "rowSpan": 4
+            },
+            "metadata": {
+              "inputs": [
+                {
+                  "name": "ComponentId",
+                  "value": {
+                    "SubscriptionId": "[subscription().subscriptionId]",
+                    "ResourceGroup": "[resourceGroup().name]",
+                    "Name": "[parameters('logAnalyticsWorkspaceName')]"
+                  }
+                },
+                {
+                  "name": "Query",
+                  "value": "SAPHana_CL\n| where CollectorType_s ==\"Inventory\"\n| where Category == \"BackupCatalog\" \n| summarize arg_max(TimeGenerated, *) by Instance_s,Database_s, ENTRY_TYPE_NAME_s\n|project Instance= strcat(Instance_s,\"; \",Database_s), Type=ENTRY_TYPE_NAME_s,Status=STATE_NAME_s, FinishTime=SYS_END_TIME_t \n | project Instance, Type, Status, FinishTime"
+                },
+                {
+                  "name": "TimeRange",
+                  "value": "P1D"
+                },
+                {
+                  "name": "Version",
+                  "value": "1.0"
+                },
+                {
+                  "name": "DashboardId",
+                  "value": "[concat(resourceGroup().id,'/providers/Microsoft.Portal/dashboards/', variables('dashboard1Name'))]"
+                },
+                {
+                  "name": "PartId",
+                  "value": "e269d419-d53d-4f5a-bcb1-572bf8635aca"
+                },
+                {
+                  "name": "PartTitle",
+                  "value": "Analytics"
+                },
+                {
+                  "name": "PartSubTitle",
+                  "value": "[parameters('logAnalyticsWorkspaceName')]"
+                },
+                {
+                  "name": "resourceTypeMode",
+                  "value": "workspace"
+                }
+              ],
+              "type": "Extension/AppInsightsExtension/PartType/AnalyticsGridPart",
+              "settings": {
+                "content": {
+                  "dashboardPartTitle": "Latest Backups",
+                  "dashboardPartSubTitle": "[parameters('logAnalyticsWorkspaceName')]"
+                }
+              },
+              "asset": {
+                "idInputName": "ComponentId",
+                "type": "ApplicationInsights"
+              }
+            }
+          },
+          "6": {
+            "position": {
+              "x": 36,
+              "y": 0,
+              "colSpan": 6,
+              "rowSpan": 4
+            },
+            "metadata": {
+              "inputs": [
+                {
+                  "name": "ComponentId",
+                  "value": {
+                    "SubscriptionId": "[subscription().subscriptionId]",
+                    "ResourceGroup": "[resourceGroup().name]",
+                    "Name": "[parameters('logAnalyticsWorkspaceName')]"
+                  }
+                },
+                {
+                  "name": "Query",
+                  "value": "SAPHana_CL\n| where CollectorType_s ==\"Inventory\" and Category== \"Backup\"\n| summarize arg_max(TimeGenerated, *) by Database_s,SERVICE_NAME_s,ENTRY_TYPE_NAME_s\n|project Instance=Instance_s,DB=strcat(Database_s,\" : \",SERVICE_NAME_s),ENTRY_TYPE_NAME_s,SizeinGB= round(ESTIMATED_SIZE_d/1024,2)\n"
+                },
+                {
+                  "name": "TimeRange",
+                  "value": "P1D"
+                },
+                {
+                  "name": "Dimensions",
+                  "value": {
+                    "xAxis": {
+                      "name": "ENTRY_TYPE_NAME_s",
+                      "type": "String"
+                    },
+                    "yAxis": [
+                      {
+                        "name": "SizeinGB",
+                        "type": "Double"
+                      }
+                    ],
+                    "splitBy": [
+                      {
+                        "name": "DB",
+                        "type": "String"
+                      }
+                    ],
+                    "aggregation": "Sum"
+                  }
+                },
+                {
+                  "name": "Version",
+                  "value": "1.0"
+                },
+                {
+                  "name": "DashboardId",
+                  "value": "[concat(resourceGroup().id,'/providers/Microsoft.Portal/dashboards/', variables('dashboard1Name'))]"
+                },
+                {
+                  "name": "PartId",
+                  "value": "368359dc-0345-40b2-a427-1f22f191e8ae"
+                },
+                {
+                  "name": "PartTitle",
+                  "value": "Analytics"
+                },
+                {
+                  "name": "PartSubTitle",
+                  "value": "[parameters('logAnalyticsWorkspaceName')]"
+                },
+                {
+                  "name": "resourceTypeMode",
+                  "value": "workspace"
+                }
+              ],
+              "type": "Extension/AppInsightsExtension/PartType/AnalyticsGroupedBarChartPart",
+              "settings": {
+                "content": {
+                  "dashboardPartTitle": "Backup Size Estimates",
+                  "dashboardPartSubTitle": "SAPHANA on [parameters('logAnalyticsWorkspaceName')]"
+                }
+              },
+              "asset": {
+                "idInputName": "ComponentId",
+                "type": "ApplicationInsights"
+              }
+            }
+          },
+          "7": {
+            "position": {
+              "x": 42,
+              "y": 0,
+              "colSpan": 6,
+              "rowSpan": 4
+            },
+            "metadata": {
+              "inputs": [
+                {
+                  "name": "ComponentId",
+                  "value": {
+                    "SubscriptionId": "[subscription().subscriptionId]",
+                    "ResourceGroup": "[resourceGroup().name]",
+                    "Name": "[parameters('logAnalyticsWorkspaceName')]"
+                  }
+                },
+                {
+                  "name": "Query",
+                  "value": "    SAPHana_CL\r\n    | where CollectorType_s ==\"Inventory\" and Category== \"Services\"\r\n    | summarize arg_max(TimeGenerated, *) by HOST_s,SERVICE_NAME_s\r\n    |project Instance=strcat(Instance_s,'; ',HOST_s),  Status=ACTIVE_STATUS_s , Service=SERVICE_NAME_s ,Port=PORT_d\n | project Instance, Status, Service, Port"
+                },
+                {
+                  "name": "TimeRange",
+                  "value": "P1D"
+                },
+                {
+                  "name": "Version",
+                  "value": "1.0"
+                },
+                {
+                  "name": "DashboardId",
+                  "value": "[concat(resourceGroup().id,'/providers/Microsoft.Portal/dashboards/', variables('dashboard1Name'))]"
+                },
+                {
+                  "name": "PartId",
+                  "value": "f599469b-e1eb-410a-ad7c-4197370c4c80"
+                },
+                {
+                  "name": "PartTitle",
+                  "value": "Analytics"
+                },
+                {
+                  "name": "PartSubTitle",
+                  "value": "[parameters('logAnalyticsWorkspaceName')]"
+                },
+                {
+                  "name": "resourceTypeMode",
+                  "value": "workspace"
+                }
+              ],
+              "type": "Extension/AppInsightsExtension/PartType/AnalyticsGridPart",
+              "settings": {
+                "content": {
+                  "dashboardPartTitle": "Service Inventory",
+                  "dashboardPartSubTitle": "SAPHANA"
+                }
+              },
+              "asset": {
+                "idInputName": "ComponentId",
+                "type": "ApplicationInsights"
+              }
+            }
+          },
+          "8": {
+            "position": {
+              "x": 0,
+              "y": 4,
+              "colSpan": 6,
+              "rowSpan": 4
+            },
+            "metadata": {
+              "inputs": [
+                {
+                  "name": "ComponentId",
+                  "value": {
+                    "SubscriptionId": "[subscription().subscriptionId]",
+                    "ResourceGroup": "[resourceGroup().name]",
+                    "Name": "[parameters('logAnalyticsWorkspaceName')]"
+                  }
+                },
+                {
+                  "name": "Query",
+                  "value": "let HanaConnectionTable=  SAPHana_CL\n| where CollectorType_s == \"State\"\n| where Category == \"Connectivity\"\n|summarize arg_max(TimeGenerated,* ) by HOST_s\n|project Host=HOST_s ,ConnectionStatus=Connection_s  ;\nHanaConnectionTable\n|join kind= fullouter\n(\n    SAPHana_CL\n    | where CollectorType_s ==\"Inventory\" and Category== \"Services\"\n    | summarize arg_max(TimeGenerated, *) by HOST_s,SERVICE_NAME_s\n    |project Instance=Instance_s,Host=HOST_s,  Status=ACTIVE_STATUS_s , Service=SERVICE_NAME_s ,Port=SQL_PORT_d\n)\non Host\n| project Host=strcat(Instance,\"; \",iff(isempty(Host),Host1 ,Host)) ,Status=iff(ConnectionStatus==\"Failed\",\"Unkown\",Status),Service=iff(isempty(Service),\"Unkown\",Service)\n|summarize count(Service) by Status\n"
+                },
+                {
+                  "name": "TimeRange",
+                  "value": "PT1H"
+                },
+                {
+                  "name": "Dimensions",
+                  "value": {
+                    "xAxis": {
+                      "name": "Status",
+                      "type": "String"
+                    },
+                    "yAxis": [
+                      {
+                        "name": "count_Service",
+                        "type": "Int64"
+                      }
+                    ],
+                    "splitBy": [],
+                    "aggregation": "Sum"
+                  }
+                },
+                {
+                  "name": "Version",
+                  "value": "1.0"
+                },
+                {
+                  "name": "DashboardId",
+                  "value": "[concat(resourceGroup().id,'/providers/Microsoft.Portal/dashboards/', variables('dashboard1Name'))]"
+                },
+                {
+                  "name": "PartId",
+                  "value": "583b8b2c-c385-4da9-a770-7d779cff2d5a"
+                },
+                {
+                  "name": "PartTitle",
+                  "value": "Analytics"
+                },
+                {
+                  "name": "PartSubTitle",
+                  "value": "[parameters('logAnalyticsWorkspaceName')]"
+                },
+                {
+                  "name": "resourceTypeMode",
+                  "value": "workspace"
+                }
+              ],
+              "type": "Extension/AppInsightsExtension/PartType/AnalyticsDonutPart",
+              "settings": {
+                "content": {
+                  "dashboardPartTitle": "Service State",
+                  "dashboardPartSubTitle": "SapHana"
+                }
+              },
+              "asset": {
+                "idInputName": "ComponentId",
+                "type": "ApplicationInsights"
+              }
+            }
+          },
+          "9": {
+            "position": {
+              "x": 6,
+              "y": 4,
+              "colSpan": 6,
+              "rowSpan": 4
+            },
+            "metadata": {
+              "inputs": [
+                {
+                  "name": "ComponentId",
+                  "value": {
+                    "SubscriptionId": "[subscription().subscriptionId]",
+                    "ResourceGroup": "[resourceGroup().name]",
+                    "Name": "[parameters('logAnalyticsWorkspaceName')]"
+                  }
+                },
+                {
+                  "name": "Query",
+                  "value": "let HanaConnectionTable=  SAPHana_CL\n| where CollectorType_s == \"State\"\n| where Category == \"Connectivity\"\n|summarize arg_max(TimeGenerated,* ) by HOST_s\n|project Host=HOST_s ,ConnectionStatus=Connection_s  ;\nHanaConnectionTable\n|join kind= fullouter\n(\n    SAPHana_CL\n    | where CollectorType_s ==\"Inventory\" and Category== \"Services\"\n    | summarize arg_max(TimeGenerated, *) by HOST_s,SERVICE_NAME_s\n    |project Instance=Instance_s,Host=HOST_s,  Status=ACTIVE_STATUS_s , Service=SERVICE_NAME_s ,Port=SQL_PORT_d\n)\non Host\n| project Host=strcat(Instance,\"; \",iff(isempty(Host),Host1 ,Host)) ,Status=iff(ConnectionStatus==\"Failed\",\"Unkown\",Status),Service=iff(isempty(Service),\"Unkown\",Service)\n| project Host, IsActive=Status, Service\n | project Host, IsActive, Service"
+                },
+                {
+                  "name": "TimeRange",
+                  "value": "P1D"
+                },
+                {
+                  "name": "Version",
+                  "value": "1.0"
+                },
+                {
+                  "name": "DashboardId",
+                  "value": "[concat(resourceGroup().id,'/providers/Microsoft.Portal/dashboards/', variables('dashboard1Name'))]"
+                },
+                {
+                  "name": "PartId",
+                  "value": "8237a533-449d-4226-adfb-b3003697eacd"
+                },
+                {
+                  "name": "PartTitle",
+                  "value": "Analytics"
+                },
+                {
+                  "name": "PartSubTitle",
+                  "value": "[parameters('logAnalyticsWorkspaceName')]"
+                },
+                {
+                  "name": "resourceTypeMode",
+                  "value": "workspace"
+                }
+              ],
+              "type": "Extension/AppInsightsExtension/PartType/AnalyticsGridPart",
+              "settings": {
+                "content": {
+                  "dashboardPartTitle": "Service Health",
+                  "dashboardPartSubTitle": "SAPHANA"
+                }
+              },
+              "asset": {
+                "idInputName": "ComponentId",
+                "type": "ApplicationInsights"
+              }
+            }
+          },
+          "10": {
+            "position": {
+              "x": 12,
+              "y": 4,
+              "colSpan": 6,
+              "rowSpan": 4
+            },
+            "metadata": {
+              "inputs": [
+                {
+                  "name": "ComponentId",
+                  "value": {
+                    "SubscriptionId": "[subscription().subscriptionId]",
+                    "ResourceGroup": "[resourceGroup().name]",
+                    "Name": "[parameters('logAnalyticsWorkspaceName')]"
+                  }
+                },
+                {
+                  "name": "Query",
+                  "value": "SAPHana_CL\n| where CollectorType_s == \"Performance\" \n| where     PerfObject_s ==\"Compression\"\n|where PerfCounter_s  ==\"COMPRESSION_PERCENTAGE\"\n|summarize arg_max(TimeGenerated, *) by HOST_s,Database_s, PerfInstance_s\n|project HostandDB=strcat(HOST_s,':',Database_s), Schema=PerfInstance_s,CompPct=round(PerfValue_d,1)\n|summarize AvgCompression=avg(CompPct) by HostandDB\n| project HostandDB, AvgCompression\n | project HostandDB, AvgCompression"
+                },
+                {
+                  "name": "TimeRange",
+                  "value": "P1D"
+                },
+                {
+                  "name": "Version",
+                  "value": "1.0"
+                },
+                {
+                  "name": "DashboardId",
+                  "value": "[concat(resourceGroup().id,'/providers/Microsoft.Portal/dashboards/', variables('dashboard1Name'))]"
+                },
+                {
+                  "name": "PartId",
+                  "value": "1d1571fc-2b8b-4d17-acfb-7e490af37eec"
+                },
+                {
+                  "name": "PartTitle",
+                  "value": "Analytics"
+                },
+                {
+                  "name": "PartSubTitle",
+                  "value": "[parameters('logAnalyticsWorkspaceName')]"
+                },
+                {
+                  "name": "resourceTypeMode",
+                  "value": "workspace"
+                }
+              ],
+              "type": "Extension/AppInsightsExtension/PartType/AnalyticsGridPart",
+              "settings": {
+                "content": {
+                  "dashboardPartTitle": "Compression",
+                  "dashboardPartSubTitle": "Dataabase"
+                }
+              },
+              "asset": {
+                "idInputName": "ComponentId",
+                "type": "ApplicationInsights"
+              }
+            }
+          },
+          "11": {
+            "position": {
+              "x": 18,
+              "y": 4,
+              "colSpan": 6,
+              "rowSpan": 4
+            },
+            "metadata": {
+              "inputs": [
+                {
+                  "name": "ComponentId",
+                  "value": {
+                    "SubscriptionId": "[subscription().subscriptionId]",
+                    "ResourceGroup": "[resourceGroup().name]",
+                    "Name": "[parameters('logAnalyticsWorkspaceName')]"
+                  }
+                },
+                {
+                  "name": "Query",
+                  "value": "SAPHana_CL\n| where CollectorType_s ==\"Inventory\" and Category== \"Disks\"\n| summarize arg_max(TimeGenerated, *) by PATH_s,SUBPATH_s,DEVICE_ID_d\n|project Host=strcat(HOST_s,\" : \" ,USAGE_TYPE_s,\" :\",PATH_s),PctUSed= round(USED_SIZE_d/TOTAL_SIZE_d,2)*100\n"
+                },
+                {
+                  "name": "TimeRange",
+                  "value": "PT1H"
+                },
+                {
+                  "name": "Dimensions",
+                  "value": {
+                    "xAxis": {
+                      "name": "Host",
+                      "type": "String"
+                    },
+                    "yAxis": [
+                      {
+                        "name": "PctUSed",
+                        "type": "Double"
+                      }
+                    ],
+                    "splitBy": [],
+                    "aggregation": "Sum"
+                  }
+                },
+                {
+                  "name": "Version",
+                  "value": "1.0"
+                },
+                {
+                  "name": "DashboardId",
+                  "value": "[concat(resourceGroup().id,'/providers/Microsoft.Portal/dashboards/', variables('dashboard1Name'))]"
+                },
+                {
+                  "name": "PartId",
+                  "value": "f20a041c-39b7-4e3b-b212-cdc807915dca"
+                },
+                {
+                  "name": "PartTitle",
+                  "value": "Analytics"
+                },
+                {
+                  "name": "PartSubTitle",
+                  "value": "[parameters('logAnalyticsWorkspaceName')]"
+                },
+                {
+                  "name": "resourceTypeMode",
+                  "value": "workspace"
+                }
+              ],
+              "type": "Extension/AppInsightsExtension/PartType/AnalyticsBarChartPart",
+              "settings": {
+                "content": {
+                  "dashboardPartTitle": "% Used",
+                  "dashboardPartSubTitle": "Disks"
+                }
+              },
+              "asset": {
+                "idInputName": "ComponentId",
+                "type": "ApplicationInsights"
+              }
+            }
+          },
+          "12": {
+            "position": {
+              "x": 24,
+              "y": 4,
+              "colSpan": 6,
+              "rowSpan": 4
+            },
+            "metadata": {
+              "inputs": [
+                {
+                  "name": "ComponentId",
+                  "value": {
+                    "SubscriptionId": "[subscription().subscriptionId]",
+                    "ResourceGroup": "[resourceGroup().name]",
+                    "Name": "[parameters('logAnalyticsWorkspaceName')]"
+                  }
+                },
+                {
+                  "name": "Query",
+                  "value": "SAPHana_CL\n| where CollectorType_s ==\"Inventory\"\n| where Category == \"Alerts\"\n|summarize arg_max(TimeGenerated, *) by HOST_s ,Database_s,ALERT_ID_d\n| project Host=ALERT_HOST_s ,DB=Database_s,Alert=strcat(ALERT_NAME_s,\" ; \",ALERT_DETAILS_s),Rating=ALERT_RATING_d\n| project Host, DB, Alert, Rating\n | project Host, DB, Alert, Rating"
+                },
+                {
+                  "name": "TimeRange",
+                  "value": "PT1H"
+                },
+                {
+                  "name": "Version",
+                  "value": "1.0"
+                },
+                {
+                  "name": "DashboardId",
+                  "value": "[concat(resourceGroup().id,'/providers/Microsoft.Portal/dashboards/', variables('dashboard1Name'))]"
+                },
+                {
+                  "name": "PartId",
+                  "value": "ff37d3e4-e9e5-468f-a807-d0443b1f316c"
+                },
+                {
+                  "name": "PartTitle",
+                  "value": "Analytics"
+                },
+                {
+                  "name": "PartSubTitle",
+                  "value": "[parameters('logAnalyticsWorkspaceName')]"
+                },
+                {
+                  "name": "resourceTypeMode",
+                  "value": "workspace"
+                }
+              ],
+              "type": "Extension/AppInsightsExtension/PartType/AnalyticsGridPart",
+              "settings": {
+                "content": {
+                  "dashboardPartTitle": "Open Alerts",
+                  "dashboardPartSubTitle": "Dataabase"
+                }
+              },
+              "asset": {
+                "idInputName": "ComponentId",
+                "type": "ApplicationInsights"
+              }
+            }
+          },
+          "13": {
+            "position": {
+              "x": 30,
+              "y": 4,
+              "colSpan": 6,
+              "rowSpan": 4
+            },
+            "metadata": {
+              "inputs": [
+                {
+                  "name": "ComponentId",
+                  "value": {
+                    "SubscriptionId": "[subscription().subscriptionId]",
+                    "ResourceGroup": "[resourceGroup().name]",
+                    "Name": "[parameters('logAnalyticsWorkspaceName')]"
+                  }
+                },
+                {
+                  "name": "Query",
+                  "value": "SAPHana_CL\n| where CollectorType_s ==\"Inventory\"\n| where Category == \"Alerts\"\n|summarize arg_max(TimeGenerated, *) by HOST_s ,Database_s,ALERT_ID_d\n| summarize count() by Alert=ALERT_NAME_s, Database_s\n"
+                },
+                {
+                  "name": "TimeRange",
+                  "value": "P1D"
+                },
+                {
+                  "name": "Dimensions",
+                  "value": {
+                    "xAxis": {
+                      "name": "Alert",
+                      "type": "String"
+                    },
+                    "yAxis": [
+                      {
+                        "name": "count_",
+                        "type": "Int64"
+                      }
+                    ],
+                    "splitBy": [
+                      {
+                        "name": "Database_s",
+                        "type": "String"
+                      }
+                    ],
+                    "aggregation": "Sum"
+                  }
+                },
+                {
+                  "name": "Version",
+                  "value": "1.0"
+                },
+                {
+                  "name": "DashboardId",
+                  "value": "[concat(resourceGroup().id,'/providers/Microsoft.Portal/dashboards/', variables('dashboard1Name'))]"
+                },
+                {
+                  "name": "PartId",
+                  "value": "7324065d-212e-469a-9e8f-ef5af953d82e"
+                },
+                {
+                  "name": "PartTitle",
+                  "value": "Analytics"
+                },
+                {
+                  "name": "PartSubTitle",
+                  "value": "[parameters('logAnalyticsWorkspaceName')]"
+                },
+                {
+                  "name": "resourceTypeMode",
+                  "value": "workspace"
+                }
+              ],
+              "type": "Extension/AppInsightsExtension/PartType/AnalyticsBarChartPart",
+              "settings": {
+                "content": {
+                  "dashboardPartTitle": "Active Alerts",
+                  "dashboardPartSubTitle": "HANA DB"
+                }
+              },
+              "asset": {
+                "idInputName": "ComponentId",
+                "type": "ApplicationInsights"
+              }
+            }
+          },
+          "14": {
+            "position": {
+              "x": 36,
+              "y": 4,
+              "colSpan": 6,
+              "rowSpan": 4
+            },
+            "metadata": {
+              "inputs": [
+                {
+                  "name": "ComponentId",
+                  "value": {
+                    "SubscriptionId": "[subscription().subscriptionId]",
+                    "ResourceGroup": "[resourceGroup().name]",
+                    "Name": "[parameters('logAnalyticsWorkspaceName')]"
+                  }
+                },
+                {
+                  "name": "Query",
+                  "value": "let HanaConnectionTable=  SAPHana_CL\n| where CollectorType_s == \"State\"\n| where Category == \"Connectivity\"\n|summarize arg_max(TimeGenerated,* ) by HOST_s\n|project Host=HOST_s ,ConnectionStatus=Connection_s  ;\nHanaConnectionTable\n|join kind= fullouter\n(\n   SAPHana_CL\n| where CollectorType_s ==\"State\" and Category == \"Host\" \n|summarize arg_max(TimeGenerated, *)  by HOST_s\n|project Instance=Instance_s,Host=HOST_s,Services_CPU_Memory_Data_Log=strcat(All_Started_s,\"-\",CPU_s,\"-\",\t  Memory_s,\"-\",DISKDATA_s,\"-\",DISKLOG_s)\n| project Instance, Host, Services_CPU_Memory_Data_Log\n)\non Host\n| project Host=strcat(Instance,\"; \",iff(isempty(Host),Host1 ,Host)) ,Services_CPU_Memory_Data_Log=iff(ConnectionStatus==\"Failed\",\"Unkown\",Services_CPU_Memory_Data_Log)\n| project Host, Services_CPU_Memory_Data_Log\n | project Host, Services_CPU_Memory_Data_Log"
+                },
+                {
+                  "name": "TimeRange",
+                  "value": "P1D"
+                },
+                {
+                  "name": "Version",
+                  "value": "1.0"
+                },
+                {
+                  "name": "DashboardId",
+                  "value": "[concat(resourceGroup().id,'/providers/Microsoft.Portal/dashboards/', variables('dashboard1Name'))]"
+                },
+                {
+                  "name": "PartId",
+                  "value": "216684ef-c24d-4a2b-a85d-dedc0b9d4c5d"
+                },
+                {
+                  "name": "PartTitle",
+                  "value": "Analytics"
+                },
+                {
+                  "name": "PartSubTitle",
+                  "value": "[parameters('logAnalyticsWorkspaceName')]"
+                },
+                {
+                  "name": "resourceTypeMode",
+                  "value": "workspace"
+                }
+              ],
+              "type": "Extension/AppInsightsExtension/PartType/AnalyticsGridPart",
+              "settings": {
+                "content": {
+                  "dashboardPartTitle": "Overall Health",
+                  "dashboardPartSubTitle": "SAPHANA"
+                }
+              },
+              "asset": {
+                "idInputName": "ComponentId",
+                "type": "ApplicationInsights"
+              }
+            }
+          },
+          "15": {
+            "position": {
+              "x": 42,
+              "y": 4,
+              "colSpan": 6,
+              "rowSpan": 4
+            },
+            "metadata": {
+              "inputs": [
+                {
+                  "name": "ComponentId",
+                  "value": {
+                    "SubscriptionId": "[subscription().subscriptionId]",
+                    "ResourceGroup": "[resourceGroup().name]",
+                    "Name": "[parameters('logAnalyticsWorkspaceName')]"
+                  }
+                },
+                {
+                  "name": "Query",
+                  "value": "SAPHana_CL\n| where CollectorType_s ==\"Inventory\" \n| where Category == \"License\" \n|summarize arg_max(TimeGenerated, *) by SYSTEM_ID_s,HOST_s \n|project SYSTEMID=SYSTEM_ID_s ,Valid=VALID_s,EXPIRATION=EXPIRATION_DATE_t,LimitandUsage=strcat(tostring(PRODUCT_LIMIT_d),'/',tostring(PRODUCT_USAGE_d))\n | project SYSTEMID, Valid, EXPIRATION, LimitandUsage"
+                },
+                {
+                  "name": "TimeRange",
+                  "value": "P1D"
+                },
+                {
+                  "name": "Version",
+                  "value": "1.0"
+                },
+                {
+                  "name": "DashboardId",
+                  "value": "[concat(resourceGroup().id,'/providers/Microsoft.Portal/dashboards/', variables('dashboard1Name'))]"
+                },
+                {
+                  "name": "PartId",
+                  "value": "88946c87-c2ac-43c5-833f-f384a52e7b9b"
+                },
+                {
+                  "name": "PartTitle",
+                  "value": "Analytics"
+                },
+                {
+                  "name": "PartSubTitle",
+                  "value": "[parameters('logAnalyticsWorkspaceName')]"
+                },
+                {
+                  "name": "resourceTypeMode",
+                  "value": "workspace"
+                }
+              ],
+              "type": "Extension/AppInsightsExtension/PartType/AnalyticsGridPart",
+              "settings": {},
+              "asset": {
+                "idInputName": "ComponentId",
+                "type": "ApplicationInsights"
+              }
+            }
+          },
+          "16": {
+            "position": {
+              "x": 0,
+              "y": 8,
+              "colSpan": 6,
+              "rowSpan": 4
+            },
+            "metadata": {
+              "inputs": [
+                {
+                  "name": "ComponentId",
+                  "value": {
+                    "SubscriptionId": "[subscription().subscriptionId]",
+                    "ResourceGroup": "[resourceGroup().name]",
+                    "Name": "[parameters('logAnalyticsWorkspaceName')]"
+                  }
+                },
+                {
+                  "name": "Query",
+                  "value": "SAPHana_CL\n| where CollectorType_s has \"Performance\"\n| where PerfObject_s ==\"Host\" and PerfCounter_s ==\"CPU_PCT\"\n| summarize CPU=avg(PerfValue_d) by Host=HOST_s, bin (TimeGenerated, 15m)\n"
+                },
+                {
+                  "name": "TimeRange",
+                  "value": "P1D"
+                },
+                {
+                  "name": "Dimensions",
+                  "value": {
+                    "xAxis": {
+                      "name": "TimeGenerated",
+                      "type": "DateTime"
+                    },
+                    "yAxis": [
+                      {
+                        "name": "CPU",
+                        "type": "Double"
+                      }
+                    ],
+                    "splitBy": [
+                      {
+                        "name": "PAth",
+                        "type": "String"
+                      }
+                    ],
+                    "aggregation": "Sum"
+                  }
+                },
+                {
+                  "name": "Version",
+                  "value": "1.0"
+                },
+                {
+                  "name": "DashboardId",
+                  "value": "[concat(resourceGroup().id,'/providers/Microsoft.Portal/dashboards/', variables('dashboard1Name'))]"
+                },
+                {
+                  "name": "PartId",
+                  "value": "bcdacb52-65ce-4c18-83d0-85eeea875a24"
+                },
+                {
+                  "name": "PartTitle",
+                  "value": "Analytics"
+                },
+                {
+                  "name": "PartSubTitle",
+                  "value": "[parameters('logAnalyticsWorkspaceName')]"
+                },
+                {
+                  "name": "resourceTypeMode",
+                  "value": "workspace"
+                }
+              ],
+              "type": "Extension/AppInsightsExtension/PartType/AnalyticsLineChartPart",
+              "settings": {
+                "content": {
+                  "dashboardPartTitle": "CPU Utilization ",
+                  "dashboardPartSubTitle": "HANA HOST"
+                }
+              },
+              "asset": {
+                "idInputName": "ComponentId",
+                "type": "ApplicationInsights"
+              }
+            }
+          },
+          "17": {
+            "position": {
+              "x": 6,
+              "y": 8,
+              "colSpan": 6,
+              "rowSpan": 4
+            },
+            "metadata": {
+              "inputs": [
+                {
+                  "name": "ComponentId",
+                  "value": {
+                    "SubscriptionId": "[subscription().subscriptionId]",
+                    "ResourceGroup": "[resourceGroup().name]",
+                    "Name": "[parameters('logAnalyticsWorkspaceName')]"
+                  }
+                },
+                {
+                  "name": "Query",
+                  "value": "SAPHana_CL\n| where CollectorType_s == \"Performance\"\n| where   PerfObject_s  == \"Service\"   and PerfCounter_s ==\"THREAD_COUNT\"\n|summarize Threads=avg(PerfValue_d) by Instance_s,HOST_s,Service=strcat(Database_s,\" : \",PerfInstance_s),bin(TimeGenerated, 15m)\n"
+                },
+                {
+                  "name": "TimeRange",
+                  "value": "P1D"
+                },
+                {
+                  "name": "Dimensions",
+                  "value": {
+                    "xAxis": {
+                      "name": "TimeGenerated",
+                      "type": "DateTime"
+                    },
+                    "yAxis": [
+                      {
+                        "name": "Threads",
+                        "type": "Double"
+                      }
+                    ],
+                    "splitBy": [
+                      {
+                        "name": "Service",
+                        "type": "String"
+                      }
+                    ],
+                    "aggregation": "Sum"
+                  }
+                },
+                {
+                  "name": "Version",
+                  "value": "1.0"
+                },
+                {
+                  "name": "DashboardId",
+                  "value": "[concat(resourceGroup().id,'/providers/Microsoft.Portal/dashboards/', variables('dashboard1Name'))]"
+                },
+                {
+                  "name": "PartId",
+                  "value": "789b1b97-a964-41a8-8c42-9720f9c2eac4"
+                },
+                {
+                  "name": "PartTitle",
+                  "value": "Analytics"
+                },
+                {
+                  "name": "PartSubTitle",
+                  "value": "[parameters('logAnalyticsWorkspaceName')]"
+                },
+                {
+                  "name": "resourceTypeMode",
+                  "value": "workspace"
+                }
+              ],
+              "type": "Extension/AppInsightsExtension/PartType/AnalyticsLineChartPart",
+              "settings": {
+                "content": {
+                  "dashboardPartTitle": "Threads by Compoent",
+                  "dashboardPartSubTitle": "Hana Host"
+                }
+              },
+              "asset": {
+                "idInputName": "ComponentId",
+                "type": "ApplicationInsights"
+              }
+            }
+          },
+          "18": {
+            "position": {
+              "x": 12,
+              "y": 8,
+              "colSpan": 6,
+              "rowSpan": 4
+            },
+            "metadata": {
+              "inputs": [
+                {
+                  "name": "ComponentId",
+                  "value": {
+                    "SubscriptionId": "[subscription().subscriptionId]",
+                    "ResourceGroup": "[resourceGroup().name]",
+                    "Name": "[parameters('logAnalyticsWorkspaceName')]"
+                  }
+                },
+                {
+                  "name": "Query",
+                  "value": "SAPHana_CL\n| where CollectorType_s == \"Performance\"\n| where  PerfObject_s ==\"Memory\" and PerfCounter_s in(\"DatabaseResidentGB\",\"PeakUsedMemoryGB\",\"UsedMemoryGB\")\n|summarize AvgValue=avg(PerfValue_d) by Path=strcat(HOST_s,':',PerfCounter_s), bin(TimeGenerated, 15m)\n"
+                },
+                {
+                  "name": "TimeRange",
+                  "value": "P1D"
+                },
+                {
+                  "name": "Dimensions",
+                  "value": {
+                    "xAxis": {
+                      "name": "TimeGenerated",
+                      "type": "DateTime"
+                    },
+                    "yAxis": [
+                      {
+                        "name": "AvgValue",
+                        "type": "Double"
+                      }
+                    ],
+                    "splitBy": [
+                      {
+                        "name": "Path",
+                        "type": "String"
+                      }
+                    ],
+                    "aggregation": "Sum"
+                  }
+                },
+                {
+                  "name": "Version",
+                  "value": "1.0"
+                },
+                {
+                  "name": "DashboardId",
+                  "value": "[concat(resourceGroup().id,'/providers/Microsoft.Portal/dashboards/', variables('dashboard1Name'))]"
+                },
+                {
+                  "name": "PartId",
+                  "value": "6a4fc90a-04bf-45b8-a9d9-e8fbf6542bb6"
+                },
+                {
+                  "name": "PartTitle",
+                  "value": "Analytics"
+                },
+                {
+                  "name": "PartSubTitle",
+                  "value": "[parameters('logAnalyticsWorkspaceName')]"
+                },
+                {
+                  "name": "resourceTypeMode",
+                  "value": "workspace"
+                }
+              ],
+              "type": "Extension/AppInsightsExtension/PartType/AnalyticsLineChartPart",
+              "settings": {
+                "content": {
+                  "dashboardPartTitle": "Memory Utilization by HOST",
+                  "dashboardPartSubTitle": "SAPHANA"
+                }
+              },
+              "asset": {
+                "idInputName": "ComponentId",
+                "type": "ApplicationInsights"
+              }
+            }
+          },
+          "19": {
+            "position": {
+              "x": 18,
+              "y": 8,
+              "colSpan": 6,
+              "rowSpan": 4
+            },
+            "metadata": {
+              "inputs": [
+                {
+                  "name": "ComponentId",
+                  "value": {
+                    "SubscriptionId": "[subscription().subscriptionId]",
+                    "ResourceGroup": "[resourceGroup().name]",
+                    "Name": "[parameters('logAnalyticsWorkspaceName')]"
+                  }
+                },
+                {
+                  "name": "Query",
+                  "value": "SAPHana_CL\n| where CollectorType_s ==\"Performance\"\n//|project CollectorType_s,Category,Subcategory_s,Component_s\n| where PerfObject_s  == \"Memory\" and PerfCounter_s ==\"Component\"\n|summarize arg_max(TimeGenerated, *) by HOST_s,PerfInstance_s\n|project Host=HOST_s,Component=PerfInstance_s,MEMUsageGB=round(PerfValue_d/1024,2)\n//|project CollectorType_s,Category,Subcategory_s,Component_s\n"
+                },
+                {
+                  "name": "TimeRange",
+                  "value": "P1D"
+                },
+                {
+                  "name": "Dimensions",
+                  "value": {
+                    "xAxis": {
+                      "name": "Host",
+                      "type": "String"
+                    },
+                    "yAxis": [
+                      {
+                        "name": "MEMUsageGB",
+                        "type": "Double"
+                      }
+                    ],
+                    "splitBy": [
+                      {
+                        "name": "Component",
+                        "type": "String"
+                      }
+                    ],
+                    "aggregation": "Sum"
+                  }
+                },
+                {
+                  "name": "Version",
+                  "value": "1.0"
+                },
+                {
+                  "name": "DashboardId",
+                  "value": "[concat(resourceGroup().id,'/providers/Microsoft.Portal/dashboards/', variables('dashboard1Name'))]"
+                },
+                {
+                  "name": "PartId",
+                  "value": "5633f57b-11e5-4fe0-adde-17d6c8b91db9"
+                },
+                {
+                  "name": "PartTitle",
+                  "value": "Analytics"
+                },
+                {
+                  "name": "PartSubTitle",
+                  "value": "[parameters('logAnalyticsWorkspaceName')]"
+                },
+                {
+                  "name": "resourceTypeMode",
+                  "value": "workspace"
+                }
+              ],
+              "type": "Extension/AppInsightsExtension/PartType/AnalyticsBarChartPart",
+              "settings": {},
+              "asset": {
+                "idInputName": "ComponentId",
+                "type": "ApplicationInsights"
+              }
+            }
+          },
+          "20": {
+            "position": {
+              "x": 24,
+              "y": 8,
+              "colSpan": 6,
+              "rowSpan": 4
+            },
+            "metadata": {
+              "inputs": [
+                {
+                  "name": "ComponentId",
+                  "value": {
+                    "SubscriptionId": "[subscription().subscriptionId]",
+                    "ResourceGroup": "[resourceGroup().name]",
+                    "Name": "[parameters('logAnalyticsWorkspaceName')]"
+                  }
+                },
+                {
+                  "name": "Query",
+                  "value": "SAPHana_CL\n| where CollectorType_s ==\"Performance\"\n//|summarize count() by PerfObject_s,PerfCounter_s\n| where PerfObject_s  == \"Host\" and PerfCounter_s in (\"NETWORK_IN_MB\",\"NETWORK_OUT_MB\")\n|summarize AvgMB=avg(PerfValue_d) by PATH=strcat(HOST_s,': ',PerfCounter_s), bin(TimeGenerated, 15m)\n"
+                },
+                {
+                  "name": "TimeRange",
+                  "value": "P1D"
+                },
+                {
+                  "name": "Dimensions",
+                  "value": {
+                    "xAxis": {
+                      "name": "TimeGenerated",
+                      "type": "DateTime"
+                    },
+                    "yAxis": [
+                      {
+                        "name": "AvgMB",
+                        "type": "Double"
+                      }
+                    ],
+                    "splitBy": [
+                      {
+                        "name": "PATH",
+                        "type": "String"
+                      }
+                    ],
+                    "aggregation": "Sum"
+                  }
+                },
+                {
+                  "name": "Version",
+                  "value": "1.0"
+                },
+                {
+                  "name": "DashboardId",
+                  "value": "[concat(resourceGroup().id,'/providers/Microsoft.Portal/dashboards/', variables('dashboard1Name'))]"
+                },
+                {
+                  "name": "PartId",
+                  "value": "faef1d6e-76d1-4613-a98c-8ee392ca5cfe"
+                },
+                {
+                  "name": "PartTitle",
+                  "value": "Analytics"
+                },
+                {
+                  "name": "PartSubTitle",
+                  "value": "[parameters('logAnalyticsWorkspaceName')]"
+                },
+                {
+                  "name": "resourceTypeMode",
+                  "value": "workspace"
+                }
+              ],
+              "type": "Extension/AppInsightsExtension/PartType/AnalyticsLineChartPart",
+              "settings": {
+                "content": {
+                  "dashboardPartTitle": "NW IN/OUT MB ",
+                  "dashboardPartSubTitle": "HANA HOST"
+                }
+              },
+              "asset": {
+                "idInputName": "ComponentId",
+                "type": "ApplicationInsights"
+              }
+            }
+          },
+          "21": {
+            "position": {
+              "x": 30,
+              "y": 8,
+              "colSpan": 6,
+              "rowSpan": 4
+            },
+            "metadata": {
+              "inputs": [
+                {
+                  "name": "ComponentId",
+                  "value": {
+                    "SubscriptionId": "[subscription().subscriptionId]",
+                    "ResourceGroup": "[resourceGroup().name]",
+                    "Name": "[parameters('logAnalyticsWorkspaceName')]"
+                  }
+                },
+                {
+                  "name": "Query",
+                  "value": "SAPHana_CL\n| where CollectorType_s == \"Performance\"\n| where   Category == \"Service\"   and Subcategory_s==\"Statistics\" and SERVICE_NAME_s !=\"daemon\"\n|summarize arg_max(TimeGenerated, *) by Instance_s,HOST_s,SERVICE_NAME_s\n|project Instance=Instance_s,Host=HOST_s,Service=SERVICE_NAME_s,ServiceCPU=PROCESS_CPU_d ,REQUESTS_PER_SEC=REQUESTS_PER_SEC_d ,TOTAL_MEMORY_GB=TOTAL_MEMORY_GB_d , PROCESS_PHYSICAL_MEMORY_GB=PROCESS_PHYSICAL_MEMORY_GB_d ,PROCESS_MEMORY_GB=PROCESS_MEMORY_GB_d,PROCESS_CPU=PROCESS_CPU_TIME_d , THREADS=THREAD_COUNT_d ,TOTAL_CPU=TOTAL_CPU_d,RESPONSETIME=RESPONSE_TIME_d \n"
+                },
+                {
+                  "name": "TimeRange",
+                  "value": "P1D"
+                },
+                {
+                  "name": "Dimensions",
+                  "value": {
+                    "xAxis": {
+                      "name": "Service",
+                      "type": "String"
+                    },
+                    "yAxis": [
+                      {
+                        "name": "RESPONSETIME",
+                        "type": "Double"
+                      }
+                    ],
+                    "splitBy": [
+                      {
+                        "name": "Instance",
+                        "type": "String"
+                      }
+                    ],
+                    "aggregation": "Average"
+                  }
+                },
+                {
+                  "name": "Version",
+                  "value": "1.0"
+                },
+                {
+                  "name": "DashboardId",
+                  "value": "[concat(resourceGroup().id,'/providers/Microsoft.Portal/dashboards/', variables('dashboard1Name'))]"
+                },
+                {
+                  "name": "PartId",
+                  "value": "98336051-24ce-41af-8062-6221be4e97c9"
+                },
+                {
+                  "name": "PartTitle",
+                  "value": "Analytics"
+                },
+                {
+                  "name": "PartSubTitle",
+                  "value": "[parameters('logAnalyticsWorkspaceName')]"
+                },
+                {
+                  "name": "resourceTypeMode",
+                  "value": "workspace"
+                }
+              ],
+              "type": "Extension/AppInsightsExtension/PartType/AnalyticsGroupedBarChartPart",
+              "settings": {
+                "content": {
+                  "dashboardPartTitle": "Response Time",
+                  "dashboardPartSubTitle": "Service"
+                }
+              },
+              "asset": {
+                "idInputName": "ComponentId",
+                "type": "ApplicationInsights"
+              }
+            }
+          },
+          "22": {
+            "position": {
+              "x": 36,
+              "y": 8,
+              "colSpan": 6,
+              "rowSpan": 4
+            },
+            "metadata": {
+              "inputs": [
+                {
+                  "name": "ComponentId",
+                  "value": {
+                    "SubscriptionId": "[subscription().subscriptionId]",
+                    "ResourceGroup": "[resourceGroup().name]",
+                    "Name": "[parameters('logAnalyticsWorkspaceName')]"
+                  }
+                },
+                {
+                  "name": "Query",
+                  "value": "SAPHana_CL\n| where CollectorType_s == \"Performance\"\n| where  PerfObject_s  == \"Volumes\"   and PerfCounter_s in(\"AVG_WRITE_TIME\",\"AVG_READ_TIME\")\n|summarize AVG_WRITE_TIME=avg(PerfValue_d)/1000,AVG_READ_TIME=avg(PerfValue_d)/1000 by Path=strcat(HOST_s,\":\",PerfInstance_s),bin(TimeGenerated, 15m)\n"
+                },
+                {
+                  "name": "TimeRange",
+                  "value": "P1D"
+                },
+                {
+                  "name": "Dimensions",
+                  "value": {
+                    "xAxis": {
+                      "name": "TimeGenerated",
+                      "type": "DateTime"
+                    },
+                    "yAxis": [
+                      {
+                        "name": "AVG_READ_TIME",
+                        "type": "Double"
+                      }
+                    ],
+                    "splitBy": [
+                      {
+                        "name": "Path",
+                        "type": "String"
+                      }
+                    ],
+                    "aggregation": "Average"
+                  }
+                },
+                {
+                  "name": "Version",
+                  "value": "1.0"
+                },
+                {
+                  "name": "DashboardId",
+                  "value": "[concat(resourceGroup().id,'/providers/Microsoft.Portal/dashboards/', variables('dashboard1Name'))]"
+                },
+                {
+                  "name": "PartId",
+                  "value": "8ab89959-ab9a-4381-a232-687e9324b800"
+                },
+                {
+                  "name": "PartTitle",
+                  "value": "Analytics"
+                },
+                {
+                  "name": "PartSubTitle",
+                  "value": "[parameters('logAnalyticsWorkspaceName')]"
+                },
+                {
+                  "name": "resourceTypeMode",
+                  "value": "workspace"
+                }
+              ],
+              "type": "Extension/AppInsightsExtension/PartType/AnalyticsLineChartPart",
+              "settings": {
+                "content": {
+                  "dashboardPartTitle": "AVG Write Time",
+                  "dashboardPartSubTitle": "Volumes"
+                }
+              },
+              "asset": {
+                "idInputName": "ComponentId",
+                "type": "ApplicationInsights"
+              }
+            }
+          },
+          "23": {
+            "position": {
+              "x": 42,
+              "y": 8,
+              "colSpan": 6,
+              "rowSpan": 4
+            },
+            "metadata": {
+              "inputs": [
+                {
+                  "name": "ComponentId",
+                  "value": {
+                    "SubscriptionId": "[subscription().subscriptionId]",
+                    "ResourceGroup": "[resourceGroup().name]",
+                    "Name": "[parameters('logAnalyticsWorkspaceName')]"
+                  }
+                },
+                {
+                  "name": "Query",
+                  "value": "SAPHana_CL\n| where CollectorType_s == \"Performance\"\n| where  PerfObject_s  == \"Volumes\"   and PerfCounter_s in(\"AVG_WRITE_TIME\",\"AVG_READ_TIME\")\n|summarize AVG_WRITE_TIME=avg(PerfValue_d)/1000,AVG_READ_TIME=avg(PerfValue_d)/1000 by Path=strcat(HOST_s,\":\",PerfInstance_s),bin(TimeGenerated, 15m)\n"
+                },
+                {
+                  "name": "TimeRange",
+                  "value": "P1D"
+                },
+                {
+                  "name": "Dimensions",
+                  "value": {
+                    "xAxis": {
+                      "name": "TimeGenerated",
+                      "type": "DateTime"
+                    },
+                    "yAxis": [
+                      {
+                        "name": "AVG_WRITE_TIME",
+                        "type": "Double"
+                      }
+                    ],
+                    "splitBy": [
+                      {
+                        "name": "Path",
+                        "type": "String"
+                      }
+                    ],
+                    "aggregation": "Average"
+                  }
+                },
+                {
+                  "name": "Version",
+                  "value": "1.0"
+                },
+                {
+                  "name": "DashboardId",
+                  "value": "[concat(resourceGroup().id,'/providers/Microsoft.Portal/dashboards/', variables('dashboard1Name'))]"
+                },
+                {
+                  "name": "PartId",
+                  "value": "0d056840-6078-462b-b243-841867534e77"
+                },
+                {
+                  "name": "PartTitle",
+                  "value": "Analytics"
+                },
+                {
+                  "name": "PartSubTitle",
+                  "value": "[parameters('logAnalyticsWorkspaceName')]"
+                },
+                {
+                  "name": "resourceTypeMode",
+                  "value": "workspace"
+                }
+              ],
+              "type": "Extension/AppInsightsExtension/PartType/AnalyticsLineChartPart",
+              "settings": {
+                "content": {
+                  "dashboardPartTitle": "AVG Read Time",
+                  "dashboardPartSubTitle": "Volumes"
+                }
+              },
+              "asset": {
+                "idInputName": "ComponentId",
+                "type": "ApplicationInsights"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "metadata": { },
+            "apiVersion": "2015-08-01-preview",
+            "type": "Microsoft.Portal/dashboards",
+            "name": "[variables('dashboard1Name')]",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "hidden-title": "[variables('dashboard1DisplayName')]"
+            }
+        }
+      ]
+    }
