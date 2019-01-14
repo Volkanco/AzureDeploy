@@ -3,12 +3,15 @@ param
 [Parameter(Mandatory=$false)] [bool] $collectqueryperf=$false,
 [Parameter(Mandatory=$false)] [bool] $collecttableinv=$false,
 [Parameter(Mandatory=$true)] [string] $configfolder,
-[Parameter(Mandatory=$true)] [string] $defaultProfileUser,
-[Parameter(Mandatory=$true)] [string] $defaultProfilePassword,
-[Parameter(Mandatory=$true)] [string] $hybridworkergroup="HANAMonitorGroup",
+[Parameter(Mandatory=$true)] [string] $hybridWorkerGroup,
 [Parameter(Mandatory=$true)] [int] $freq=15
 )
 
+<#
+
+[Parameter(Mandatory=$true)] [string] $defaultProfileUser,
+[Parameter(Mandatory=$true)] [string] $defaultProfilePassword,
+#>
 
 $connectionName = "AzureRunAsConnection"
 try
@@ -64,14 +67,14 @@ IF([string]::IsNullOrEmpty($AAAccount) -or [string]::IsNullOrEmpty($AAResourceGr
 
 }
 
-New-AzureRmAutomationVariable -Name AzureHanaMonitorUser -Description "Hana Monitoring User for Default Profile" -Value $defaultProfileUser -Encrypted 0 -ResourceGroupName $AAResourceGroup -AutomationAccountName $AAAccount  -ea 0
-New-AzureRmAutomationVariable -Name AzureHanaMonitorPwd -Description "Hana Monitoring User Password for Default Profile." -Value $defaultProfilePassword -Encrypted 1 -ResourceGroupName $AAResourceGroup -AutomationAccountName $AAAccount  -ea 0
-$PlainTextPassword= [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR( (ConvertTo-SecureString $defaultProfilePassword )))
 
-Write-Output $PlainTextPassword
 
 # if not works 
 <#
+New-AzureRmAutomationVariable -Name AzureHanaMonitorUser -Description "Hana Monitoring User for Default Profile" -Value $defaultProfileUser -Encrypted 0 -ResourceGroupName $AAResourceGroup -AutomationAccountName $AAAccount  -ea 0
+New-AzureRmAutomationVariable -Name AzureHanaMonitorPwd -Description "Hana Monitoring User Password for Default Profile." -Value $defaultProfilePassword -Encrypted 1 -ResourceGroupName $AAResourceGroup -AutomationAccountName $AAAccount  -ea 0
+$PlainTextPassword= [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR( (ConvertTo-SecureString $defaultProfilePassword )))
+Write-Output $PlainTextPassword
 $PlainTextPassword= [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR( (ConvertTo-SecureString $defaultProfilePassword ))
 
 #>
