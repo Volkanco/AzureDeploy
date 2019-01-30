@@ -8,7 +8,7 @@
                 "description": "Create new or use an existing Log Analytic Workspace"
             }
         },
-        "logAnalyticsRegion": {
+        "logAnalyticsRegion": { 
             "type": "string",
             "allowedValues": [
                 "westeurope",
@@ -47,16 +47,6 @@
                 "description": "Specify the Azure Region for your OMS Automation Account"
             }
         },
-        "workspaceType": {
-            "type": "string",
-            "allowedValues": [
-                "Linked",
-                "Unlinked"
-            ],
-            "metadata": {
-                "description": "Specify the Azure Region for your OMS Automation Account"
-            }
-        },
         "linkedWorkspaceSKU": {
             "type": "array",
             "defaultValue": [
@@ -74,7 +64,7 @@
                 ]
             ],
             "metadata": {
-                "description": "Choose the SKU for linked workspace  , only valid  if workspaceType is Linked otherwise ignored."
+                "description": "Choose the SKU for linked workspace "
             }
         },
         "sapHanaMonitorUser": {
@@ -3011,7 +3001,6 @@
             ]
         },
         {
-            "condition": "[equals(parameters('workspaceType'), 'Linked')]",
             "type": "Microsoft.OperationalInsights/workspaces/linkedServices",
             "name": "[concat(parameters('logAnalyticsWorkspaceName'), '/' , 'Automation')]",
             "apiVersion": "2015-11-01-preview",
