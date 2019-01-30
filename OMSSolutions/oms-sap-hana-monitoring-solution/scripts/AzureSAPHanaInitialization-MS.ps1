@@ -4,7 +4,7 @@ param
 [Parameter(Mandatory=$false)] [bool] $collecttableinv=$false,
 [Parameter(Mandatory=$true)] [string] $configfolder,
 [Parameter(Mandatory=$true)] [string] $hybridWorkerGroup,
-[Parameter(Mandatory=$true)] [int] $freq=15
+[Parameter(Mandatory=$true)] [int] $frequency=15
 )
 
 <#
@@ -132,7 +132,7 @@ Do {
 	-StartTime (Get-Variable -Name RBStart"$i").Value
 
 
-		$params = @{"collectqueryperf" = $collectqueryperf ; "collecttableinv" = $collecttableinv;"configfolder" = $configfolder;"freq"=$freq}
+		$params = @{"collectqueryperf" = $collectqueryperf ; "collecttableinv" = $collecttableinv;"configfolder" = $configfolder;"freq"=$frequency}
 		Register-AzureRmAutomationScheduledRunbook `
 		-AutomationAccountName $AAAccount `
 		-ResourceGroupName  $AAResourceGroup `
