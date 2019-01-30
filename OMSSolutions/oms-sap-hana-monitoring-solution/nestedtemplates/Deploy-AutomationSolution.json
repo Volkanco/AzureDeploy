@@ -1,0 +1,43 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "location": {
+            "defaultValue": "",
+            "type": "String"
+        },
+         "logAnalyticsWorkspaceName": {
+            "defaultValue": "",
+            "type": "String"
+        }
+    },
+    "variables": {
+        "solutionTypes":["AzureAutomation"],
+        "resourcegroupName":"[resourceGroup()]"
+
+
+    },
+    
+    "resources": [
+        {
+            "id": "[Concat(variables('resourcegroupName').id, '/providers/Microsoft.OperationsManagement/solutions/', variables('solutionTypes')[copyIndex()], '(', parameters('logAnalyticsWorkspaceName'), ')')]",
+            "type": "Microsoft.OperationsManagement/solutions",
+            "name": "[Concat(variables('solutionTypes')[copyIndex()], '(', parameters('logAnalyticsWorkspaceName'), ')')]",
+            "apiVersion": "2015-11-01-preview",
+            "location": "[parameters('location')]",
+            "copy": {
+                "name": "solutionsCopy",
+                "count": "[length(variables('solutionTypes'))]"
+            },
+            "plan": {
+                "name": "[Concat(variables('solutionTypes')[copyIndex()], '(', parameters('logAnalyticsWorkspaceName'), ')')]",
+                "product": "[Concat('OMSGallery/', variables('solutionTypes')[copyIndex()])]",
+                "promotionCode": "",
+                "publisher": "Microsoft"
+            },
+            "properties": {
+                "workspaceResourceId": "[Concat(variables('resourcegroupName').id, '/providers/Microsoft.OperationalInsights/workspaces/', parameters('logAnalyticsWorkspaceName'))]"
+            }
+        }
+    ]
+}

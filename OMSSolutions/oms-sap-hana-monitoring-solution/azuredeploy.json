@@ -1,0 +1,301 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "deploymentNameSuffix": {
+            "type": "string",
+            "metadata": {
+                "description": "Used to create unique deployment names for subsequent deployments"
+            }
+        },
+        "logAnalyticsNewOrExisting": {
+            "type": "string",
+            "defaultValue": "new",
+            "allowedValues": [
+              "new",
+              "existing"
+            ],
+            "metadata": {
+              "description": "Identify whether to use a new or existing vnet"
+            }
+          },"azureAutomationNewOrExisting": {
+            "type": "string",
+            "defaultValue": "new",
+            "allowedValues": [
+              "new",
+              "existing"
+            ],
+            "metadata": {
+              "description": "Identify whether to use a new or existing vnet"
+            }
+          },
+        "logAnalyticsWorkspaceName": {
+            "type": "string",
+            "metadata": {
+                "description": "Create new or use an existing Log Analytic Workspace"
+            }
+        },
+        "logAnalyticsRegion": {
+            "type": "string",
+            "allowedValues": [
+                "westeurope",
+                "eastus",
+                "southeastasia",
+                "australiasoutheast",
+                "wescentralus"
+            ],
+            "metadata": {
+                "description": "Specify the Azure Region for your new or existing OMS workspace"
+            }
+        },
+        "logAnalyticsSku": {
+            "type": "string",
+            "defaultValue": "free",
+            "allowedValues": [
+                "free",
+                "standalone",
+                "pernode"
+            ],
+            "metadata": {
+                "description": "Specify the SKU for Log Analytics"
+            }
+        },
+        "automationAccountName": {
+            "type": "string",
+            "metadata": {
+                "description": "Use an existing Automation account or create a new"
+            }
+        },
+        "automationRegion": {
+            "type": "string",
+            "allowedValues": [
+                "westeurope",
+                "southeastasia",
+                "eastus2",
+                "southcentralus",
+                "japaneast",
+                "southeastasia",
+                "southcentralus",
+                "northeurope",
+                "canadacentral",
+                "australiasoutheast",
+                "centralindia",
+                "japaneast"
+            ],
+            "metadata": {
+                "description": "Specify the Azure Region for your OMS Automation Account"
+            }
+        },
+         "automationSku": {
+            "type": "string",
+            "defaultValue": "basic",
+            "allowedValues": [
+                "free",
+                "basic"
+            ],
+            "metadata": {
+                "description": "Specify the SKU for Unlinked Automation Account"
+            }
+        }        
+        ,
+        "workspaceType": {
+            "type": "string",
+            "allowedValues": [
+                "Linked",
+                "Unlinked"
+            ],
+            "metadata": {
+                "description": "Specify the Azure Region for your OMS Automation Account"
+            }
+        },
+        "linkedWorkspaceSKU": {
+            "type": "array",
+            "defaultValue": [
+                "pernode",
+                "OMS"
+            ],
+            "allowedValues": [
+                [
+                    "pernode",
+                    "OMS"
+                ],
+                [
+                    "free",
+                    "free"
+                ]
+            ],
+            "metadata": {
+                "description": "Choose the SKU for linked workspace  , only valid  if workspaceType is Linked otherwise ignored."
+            }
+        },
+        "sapHanaMonitorUser": {
+            "type": "string",
+            "metadata": {
+                "description": "Specify the username  for Hana Monitoring Role"
+            }
+        },
+        "sapHanaMonitorPassword": {
+            "type": "securestring",
+             "metadata": {
+                "description": "Specify the password  for Hana Monitoring Role"
+            }
+        },
+        "hybridWorkerGroup": {
+            "type": "string",
+             "metadata": {
+                "description": "Specify the Hybrid Worker Group Name"
+            }
+        },
+        "collectQueryPerformance": {
+            "type": "bool",
+             "metadata": {
+                "description": "Specify the Azure Region for your OMS Automation Account"
+            }
+        },
+        "collectHanaTableInventory": {
+            "type": "bool",
+            "metadata": {
+                "description": "Specify the Azure Region for your OMS Automation Account"
+            }
+        },
+        "_artifactsLocation": {
+            "type": "string",
+            "defaultValue": "https://raw.githubusercontent.com/Volkanco/AzureDeploy/master/OMSSolutions/oms-sap-hana-monitoring-solution",
+            "metadata": {
+                "description": "The base URI where artifacts required by this template are located"
+            }
+        },
+        "_artifactsLocationSasToken": {
+            "type": "securestring",
+            "defaultValue": "",
+            "metadata": {
+                "description": "The sasToken required to access _artifactsLocation.  When the template is deployed using the accompanying scripts, a sasToken will be automatically generated."
+            }
+        }
+    },
+    "variables": {
+        "nestedTemplates": {
+            "omsDeploytoLinked": "[concat(parameters('_artifactsLocation'), '/nestedtemplates/omsDeploytoLinked.json', parameters('_artifactsLocationSasToken'))]",
+            "omsDeploytoUnlinked": "[concat(parameters('_artifactsLocation'), '/nestedtemplates/omsDeploytoUnlinked.json', parameters('_artifactsLocationSasToken'))]"
+        }
+    },
+    "resources": [
+        {
+            "condition": "[equals(parameters('workspaceType'), 'Linked')]",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2016-02-01",
+            "name": "[concat('omsDeploytoLinked-',parameters('deploymentNameSuffix'))]",
+            "dependsOn": [],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('nestedTemplates').omsDeploytoLinked]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "logAnalyticsWorkspaceName": {
+                        "value": "[parameters('logAnalyticsWorkspaceName')]"
+                    },
+                    "logAnalyticsNewOrExisting": {
+                        "value": "[parameters('logAnalyticsNewOrExisting')]"
+                    },
+                    "logAnalyticsRegion": {
+                        "value": "[parameters('logAnalyticsRegion')]"
+                    },
+                    "logAnalyticsSku": {
+                        "value": "[parameters('logAnalyticsSku')]"
+                    },
+                    "automationAccountName": {
+                        "value": "[parameters('automationAccountName')]"
+                    },
+                    "azureAutomationNewOrExisting": {
+                        "value": "[parameters('azureAutomationNewOrExisting')]"
+                    },
+                    "automationRegion": {
+                        "value": "[parameters('automationRegion')]"
+                    },
+                    "workspaceType": {
+                        "value": "[parameters('workspaceType')]"
+                    },
+                    "linkedWorkspaceSKU": {
+                        "value": "[parameters('linkedWorkspaceSKU')]"
+                    },
+                    "sapHanaMonitorUser": {
+                        "value": "[parameters('sapHanaMonitorUser')]"
+                    },
+                    "sapHanaMonitorPassword": {
+                        "value": "[parameters('sapHanaMonitorPassword')]"
+                    },
+                    "hybridWorkerGroup": {
+                        "value": "[parameters('hybridWorkerGroup')]"
+                    },
+                    "collectQueryPerformance": {
+                        "value": "[parameters('collectQueryPerformance')]"
+                    },
+                    "collectHanaTableInventory": {
+                        "value": "[parameters('collectHanaTableInventory')]"
+                    }
+                }
+            }
+        },
+        {
+            "condition": "[equals(parameters('workspaceType'), 'Unlinked')]",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2016-02-01",
+            "name": "[concat('omsDeploytoUnlinked-',parameters('deploymentNameSuffix'))]",
+            "dependsOn": [],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('nestedTemplates').omsDeploytoUnlinked]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "logAnalyticsWorkspaceName": {
+                        "value": "[parameters('logAnalyticsWorkspaceName')]"
+                    },
+                    "logAnalyticsNewOrExisting": {
+                        "value": "[parameters('logAnalyticsNewOrExisting')]"
+                    },
+                    "logAnalyticsRegion": {
+                        "value": "[parameters('logAnalyticsRegion')]"
+                    },
+                    "logAnalyticsSku": {
+                        "value": "[parameters('logAnalyticsSku')]"
+                    },
+                    "automationAccountName": {
+                        "value": "[parameters('automationAccountName')]"
+                    },
+                    "azureAutomationNewOrExisting": {
+                        "value": "[parameters('azureAutomationNewOrExisting')]"
+                    },
+                    "automationRegion": {
+                        "value": "[parameters('automationRegion')]"
+                    },
+                    "automationSku": {
+                        "value": "[parameters('automationSku')]"
+                    },
+                    "workspaceType": {
+                        "value": "[parameters('workspaceType')]"
+                    },
+                    "sapHanaMonitorUser": {
+                        "value": "[parameters('sapHanaMonitorUser')]"
+                    },
+                    "sapHanaMonitorPassword": {
+                        "value": "[parameters('sapHanaMonitorPassword')]"
+                    },
+                    "hybridWorkerGroup": {
+                        "value": "[parameters('hybridWorkerGroup')]"
+                    },
+                    "collectQueryPerformance": {
+                        "value": "[parameters('collectQueryPerformance')]"
+                    },
+                    "collectHanaTableInventory": {
+                        "value": "[parameters('collectHanaTableInventory')]"
+                    }
+                }
+            }
+        }
+    ],
+    "outputs": {}
+}
