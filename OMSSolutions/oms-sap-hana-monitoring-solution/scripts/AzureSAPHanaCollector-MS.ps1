@@ -51,13 +51,6 @@ $varText= "AAResourceGroup = $AAResourceGroup , AAAccount = $AAAccount"
 
 #endregion
 
-param
-(
-[Parameter(Mandatory=$false)] [bool] $collecttableinv=$false,
-[Parameter(Mandatory=$false)] [string] $configfolder="C:\HanaMonitor",
-[Parameter(Mandatory=$false)] [bool] $debuglog=$false
-)
-
 
 #Write-Output "RB Initial   : $([System.gc]::gettotalmemory('forcefullcollection') /1MB) MB" 
 
