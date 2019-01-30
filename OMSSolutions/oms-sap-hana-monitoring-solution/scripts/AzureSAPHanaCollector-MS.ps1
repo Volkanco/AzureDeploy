@@ -231,7 +231,9 @@ $ex=$null
 
 	Foreach($ins in $hanaconfig.HanaConnections.Rule)
 	{
-		$colstart=get-date
+	   IF($ins.Enabled -eq'true')
+        {	
+        $colstart=get-date
 		$Omsupload=@()
 		$OmsPerfupload=@()
 		$OmsInvupload=@()
@@ -386,6 +388,11 @@ $ex=$null
 				$currentruntime=($ds.Tables[0].rows[0].CURRENT_TIMESTAMP).tostring('yyyy-MM-dd HH:mm:ss.FF')  #format ddate to Hana timestamp YYYY-MM-DD HH24:MI:SS.FF7. FF
 				$timespan=([datetime]$currentruntime-[datetime]$lastruntime).Totalseconds
 				Write-Output "Last Collection time was $lastruntime and currenttime is  $currentruntime , timespan $timespan seconds"
+                If($timespan -gt  14400)
+                {
+                    $timespan=14400 # MAx collect last 4 hours
+
+                }
 
                   #check if hourly schedule 
             IF((get-date).Minute -in (0..20))
@@ -9978,6 +9985,11 @@ ORDER BY
 		$omsupload=@()
 		$conn.Close()
         $i++
+      }Else
+      {
+
+        Write-output "$($rule.Database)  is not enabled for data collection in config file"
+      }
 
 	}
 
