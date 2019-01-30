@@ -97,10 +97,13 @@ if($min -in 0..10)
 	$RBStart1=(get-date -Minute 16 -Second 00).AddHours(1).ToUniversalTime()
 }
 
-$RBStart2=$RBStart1.AddMinutes(15)
-$RBStart3=$RBStart2.AddMinutes(15)
-$RBStart4=$RBStart3.AddMinutes(15)
 
+$schcount=60/$frequency
+
+For($i=2;$I -le $schcount; $I++)
+{
+    New-Variable -Name RBStart$i -Value $RBStart1.AddMinutes($frequency*($i-1))
+}
 
 # First clean up any previous schedules to prevent any conflict 
 
@@ -132,7 +135,7 @@ Do {
 	-StartTime (Get-Variable -Name RBStart"$i").Value
 
 
-		$params = @{"collectqueryperf" = $collectqueryperf ; "collecttableinv" = $collecttableinv;"configfolder" = $configfolder;"freq"=$frequency}
+		$params = @{"collectqueryperf" = $collectqueryperf ; "collecttableinv" = $collecttableinv;"configfolder" = $configfolder}
 		Register-AzureRmAutomationScheduledRunbook `
 		-AutomationAccountName $AAAccount `
 		-ResourceGroupName  $AAResourceGroup `
