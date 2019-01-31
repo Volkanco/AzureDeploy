@@ -2793,7 +2793,8 @@
             "dependsOn": [
                 "[concat('Microsoft.OperationalInsights/workspaces/', parameters('logAnalyticsWorkspaceName'))]",
                 "[concat('Microsoft.OperationalInsights/workspaces/', parameters('logAnalyticsWorkspaceName'), '/savedSearches/', tolower(variables('alertArray')[copyIndex()].searchCategory), '|', toLower(variables('alertArray')[copyIndex()].searchName))]",
-                "[concat('Microsoft.OperationalInsights/workspaces/', parameters('logAnalyticsWorkspaceName'), '/savedSearches/', tolower(variables('alertArray')[copyIndex()].searchCategory), '|', toLower(variables('alertArray')[copyIndex()].searchName), '/schedules/','schedule-',uniqueString(resourceGroup().id, deployment().name,parameters('logAnalyticsWorkspaceName'), '/', variables('alertArray')[copyIndex()].searchCategory, '|', variables('alertArray')[copyIndex()].searchName))]"
+                "[concat('Microsoft.OperationalInsights/workspaces/', parameters('logAnalyticsWorkspaceName'), '/savedSearches/', tolower(variables('alertArray')[copyIndex()].searchCategory), '|', toLower(variables('alertArray')[copyIndex()].searchName), '/schedules/','schedule-',uniqueString(resourceGroup().id, deployment().name,parameters('logAnalyticsWorkspaceName'), '/', variables('alertArray')[copyIndex()].searchCategory, '|', variables('alertArray')[copyIndex()].searchName))]",
+                "[concat('Microsoft.Insights/actionGroups/', variables('actionGroupName'))]"
             ],
             "properties": {
                 "etag": "*",
@@ -2807,6 +2808,10 @@
                 },
                 "Throttling": {
                     "DurationInMinutes": "[variables('alertArray')[copyIndex()].alertThrottleInMinutes]"
+                },
+               "AzNsNotification": {
+                    "GroupIds": "[resourceId('Microsoft.Insights/actionGroups',variables('actionGroupName'))]",
+                    "CustomEmailSubject": "[variables('alertArray')[copyIndex()].alertName]"
                 }
             }
         },        
