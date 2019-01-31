@@ -101,7 +101,7 @@ Function Build-OMSSignature ($customerId, $sharedKey, $date, $contentLength, $me
 	$stringToHash = $method + "`n" + $contentLength + "`n" + $contentType + "`n" + $xHeaders + "`n" + $resource
 	$bytesToHash = [Text.Encoding]::UTF8.GetBytes($stringToHash)
 	$keyBytes = [Convert]::FromBase64String($sharedKey)
-	$sha256 = New-Object System.Security.Cryptography.HMACSHA256
+	$sha256 =New-Object System.Security.Cryptography.HMACSHA256
 	$sha256.Key = $keyBytes
 	$calculatedHash = $sha256.ComputeHash($bytesToHash)
 	$encodedHash = [Convert]::ToBase64String($calculatedHash)
@@ -246,24 +246,24 @@ $ex=$null
 		If($ins.UserAsset -match 'default')
 		{
 			$user=Get-AutomationVariable -Name "AzureHanaMonitorUser"
-			$password= Get-AutomationVariable -Name "AzureHanaMonitorPwd"
+			$password= Get-AutomationVariable -Name "AzureHanaMonitorPassword"
 		}else
 		{
 			$user=Get-AutomationVariable -Name $ins.UserAsset+"User"
-			$password= Get-AutomationVariable -Name $ins.UserAsset+"Password"
+			$password=Get-AutomationVariable -Name $ins.UserAsset+"Password"
 		}
 
         Write-output " Processing $($ins.HanaServer) - $($ins.Database) "
 		$constring="Server={0}:{1};Database={2};UserID={3};Password={4}" -f $ins.HanaServer,$ins.Port,$ins.Database,$user,$password
 		$conn=$null
-		$conn = new-object Sap.Data.Hana.HanaConnection($constring);
+		$conn=new-object Sap.Data.Hana.HanaConnection($constring);
 		$hanadb=$null
 		$hanadb=$ins.Database
 		
 		#first test ping 
 		IF(Test-Path -Path C:\HanaMonitor\PSTools\psping.exe)
 		{
-            $tcpclient = new-Object system.Net.Sockets.TcpClient
+            $tcpclient =new-Object system.Net.Sockets.TcpClient
             $tcpConnection=$tcpclient.BeginConnect($ins.HanaServer,22,$null,$null)
             $conntest=$tcpConnection.AsyncWaitHandle.WaitOne(2000,$false) # we will test if HAna server reachable before performing  latency test 
 
@@ -272,8 +272,8 @@ $ex=$null
 
                 $ping=$out=$null
                 $arg="-n 100  -i 0 -q  {0} 22  -accepteula" -f $ins.HanaServer        
-                $ps = new-object System.Diagnostics.Process
-                $ps.StartInfo.Filename = "C:\HanaMonitor\PSTools\psping.exe"
+                $ps =new-object System.Diagnostics.Process
+                $ps.StartInfo.Filename ="C:\HanaMonitor\PSTools\psping.exe"
                 $ps.StartInfo.Arguments = $arg
                 $ps.StartInfo.RedirectStandardOutput = $True
                 $ps.StartInfo.UseShellExecute = $false
@@ -366,8 +366,8 @@ $ex=$null
 				$Ex1=$_.Exception.MEssage
 			}
 			$query="/* OMS */SELECT CURRENT_TIMESTAMP ,add_seconds(CURRENT_TIMESTAMP,-900 ) as LastTime  FROM DUMMY"
-			$cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds = New-Object system.Data.DataSet ;
+			$cmd =new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds =New-Object system.Data.DataSet ;
 			$ex=$null
 			Try{
 				$cmd.fill($ds)
@@ -406,8 +406,8 @@ $ex=$null
 
 			#region Collect instance data and databases 
 			$query='/* OMS */ Select * FROM SYS.M_HOST_INFORMATION'
-					$cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds = New-Object system.Data.DataSet ;
+					$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds =New-Object system.Data.DataSet ;
 			$ex=$null
 			Try{
 				$cmd.fill($ds)
@@ -459,8 +459,8 @@ $ex=$null
 			$cu=$null
 
 			$query="/* OMS */SELECT * from  SYS.M_SYSTEM_OVERVIEW"
-			$cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds = New-Object system.Data.DataSet ;
+			$cmd =new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds =New-Object system.Data.DataSet ;
 			$cmd.fill($ds)
 
 			$Resultsinv=$null
@@ -469,7 +469,7 @@ $ex=$null
 			$Resultsstate=@(); 
 
 			Write-Output 'CollectorType="Status" -   Category="Host"'
-			$resultsinv+= New-Object PSObject -Property @{
+			$resultsinv+=New-Object PSObject -Property @{
 				HOST=$row.HOST
 				Instance=$sapinstance
 				CollectorType="Inventory"
@@ -484,7 +484,7 @@ $ex=$null
 				'MaxStartTime'=($ds.Tables[0].rows|where{$_.Name  -eq 'Max Start Time'}).Value
 			}
 
-			$resultsstate+= New-Object PSObject -Property @{
+			$resultsstate+=New-Object PSObject -Property @{
 				HOST=$row.HOST
 				Instance=$sapinstance
 				CollectorType="State"
@@ -506,8 +506,8 @@ $ex=$null
 
 
 			$query='/* OMS */ Select * from SYS_Databases.M_Services'
-			$cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds = New-Object system.Data.DataSet ;
+			$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds =New-Object system.Data.DataSet ;
 $ex=$null
 			Try{
 				$cmd.fill($ds)
@@ -533,7 +533,7 @@ $ex=$null
             {
 			foreach ($row in $ds.Tables[0].rows)
 			{
-				$resultsinv+= New-Object PSObject -Property @{
+				$resultsinv+=New-Object PSObject -Property @{
 					HOST=$row.Host
 					Instance=$sapinstance
 					CollectorType="Inventory"
@@ -546,7 +546,7 @@ $ex=$null
 					COORDINATOR_TYPE=$row.COORDINATOR_TYPE
 			
 				}
-				$resultsstate+= New-Object PSObject -Property @{
+				$resultsstate+=New-Object PSObject -Property @{
 					CollectorType="State"
 					Category="Database"
 					Database=$row.DATABASE_NAME
@@ -5067,8 +5067,8 @@ ORDER BY
   M.VALUE
 WITH HINT (NO_SUBPLAN_SHARING)
 "
-			$cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds = New-Object system.Data.DataSet ;
+			$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds =New-Object system.Data.DataSet ;
 
 
 $ex=$null
@@ -5101,7 +5101,7 @@ $ex=$null
 			{
 				
 				$cu=$null
-                    $cu= New-Object PSObject -Property @{
+                    $cu=New-Object PSObject -Property @{
 					CollectorType="State"
 					Category="ConfigurationCheck"
 					Database=$(IF([String]::IsNullOrEmpty($row.DATABASE_NAME)){$hanadb}Else{$row.DATABASE_NAME})
@@ -5137,8 +5137,8 @@ $ex=$null
 #region inventory collection
 
 			$query='/* OMS */ Select * FROM SYS.M_DATABASE'
-			$cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds = New-Object system.Data.DataSet ;
+			$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds =New-Object system.Data.DataSet ;
 $ex=$null
 			Try{
 				$cmd.fill($ds)
@@ -5156,7 +5156,7 @@ $ex=$null
 
 			foreach ($row in $ds.Tables[0].rows)
 			{
-				$resultsinv+= New-Object PSObject -Property @{
+				$resultsinv+=New-Object PSObject -Property @{
 					HOST=$row.HOST
 					Instance=$sapinstance
 					CollectorType="Inventory"
@@ -5173,8 +5173,8 @@ $ex=$null
 			$Omsinvupload+=,$Resultsinv
 
 			$query="/* OMS */SELECT * FROM SYS.M_SERVICES"
-			$cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds = New-Object system.Data.DataSet ;
+			$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds =New-Object system.Data.DataSet ;
 			$ex=$null
             Try{
 				$cmd.fill($ds)
@@ -5191,7 +5191,7 @@ $ex=$null
 
 			foreach ($row in $ds.Tables[0].rows)
 			{
-				$resultsinv+= New-Object PSObject -Property @{
+				$resultsinv+=New-Object PSObject -Property @{
 					HOST=$row.HOST
 					Instance=$sapinstance
 					CollectorType="Inventory"
@@ -5205,7 +5205,7 @@ $ex=$null
 					COORDINATOR_TYPE=$row.COORDINATOR_TYPE
 				}
 
-				$OmsStateupload+= New-Object PSObject -Property @{
+				$OmsStateupload+=New-Object PSObject -Property @{
 					HOST=$row.HOST
 					Instance=$sapinstance
 					CollectorType="State"
@@ -5260,8 +5260,8 @@ $ex=$null
 			O.HOST
 			"
 
-			$cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-					$ds = New-Object system.Data.DataSet ;
+			$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+					$ds =New-Object system.Data.DataSet ;
 			$ex=$null
 					Try{
 						$cmd.fill($ds)|out-null
@@ -5277,8 +5277,8 @@ $ex=$null
 			Write-Output '  CollectorType="Performance" - Category="Host" - Subcategory="OverallUsage" '
 
 			$query="/* OMS */SELECT * from SYS.M_HOST_RESOURCE_UTILIZATION"
-			$cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds = New-Object system.Data.DataSet ;
+			$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds =New-Object system.Data.DataSet ;
 			$ex=$null
             Try{
 				$cmd.fill($ds)
@@ -5459,8 +5459,8 @@ $ex=$null
 
 
 			$query="/* OMS */SELECT * FROM SYS.M_BACKUP_CATALOG where SYS_START_TIME    > add_seconds('"+$currentruntime+"',-$timespan)"
-			$cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds = New-Object system.Data.DataSet ;
+			$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds =New-Object system.Data.DataSet ;
 			$ex=$null
             Try{
 				$cmd.fill($ds)
@@ -5478,7 +5478,7 @@ $ex=$null
 			Write-Output ' CollectorType="Inventory" ,  Category="BAckupCatalog"'
 			foreach ($row in $ds.Tables[0].rows)
 			{
-				$resultsinv+= New-Object PSObject -Property @{
+				$resultsinv+=New-Object PSObject -Property @{
 					Hostname=$saphost
 					Instance=$sapinstance
 					CollectorType="Inventory"
@@ -5507,8 +5507,8 @@ $ex=$null
 
 
 			$query='/* OMS */ Select * FROM SYS.M_BACKUP_SIZE_ESTIMATIONS'
-			$cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds = New-Object system.Data.DataSet ;
+			$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds =New-Object system.Data.DataSet ;
 $ex=$null
 			Try{
 				$cmd.fill($ds)
@@ -5528,7 +5528,7 @@ $ex=$null
 
 			foreach ($row in $ds.Tables[0].rows)
 			{
-				$resultsinv+= New-Object PSObject -Property @{
+				$resultsinv+=New-Object PSObject -Property @{
 					HOST=$saphost
 					Instance=$sapinstance
 					CollectorType="Inventory"
@@ -5549,8 +5549,8 @@ $ex=$null
 
 
 			$query='/* OMS */ Select * FROM SYS.M_DATA_VOLUMES'
-			$cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds = New-Object system.Data.DataSet ;
+			$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds =New-Object system.Data.DataSet ;
 $ex=$null
 			Try{
 				$cmd.fill($ds)
@@ -5569,7 +5569,7 @@ $ex=$null
 			Write-Output ' CollectorType="Inventory" ,  Category="Volumes"'
 			foreach ($row in $ds.Tables[0].rows)
 			{
-				$Resultsinv+= New-Object PSObject -Property @{
+				$Resultsinv+=New-Object PSObject -Property @{
 					HOST=$row.HOST.tolower() 
 					Instance=$sapinstance                  
 					CollectorType="Inventory"
@@ -5591,8 +5591,8 @@ $ex=$null
 
 
 			$query='/* OMS */ Select * FROM SYS.M_DISKS'
-			$cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds = New-Object system.Data.DataSet ;
+			$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds =New-Object system.Data.DataSet ;
 $ex=$null
 			Try{
 				$cmd.fill($ds)
@@ -5612,7 +5612,7 @@ $ex=$null
 			foreach ($row in $ds.Tables[0].rows)
 			{
 				
-				$Resultsinv+= New-Object PSObject -Property @{
+				$Resultsinv+=New-Object PSObject -Property @{
 
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -5634,8 +5634,8 @@ $ex=$null
 
 
 			$query='/* OMS */ Select * FROM SYS.M_DISK_USAGE'
-			$cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds = New-Object system.Data.DataSet ;
+			$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds =New-Object system.Data.DataSet ;
 $ex=$null
 			Try{
 				$cmd.fill($ds)
@@ -5654,7 +5654,7 @@ $ex=$null
 			Write-Output 'CollectorType="Performance" -   Category="DiskUsage"'
 			foreach ($row in $ds.Tables[0].rows)
 			{
-				$Resultsperf+= New-Object PSObject -Property @{
+				$Resultsperf+=New-Object PSObject -Property @{
 					HOST=$row.HOST
 					Instance=$sapinstance
 					Database=$Hanadb
@@ -5672,8 +5672,8 @@ $ex=$null
 
 
 			$query="/* OMS */SELECT * FROM SYS.M_LICENSE"
-			$cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds = New-Object system.Data.DataSet ;
+			$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds =New-Object system.Data.DataSet ;
 $ex=$null
 			Try{
 				$cmd.fill($ds)
@@ -5692,7 +5692,7 @@ $ex=$null
 			Write-Output 'CollectorType="Inventory" -   Category="License"'
 			foreach ($row in $ds.Tables[0].rows)
 			{
-				$resultsinv+= New-Object PSObject -Property @{
+				$resultsinv+=New-Object PSObject -Property @{
 					HOST=$saphost
 					CollectorType="Inventory"
 					Category="License"
@@ -5727,8 +5727,8 @@ if($collecttableinv -and (get-date).Minute -lt 15)
 			$query='/* OMS */ Select Host,Port,Loaded,TABLE_NAME,RECORD_COUNT,RAW_RECORD_COUNT_IN_DELTA,MEMORY_SIZE_IN_TOTAL,MEMORY_SIZE_IN_MAIN,MEMORY_SIZE_IN_DELTA 
 from M_CS_TABLES'
 
-			$cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds = New-Object system.Data.DataSet ;
+			$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds =New-Object system.Data.DataSet ;
 $ex=$null
 			Try{
 				$cmd.fill($ds)
@@ -5749,7 +5749,7 @@ $ex=$null
 
 			foreach ($row in $ds.Tables[0].rows)
 			{
-				$resultsinv+= New-Object PSObject -Property @{
+				$resultsinv+=New-Object PSObject -Property @{
 					HOST=$row.HOST.ToLower()
 					Instance=$sapinstance
 					CollectorType="Inventory"
@@ -5776,8 +5776,8 @@ $ex=$null
 			Write-Output 'CollectorType="Inventory" -   Category="Alerts"'
 
 			$query='/* OMS */ Select * from _SYS_STATISTICS.Statistics_Current_Alerts'
-			$cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds = New-Object system.Data.DataSet ;
+			$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds =New-Object system.Data.DataSet ;
 $ex=$null
 			Try{
 				$cmd.fill($ds)
@@ -5792,7 +5792,7 @@ $ex=$null
 
 			foreach ($row in $ds.Tables[0].rows)
 			{
-				$resultsinv+= New-Object PSObject -Property @{
+				$resultsinv+=New-Object PSObject -Property @{
 					HOST=$row.ALERT_HOST
 					Instance=$sapinstance
 					CollectorType="Inventory"
@@ -5826,8 +5826,8 @@ $ex=$null
 
 
 			$query='/* OMS */ Select * from SYS.M_Service_statistics'
-			$cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds = New-Object system.Data.DataSet ;
+			$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds =New-Object system.Data.DataSet ;
 $ex=$null
 			Try{
 				$cmd.fill($ds)
@@ -5847,7 +5847,7 @@ $ex=$null
 				foreach ($row in $ds.Tables[0].rows)
 				{
 					
-					$Resultsperf+= New-Object PSObject -Property @{
+					$Resultsperf+=New-Object PSObject -Property @{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -5859,7 +5859,7 @@ $ex=$null
 						PerfCounter="PROCESS_MEMORY_GB"
 						PerfValue=$row.PROCESS_MEMORY_GB/1024/1024/1024
 					}
-					$Resultsperf+= New-Object PSObject -Property @{
+					$Resultsperf+=New-Object PSObject -Property @{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -5871,7 +5871,7 @@ $ex=$null
 						PerfCounter="ACTIVE_REQUEST_COUNT"
 						PerfValue=$row.ACTIVE_REQUEST_COUNT
 					}
-					$Resultsperf+= New-Object PSObject -Property @{
+					$Resultsperf+=New-Object PSObject -Property @{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -5883,7 +5883,7 @@ $ex=$null
 						PerfCounter="TOTAL_CPU"
 						PerfValue=$row.TOTAL_CPU
 					}
-					$Resultsperf+= New-Object PSObject -Property @{
+					$Resultsperf+=New-Object PSObject -Property @{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -5895,7 +5895,7 @@ $ex=$null
 						PerfCounter="PROCESS_CPU_TIME"
 						PerfValue=$row.PROCESS_CPU_TIME
 					}
-					$Resultsperf+= New-Object PSObject -Property @{
+					$Resultsperf+=New-Object PSObject -Property @{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -5907,7 +5907,7 @@ $ex=$null
 						PerfCounter="PHYSICAL_MEMORY_GB"
 						PerfValue=$row.PHYSICAL_MEMORY_GB/1024/1024/1024
 					}
-					$Resultsperf+= New-Object PSObject -Property @{
+					$Resultsperf+=New-Object PSObject -Property @{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -5919,7 +5919,7 @@ $ex=$null
 						PerfCounter="OPEN_FILE_COUNT"
 						PerfValue=$row.OPEN_FILE_COUNT
 					}
-					$Resultsperf+= New-Object PSObject -Property @{
+					$Resultsperf+=New-Object PSObject -Property @{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -5931,7 +5931,7 @@ $ex=$null
 						PerfCounter="PROCESS_PHYSICAL_MEMORY_GB"
 						PerfValue=$row.PROCESS_PHYSICAL_MEMORY_GB/1024/1024/1024
 					}
-					$Resultsperf+= New-Object PSObject -Property @{
+					$Resultsperf+=New-Object PSObject -Property @{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -5943,7 +5943,7 @@ $ex=$null
 						PerfCounter="TOTAL_CPU_TIME"
 						PerfValue=$row.TOTAL_CPU_TIME
 					}
-					$Resultsperf+= New-Object PSObject -Property @{
+					$Resultsperf+=New-Object PSObject -Property @{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -5955,7 +5955,7 @@ $ex=$null
 						PerfCounter="ACTIVE_THREAD_COUNT"
 						PerfValue=$row.ACTIVE_THREAD_COUNT
 					}
-					$Resultsperf+= New-Object PSObject -Property @{
+					$Resultsperf+=New-Object PSObject -Property @{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -5967,7 +5967,7 @@ $ex=$null
 						PerfCounter="FINISHED_NON_INTERNAL_REQUEST_COUNT"
 						PerfValue=$row.FINISHED_NON_INTERNAL_REQUEST_COUNT
 					}
-					$Resultsperf+= New-Object PSObject -Property @{
+					$Resultsperf+=New-Object PSObject -Property @{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -5979,7 +5979,7 @@ $ex=$null
 						PerfCounter="PROCESS_CPU"
 						PerfValue=$row.PROCESS_CPU
 					}
-					$Resultsperf+= New-Object PSObject -Property @{
+					$Resultsperf+=New-Object PSObject -Property @{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -5991,7 +5991,7 @@ $ex=$null
 						PerfCounter="ALL_FINISHED_REQUEST_COUNT"
 						PerfValue=$row.ALL_FINISHED_REQUEST_COUNT
 					}
-					$Resultsperf+= New-Object PSObject -Property @{
+					$Resultsperf+=New-Object PSObject -Property @{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -6003,7 +6003,7 @@ $ex=$null
 						PerfCounter="REQUESTS_PER_SEC"
 						PerfValue=$row.REQUESTS_PER_SEC
 					}
-					$Resultsperf+= New-Object PSObject -Property @{
+					$Resultsperf+=New-Object PSObject -Property @{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -6015,7 +6015,7 @@ $ex=$null
 						PerfCounter="AVAILABLE_MEMORY_GB"
 						PerfValue=$row.AVAILABLE_MEMORY_GB/1024/1024/1024
 					}
-					$Resultsperf+= New-Object PSObject -Property @{
+					$Resultsperf+=New-Object PSObject -Property @{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -6027,7 +6027,7 @@ $ex=$null
 						PerfCounter="THREAD_COUNT"
 						PerfValue=$row.THREAD_COUNT
 					}
-					$Resultsperf+= New-Object PSObject -Property @{
+					$Resultsperf+=New-Object PSObject -Property @{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -6039,7 +6039,7 @@ $ex=$null
 						PerfCounter="TOTAL_MEMORY_GB"
 						PerfValue=$row.TOTAL_MEMORY_GB/1024/1024/1024
 					}
-					$Resultsperf+= New-Object PSObject -Property @{
+					$Resultsperf+=New-Object PSObject -Property @{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -6051,7 +6051,7 @@ $ex=$null
 						PerfCounter="RESPONSE_TIME"
 						PerfValue=$row.RESPONSE_TIME
 					}
-					$Resultsperf+= New-Object PSObject -Property @{
+					$Resultsperf+=New-Object PSObject -Property @{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -6166,8 +6166,8 @@ GROUP BY
 	CASE WHEN AGGREGATE_BY = 'NONE' OR INSTR(AGGREGATE_BY, 'HOST') != 0 THEN HOST ELSE MAP(BI_HOST, '%', 'any', BI_HOST) END
 ) ORDER BY    SAMPLE_TIME DESC "
 
-			$cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds = New-Object system.Data.DataSet ;
+			$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds =New-Object system.Data.DataSet ;
 $ex=$null
 			Try{
 				$cmd.fill($ds)
@@ -6187,7 +6187,7 @@ $ex=$null
 				foreach ($row in $ds.Tables[0].rows)
 				{
 
-					$Resultsperf+= New-Object PSObject -Property @{
+					$Resultsperf+=New-Object PSObject -Property @{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -6359,8 +6359,8 @@ GROUP BY
 ORDER BY
 SAMPLE_TIME DESC
 WITH HINT (NO_JOIN_REMOVAL)"
-			$cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds = New-Object system.Data.DataSet ;
+			$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds =New-Object system.Data.DataSet ;
 $ex=$null
 			Try{
 				$cmd.fill($ds)
@@ -6381,7 +6381,7 @@ $ex=$null
 				foreach ($row in $ds.Tables[0].rows)
 				{
 
-					$Resultsperf+= New-Object PSObject -Property @{
+					$Resultsperf+=New-Object PSObject -Property @{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -6393,7 +6393,7 @@ $ex=$null
 						PerfCounter="CPU_PCT"
 						PerfValue=$row.CPU
 					}
-					$Resultsperf+= New-Object PSObject -Property @{
+					$Resultsperf+=New-Object PSObject -Property @{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -6405,7 +6405,7 @@ $ex=$null
 						PerfCounter="SYSCPU_PCT"
 						PerfValue=$row.SYS
 					}
-					$Resultsperf+= New-Object PSObject -Property @{
+					$Resultsperf+=New-Object PSObject -Property @{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -6417,7 +6417,7 @@ $ex=$null
 						PerfCounter="Connections"
 						PerfValue=$row.CONNS
 					}
-					$Resultsperf+= New-Object PSObject -Property @{
+					$Resultsperf+=New-Object PSObject -Property @{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -6429,7 +6429,7 @@ $ex=$null
 						PerfCounter="Transactions"
 						PerfValue=$row.TRANS
 					}
-					$Resultsperf+= New-Object PSObject -Property @{
+					$Resultsperf+=New-Object PSObject -Property @{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -6441,7 +6441,7 @@ $ex=$null
 						PerfCounter="Requestspersec"
 						PerfValue=$row.EXE_PS
 					}
-					$Resultsperf+= New-Object PSObject -Property @{
+					$Resultsperf+=New-Object PSObject -Property @{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -6453,7 +6453,7 @@ $ex=$null
 						PerfCounter="ActiveThreads"
 						PerfValue=$row.ACT_THR
 					}
-					$Resultsperf+= New-Object PSObject -Property @{
+					$Resultsperf+=New-Object PSObject -Property @{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -6466,7 +6466,7 @@ $ex=$null
 						PerfValue=$row.WAIT_THR
 					}
 
-					$Resultsperf+= New-Object PSObject -Property @{
+					$Resultsperf+=New-Object PSObject -Property @{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -6478,7 +6478,7 @@ $ex=$null
 						PerfCounter="ActiveSQLExecutorTHR"
 						PerfValue=$row.ACT_SQL
 					}
-					$Resultsperf+= New-Object PSObject -Property @{
+					$Resultsperf+=New-Object PSObject -Property @{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -6490,7 +6490,7 @@ $ex=$null
 						PerfCounter="PendingSessions"
 						PerfValue=$row.PEND_SESS
 					}
-					$Resultsperf+= New-Object PSObject -Property @{
+					$Resultsperf+=New-Object PSObject -Property @{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -6502,7 +6502,7 @@ $ex=$null
 						PerfCounter="Merges"
 						PerfValue=$row.MERGES
 					}
-					$Resultsperf+= New-Object PSObject -Property @{
+					$Resultsperf+=New-Object PSObject -Property @{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -6526,8 +6526,8 @@ $ex=$null
 			Write-Output '  CollectorType="Performance" - Category="Memory" - Subcategory="OverallUsage" '
 
 			$query="/* OMS */SELECT * FROM SYS.M_MEMORY Where PORT=30003" ###HArdcoded change this
-			$cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds = New-Object system.Data.DataSet ;
+			$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds =New-Object system.Data.DataSet ;
 $ex=$null
 			Try{
 				$cmd.fill($ds)
@@ -6544,7 +6544,7 @@ $ex=$null
 
 			IF ($ds.tables[0].rows)
 			{
-				$Resultsperf+= New-Object PSObject -Property @{
+				$Resultsperf+=New-Object PSObject -Property @{
 					HOST=$SAPHOST
 					Instance=$sapinstance
 					CollectorType="Performance"
@@ -6552,7 +6552,7 @@ $ex=$null
 					PerfCounter="SYSTEM_MEMORY_SIZE"
 					PerfValue=$row.Value/1024/1024/1024
 				}
-				$Resultsperf+= New-Object PSObject -Property @{
+				$Resultsperf+=New-Object PSObject -Property @{
 					HOST=$SAPHOST
 					Instance=$sapinstance
 					CollectorType="Performance"
@@ -6560,7 +6560,7 @@ $ex=$null
 					PerfCounter="SYSTEM_MEMORY_FREE_SIZE"
 					PerfValue=$row.Value/1024/1024/1024
 				}
-				$Resultsperf+= New-Object PSObject -Property @{
+				$Resultsperf+=New-Object PSObject -Property @{
 					HOST=$SAPHOST
 					Instance=$sapinstance
 					CollectorType="Performance"
@@ -6568,7 +6568,7 @@ $ex=$null
 					PerfCounter="PROCESS_MEMORY_SIZE"
 					PerfValue=$row.Value/1024/1024/1024
 				}
-				$Resultsperf+= New-Object PSObject -Property @{
+				$Resultsperf+=New-Object PSObject -Property @{
 					HOST=$SAPHOST
 					Instance=$sapinstance
 					CollectorType="Performance"
@@ -6576,7 +6576,7 @@ $ex=$null
 					PerfCounter="PROCESS_RESIDENT_SIZE"
 					PerfValue=$row.Value/1024/1024/1024
 				}
-				$Resultsperf+= New-Object PSObject -Property @{
+				$Resultsperf+=New-Object PSObject -Property @{
 					HOST=$SAPHOST
 					Instance=$sapinstance
 					CollectorType="Performance"
@@ -6584,7 +6584,7 @@ $ex=$null
 					PerfCounter="PROCESS_CODE_SIZE"
 					PerfValue=$row.Value/1024/1024/1024
 				}
-				$Resultsperf+= New-Object PSObject -Property @{
+				$Resultsperf+=New-Object PSObject -Property @{
 					HOST=$SAPHOST
 					Instance=$sapinstance
 					CollectorType="Performance"
@@ -6592,7 +6592,7 @@ $ex=$null
 					PerfCounter="PROCESS_STACK_SIZE"
 					PerfValue=$row.Value/1024/1024/1024
 				}
-				$Resultsperf+= New-Object PSObject -Property @{
+				$Resultsperf+=New-Object PSObject -Property @{
 					HOST=$SAPHOST
 					Instance=$sapinstance
 					CollectorType="Performance"
@@ -6600,7 +6600,7 @@ $ex=$null
 					PerfCounter="PROCESS_ALLOCATION_LIMIT"
 					PerfValue=$row.Value/1024/1024/1024
 				}
-				$Resultsperf+= New-Object PSObject -Property @{
+				$Resultsperf+=New-Object PSObject -Property @{
 					HOST=$SAPHOST
 					Instance=$sapinstance
 					CollectorType="Performance"
@@ -6608,7 +6608,7 @@ $ex=$null
 					PerfCounter="GLOBAL_ALLOCATION_LIMIT"
 					PerfValue=$row.Value/1024/1024/1024
 				}
-				$Resultsperf+= New-Object PSObject -Property @{
+				$Resultsperf+=New-Object PSObject -Property @{
 					HOST=$SAPHOST
 					Instance=$sapinstance
 					CollectorType="Performance"
@@ -6616,7 +6616,7 @@ $ex=$null
 					PerfCounter="EFFECTIVE_PROCESS_ALLOCATION_LIMIT"
 					PerfValue=$row.Value/1024/1024/1024
 				}
-				$Resultsperf+= New-Object PSObject -Property @{
+				$Resultsperf+=New-Object PSObject -Property @{
 					HOST=$SAPHOST
 					Instance=$sapinstance
 					CollectorType="Performance"
@@ -6624,7 +6624,7 @@ $ex=$null
 					PerfCounter="HEAP_MEMORY_ALLOCATED_SIZE"
 					PerfValue=$row.Value/1024/1024/1024
 				}
-				$Resultsperf+= New-Object PSObject -Property @{
+				$Resultsperf+=New-Object PSObject -Property @{
 					HOST=$SAPHOST
 					Instance=$sapinstance
 					CollectorType="Performance"
@@ -6632,7 +6632,7 @@ $ex=$null
 					PerfCounter="HEAP_MEMORY_USED_SIZE"
 					PerfValue=$row.Value/1024/1024/1024
 				}
-				$Resultsperf+= New-Object PSObject -Property @{
+				$Resultsperf+=New-Object PSObject -Property @{
 					HOST=$SAPHOST
 					Instance=$sapinstance
 					CollectorType="Performance"
@@ -6640,7 +6640,7 @@ $ex=$null
 					PerfCounter="HEAP_MEMORY_FREE_SIZE"
 					PerfValue=$row.Value/1024/1024/1024
 				}
-				$Resultsperf+= New-Object PSObject -Property @{
+				$Resultsperf+=New-Object PSObject -Property @{
 					HOST=$SAPHOST
 					Instance=$sapinstance
 					CollectorType="Performance"
@@ -6648,7 +6648,7 @@ $ex=$null
 					PerfCounter="HEAP_MEMORY_ROOT_ALLOCATED_SIZE"
 					PerfValue=$row.Value/1024/1024/1024
 				}
-				$Resultsperf+= New-Object PSObject -Property @{
+				$Resultsperf+=New-Object PSObject -Property @{
 					HOST=$SAPHOST
 					Instance=$sapinstance
 					CollectorType="Performance"
@@ -6656,7 +6656,7 @@ $ex=$null
 					PerfCounter="HEAP_MEMORY_ROOT_FREE_SIZE"
 					PerfValue=$row.Value/1024/1024/1024
 				}
-				$Resultsperf+= New-Object PSObject -Property @{
+				$Resultsperf+=New-Object PSObject -Property @{
 					HOST=$SAPHOST
 					Instance=$sapinstance
 					CollectorType="Performance"
@@ -6664,7 +6664,7 @@ $ex=$null
 					PerfCounter="SHARED_MEMORY_ALLOCATED_SIZE"
 					PerfValue=$row.Value/1024/1024/1024
 				}
-				$Resultsperf+= New-Object PSObject -Property @{
+				$Resultsperf+=New-Object PSObject -Property @{
 					HOST=$SAPHOST
 					Instance=$sapinstance
 					CollectorType="Performance"
@@ -6672,7 +6672,7 @@ $ex=$null
 					PerfCounter="SHARED_MEMORY_USED_SIZE"
 					PerfValue=$row.Value/1024/1024/1024
 				}
-				$Resultsperf+= New-Object PSObject -Property @{
+				$Resultsperf+=New-Object PSObject -Property @{
 					HOST=$SAPHOST
 					Instance=$sapinstance
 					CollectorType="Performance"
@@ -6680,7 +6680,7 @@ $ex=$null
 					PerfCounter="SHARED_MEMORY_FREE_SIZE"
 					PerfValue=$row.Value/1024/1024/1024
 				}
-				$Resultsperf+= New-Object PSObject -Property @{
+				$Resultsperf+=New-Object PSObject -Property @{
 					HOST=$SAPHOST
 					Instance=$sapinstance
 					CollectorType="Performance"
@@ -6688,7 +6688,7 @@ $ex=$null
 					PerfCounter="TOTAL_MEMORY_SIZE_IN_USE"
 					PerfValue=$row.Value/1024/1024/1024
 				}
-				$Resultsperf+= New-Object PSObject -Property @{
+				$Resultsperf+=New-Object PSObject -Property @{
 					HOST=$SAPHOST
 					Instance=$sapinstance
 					CollectorType="Performance"
@@ -6696,7 +6696,7 @@ $ex=$null
 					PerfCounter="COMPACTORS_SIZE"
 					PerfValue=$row.Value/1024/1024/1024
 				}
-				$Resultsperf+= New-Object PSObject -Property @{
+				$Resultsperf+=New-Object PSObject -Property @{
 					HOST=$SAPHOST
 					Instance=$sapinstance
 					CollectorType="Performance"
@@ -6711,8 +6711,8 @@ $ex=$null
 
 
 			$query="/* OMS */SELECT * FROM SYS.M_SERVICE_MEMORY"
-			$cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds = New-Object system.Data.DataSet ;
+			$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds =New-Object system.Data.DataSet ;
 $ex=$null
 			Try{
 				$cmd.fill($ds)
@@ -6731,7 +6731,7 @@ $ex=$null
 			Write-Output '  CollectorType="Performance" - Category="Service" - Subcategory="MemoryUsage" '
 			foreach ($row in $ds.Tables[0].rows)
 			{
-				$Resultsperf+= New-Object PSObject -Property @{
+				$Resultsperf+=New-Object PSObject -Property @{
 
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -6742,7 +6742,7 @@ $ex=$null
 					PerfCounter="COMPACTORS_ALLOCATED_SIZE"
 					PerfValue=$row.COMPACTORS_ALLOCATED_SIZE/1024/1024/1024
 				}
-				$Resultsperf+= New-Object PSObject -Property @{
+				$Resultsperf+=New-Object PSObject -Property @{
 
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -6753,7 +6753,7 @@ $ex=$null
 					PerfCounter="HEAP_MEMORY_ALLOCATED_SIZE"
 					PerfValue=$row.HEAP_MEMORY_ALLOCATED_SIZE/1024/1024/1024
 				}
-				$Resultsperf+= New-Object PSObject -Property @{
+				$Resultsperf+=New-Object PSObject -Property @{
 
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -6765,7 +6765,7 @@ $ex=$null
 					PerfValue=$row.HEAP_MEMORY_USED_SIZE/1024/1024/1024
 				}
 
-				$Resultsperf+= New-Object PSObject -Property @{
+				$Resultsperf+=New-Object PSObject -Property @{
 
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -6777,7 +6777,7 @@ $ex=$null
 					PerfValue=$row.LOGICAL_MEMORY_SIZE/1024/1024/1024
 				}
 
-				$Resultsperf+= New-Object PSObject -Property @{
+				$Resultsperf+=New-Object PSObject -Property @{
 
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -6789,7 +6789,7 @@ $ex=$null
 					PerfValue=$row.TOTAL_MEMORY_USED_SIZE/1024/1024/1024
 				}
 
-				$Resultsperf+= New-Object PSObject -Property @{
+				$Resultsperf+=New-Object PSObject -Property @{
 
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -6800,7 +6800,7 @@ $ex=$null
 					PerfCounter="ALLOCATION_LIMIT"
 					PerfValue=$row.ALLOCATION_LIMIT/1024/1024/1024
 				}
-				$Resultsperf+= New-Object PSObject -Property @{
+				$Resultsperf+=New-Object PSObject -Property @{
 
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -6813,7 +6813,7 @@ $ex=$null
 				}
 
 
-				$Resultsperf+= New-Object PSObject -Property @{
+				$Resultsperf+=New-Object PSObject -Property @{
 
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -6824,7 +6824,7 @@ $ex=$null
 					PerfCounter="PHYSICAL_MEMORY_SIZE"
 					PerfValue=$row.PHYSICAL_MEMORY_SIZE/1024/1024/1024
 				}
-				$Resultsperf+= New-Object PSObject -Property @{
+				$Resultsperf+=New-Object PSObject -Property @{
 
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -6835,7 +6835,7 @@ $ex=$null
 					PerfCounter="SHARED_MEMORY_USED_SIZE"
 					PerfValue=$row.SHARED_MEMORY_USED_SIZE/1024/1024/1024
 				}
-				$Resultsperf+= New-Object PSObject -Property @{
+				$Resultsperf+=New-Object PSObject -Property @{
 
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -6847,7 +6847,7 @@ $ex=$null
 					PerfValue=$row.CODE_SIZE/1024/1024/1024
 				}
 
-				$Resultsperf+= New-Object PSObject -Property @{
+				$Resultsperf+=New-Object PSObject -Property @{
 
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -6858,7 +6858,7 @@ $ex=$null
 					PerfCounter="EFFECTIVE_ALLOCATION_LIMIT"
 					PerfValue=$row.EFFECTIVE_ALLOCATION_LIMIT/1024/1024/1024
 				}
-				$Resultsperf+= New-Object PSObject -Property @{
+				$Resultsperf+=New-Object PSObject -Property @{
 
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -6869,7 +6869,7 @@ $ex=$null
 					PerfCounter="SHARED_MEMORY_ALLOCATED_SIZE"
 					PerfValue=$row.SHARED_MEMORY_ALLOCATED_SIZE/1024/1024/1024
 				}
-				$Resultsperf+= New-Object PSObject -Property @{
+				$Resultsperf+=New-Object PSObject -Property @{
 
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -6900,8 +6900,8 @@ Group by  HOST , PORT,to_varchar(time, 'YYYY-MM-DD HH24:MI')"
 WHERE TIME > add_seconds('"+$currentruntime+"',-$timespan)
 group by Host,Time
 order by Time desc"
-			$cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds = New-Object system.Data.DataSet ;
+			$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds =New-Object system.Data.DataSet ;
 $ex=$null
 			Try{
 				$cmd.fill($ds)
@@ -6919,7 +6919,7 @@ $ex=$null
 			Write-Output '  CollectorType="Performance" - Category="COU,MEmory" - Subcategory="Usage" '
 			foreach ($row in $ds.Tables[0].rows)
 			{
-				$Resultsperf+= New-Object PSObject -Property @{
+				$Resultsperf+=New-Object PSObject -Property @{
 
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -6931,7 +6931,7 @@ $ex=$null
 					PerfCounter="EXTERNAL_CONNECTION_COUNT"
 					PerfValue=$row.EXTERNAL_CONNECTION_COUNT
 				}
-				$Resultsperf+= New-Object PSObject -Property @{
+				$Resultsperf+=New-Object PSObject -Property @{
 
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -6943,7 +6943,7 @@ $ex=$null
 					PerfCounter="EXTERNAL_TRANSACTION_COUNT"
 					PerfValue=$row.EXTERNAL_TRANSACTION_COUNT
 				}
-				$Resultsperf+= New-Object PSObject -Property @{
+				$Resultsperf+=New-Object PSObject -Property @{
 
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -6955,7 +6955,7 @@ $ex=$null
 					PerfCounter="STATEMENT_COUNT"
 					PerfValue=$row.STATEMENT_COUNT
 				}
-				$Resultsperf+= New-Object PSObject -Property @{
+				$Resultsperf+=New-Object PSObject -Property @{
 
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -6967,7 +6967,7 @@ $ex=$null
 					PerfCounter="TRANSACTION_COUNT"
 					PerfValue=$row.TRANSACTION_COUNT
 				}
-				$Resultsperf+= New-Object PSObject -Property @{
+				$Resultsperf+=New-Object PSObject -Property @{
 
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -6979,7 +6979,7 @@ $ex=$null
 					PerfCounter="SYSTEM_CPU"
 					PerfValue=$row.SYSTEM_CPU
 				}
-				$Resultsperf+= New-Object PSObject -Property @{
+				$Resultsperf+=New-Object PSObject -Property @{
 
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -6991,7 +6991,7 @@ $ex=$null
 					PerfCounter="MEMORY_USED"
 					PerfValue=$row.MEMORY_USED/1024/1024/1024
 				}
-				$Resultsperf+= New-Object PSObject -Property @{
+				$Resultsperf+=New-Object PSObject -Property @{
 
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -7004,7 +7004,7 @@ $ex=$null
 					PerfCounter="PROCESS_CPU"
 					PerfValue=$row.PROCESS_CPU
 				}
-				$Resultsperf+= New-Object PSObject -Property @{
+				$Resultsperf+=New-Object PSObject -Property @{
 
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -7016,7 +7016,7 @@ $ex=$null
 					PerfCounter="IDLE_CONNECTION_COUNT"
 					PerfValue=$row.IDLE_CONNECTION_COUNT
 				}
-				$Resultsperf+= New-Object PSObject -Property @{
+				$Resultsperf+=New-Object PSObject -Property @{
 
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -7028,7 +7028,7 @@ $ex=$null
 					PerfCounter="MEMORY_ALLOCATION_LIMIT"
 					PerfValue=$row.MEMORY_ALLOCATION_LIMIT/1024/1024/1024
 				}
-				$Resultsperf+= New-Object PSObject -Property @{
+				$Resultsperf+=New-Object PSObject -Property @{
 
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -7041,7 +7041,7 @@ $ex=$null
 					PerfValue=$row.HANDLE_COUNT
 				}
 
-				$Resultsperf+= New-Object PSObject -Property @{
+				$Resultsperf+=New-Object PSObject -Property @{
 
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -7054,7 +7054,7 @@ $ex=$null
 					PerfValue=$row.INTERNAL_TRANSACTION_COUNT
 				}
 
-				$Resultsperf+= New-Object PSObject -Property @{
+				$Resultsperf+=New-Object PSObject -Property @{
 
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -7067,7 +7067,7 @@ $ex=$null
 					PerfValue=$row.BLOCKED_TRANSACTION_COUNT
 				}
 
-				$Resultsperf+= New-Object PSObject -Property @{
+				$Resultsperf+=New-Object PSObject -Property @{
 
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -7079,7 +7079,7 @@ $ex=$null
 					PerfCounter="USER_TRANSACTION_COUNT"
 					PerfValue=$row.USER_TRANSACTION_COUNT
 				}
-				$Resultsperf+= New-Object PSObject -Property @{
+				$Resultsperf+=New-Object PSObject -Property @{
 
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -7093,7 +7093,7 @@ $ex=$null
 				}
 
 
-				$Resultsperf+= New-Object PSObject -Property @{
+				$Resultsperf+=New-Object PSObject -Property @{
 
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -7105,7 +7105,7 @@ $ex=$null
 					PerfCounter="SWAP_IN"
 					PerfValue=$row.SWAP_IN
 				}
-				$Resultsperf+= New-Object PSObject -Property @{
+				$Resultsperf+=New-Object PSObject -Property @{
 
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -7117,7 +7117,7 @@ $ex=$null
 					PerfCounter="PING_TIME"
 					PerfValue=$row.PING_TIME
 				}
-				$Resultsperf+= New-Object PSObject -Property @{
+				$Resultsperf+=New-Object PSObject -Property @{
 
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -7142,8 +7142,8 @@ MAX(MEMORY_RESIDENT)/1024/1024/1024 as ResidentGB,MAX(MEMORY_TOTAL_RESIDENT/1024
 from SYS.M_LOAD_HISTORY_HOST
 WHERE TIME > add_seconds('"+$currentruntime+"',-$timespan)
 Group by  HOST ,to_varchar(time, 'YYYY-MM-DD HH24:MI')"
-			$cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds = New-Object system.Data.DataSet ;
+			$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds =New-Object system.Data.DataSet ;
 $ex=$null
 			Try{
 				$cmd.fill($ds)
@@ -7166,7 +7166,7 @@ $ex=$null
 				{
 					
 
-					$Resultsperf+= New-Object PSObject -Property @{
+					$Resultsperf+=New-Object PSObject -Property @{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -7178,7 +7178,7 @@ $ex=$null
 						PerfCounter="USEDMEMORYGB"
 						PerfValue=$row.USEDMEMORYGB
 					}
-					$Resultsperf+= New-Object PSObject -Property @{
+					$Resultsperf+=New-Object PSObject -Property @{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -7190,7 +7190,7 @@ $ex=$null
 						PerfCounter="ALLOCATIONLIMITGB"
 						PerfValue=$row.ALLOCATIONLIMITGB
 					}
-					$Resultsperf+= New-Object PSObject -Property @{
+					$Resultsperf+=New-Object PSObject -Property @{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -7202,7 +7202,7 @@ $ex=$null
 						PerfCounter="RESIDENTGB"
 						PerfValue=$row.RESIDENTGB
 					}
-					$Resultsperf+= New-Object PSObject -Property @{
+					$Resultsperf+=New-Object PSObject -Property @{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -7216,7 +7216,7 @@ $ex=$null
 					}
 
 
-					$Resultsperf+= New-Object PSObject -Property @{
+					$Resultsperf+=New-Object PSObject -Property @{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -7228,7 +7228,7 @@ $ex=$null
 						PerfCounter="DATABASE_RESIDENTGB"
 						PerfValue=$row.DATABASE_RESIDENTGB
 					}
-					$Resultsperf+= New-Object PSObject -Property @{
+					$Resultsperf+=New-Object PSObject -Property @{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -7241,7 +7241,7 @@ $ex=$null
 						PerfValue=$row.NETWORK_OUT_MB
 					}
 
-					$Resultsperf+= New-Object PSObject -Property @{
+					$Resultsperf+=New-Object PSObject -Property @{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -7254,7 +7254,7 @@ $ex=$null
 						PerfValue=$row.CPU_TOTAL
 					}
 
-					$Resultsperf+= New-Object PSObject -Property @{
+					$Resultsperf+=New-Object PSObject -Property @{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -7273,8 +7273,8 @@ $ex=$null
 
 
 			$query='/* OMS */ Select Schema_name,round(sum(Memory_size_in_total)/1024/1024) as "ColunmTablesMBUSed" from M_CS_TABLES group by Schema_name'
-			$cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds = New-Object system.Data.DataSet ;
+			$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds =New-Object system.Data.DataSet ;
 $ex=$null
 			Try{
 				$cmd.fill($ds)
@@ -7314,8 +7314,8 @@ $ex=$null
 
 
 			$query='/* OMS */ Select  host,component, sum(Used_memory_size) USed_MEmory_size from public.m_service_component_memory group by host, component'
-			$cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds = New-Object system.Data.DataSet ;
+			$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds =New-Object system.Data.DataSet ;
 $ex=$null
 			Try{
 				$cmd.fill($ds)
@@ -7359,8 +7359,8 @@ Join
 union 
 select host, sum(INCLUSIVE_PEAK_ALLOCATION_SIZE) as M from M_HEAP_MEMORY_RESET WHERE depth = 0 group by host ) group by Host )as T2 on T1.Host=T2.Host
 group by T1.host'
-			$cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds = New-Object system.Data.DataSet ;
+			$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds =New-Object system.Data.DataSet ;
 $ex=$null
 			Try{
 				$cmd.fill($ds)
@@ -7379,7 +7379,7 @@ $ex=$null
 			{
 
 				Write-Output '  CollectorType="Performance" - Category="MEmory" - Subcategory="Usage" '
-				$Resultsperf+= New-Object PSObject -Property @{
+				$Resultsperf+=New-Object PSObject -Property @{
 					HOST=$ds.tables[0].rows[0].HOST
 					Database=$hanadb
 					CollectorType="Performance"
@@ -7390,7 +7390,7 @@ $ex=$null
 					PerfValue=$ds.tables[0].rows[0].UsedMemoryGB
 					
 				}
-				$Resultsperf+= New-Object PSObject -Property @{
+				$Resultsperf+=New-Object PSObject -Property @{
 					HOST=$ds.tables[0].rows[0].HOST
 					Database=$hanadb
 					CollectorType="Performance"
@@ -7401,7 +7401,7 @@ $ex=$null
 					PerfValue=$ds.tables[0].rows[0].DatabaseResident
 					
 				}
-				$Resultsperf+= New-Object PSObject -Property @{
+				$Resultsperf+=New-Object PSObject -Property @{
 					HOST=$ds.tables[0].rows[0].HOST
 					Database=$hanadb
 					Instance=$sapinstance
@@ -7422,8 +7422,8 @@ $ex=$null
 , 100*(sum(UNCOMPRESSED_SIZE)/sum(MEMORY_SIZE_IN_TOTAL)) Compression_PErcentage
 	FROM SYS.M_CS_ALL_COLUMNS Group by host,Schema_name having sum(Uncompressed_size) >0 '
 
-			$cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds = New-Object system.Data.DataSet ;
+			$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds =New-Object system.Data.DataSet ;
 $ex=$null
 			Try{
 				$cmd.fill($ds)
@@ -7446,7 +7446,7 @@ $ex=$null
 				foreach ($row in $ds.Tables[0].rows)
 				{
 					
-					$Resultsperf+= New-Object PSObject -Property @{
+					$Resultsperf+=New-Object PSObject -Property @{
 						HOST=$row.Host
 						Instance=$sapinstance
 						CollectorType="Performance"
@@ -7457,7 +7457,7 @@ $ex=$null
 						PerfValue=$row.RECORD_COUNT
 						
 					}
-					$Resultsperf+= New-Object PSObject -Property @{
+					$Resultsperf+=New-Object PSObject -Property @{
 						HOST=$row.Host
 						Instance=$sapinstance
 						CollectorType="Performance"
@@ -7468,7 +7468,7 @@ $ex=$null
 						PerfValue=$row.COMPRESSED_SIZE/1024/1024
 						
 					}
-					$Resultsperf+= New-Object PSObject -Property @{
+					$Resultsperf+=New-Object PSObject -Property @{
 						HOST=$row.Host
 						Instance=$sapinstance
 						Database=$Hanadb
@@ -7479,7 +7479,7 @@ $ex=$null
 						PerfValue=$row.UNCOMPRESSED_SIZE/1024/1024
 						
 					}
-					$Resultsperf+= New-Object PSObject -Property @{
+					$Resultsperf+=New-Object PSObject -Property @{
 						HOST=$row.Host
 						Instance=$sapinstance
 						CollectorType="Performance"
@@ -7490,7 +7490,7 @@ $ex=$null
 						PerfValue=$row.COMPRESSION_RATIO
 						
 					}
-					$Resultsperf+= New-Object PSObject -Property @{
+					$Resultsperf+=New-Object PSObject -Property @{
 						HOST=$row.Host
 						Instance=$sapinstance
 						CollectorType="Performance"
@@ -7523,8 +7523,8 @@ $ex=$null
 					and (write_count <> 0 or read_count <> 0  or avg_trigger_async_write_time <> 0 or avg_trigger_async_read_time <> 0)
 					"
 								   
-				   $cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-				   $ds = New-Object system.Data.DataSet ;
+				   $cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+				   $ds =New-Object system.Data.DataSet ;
 				   $ex=$null
 				   Try{
 					   $cmd.fill($ds)
@@ -7541,7 +7541,7 @@ $ex=$null
 					   foreach ($row in $ds.Tables[0].rows)
 					   {
 
-								$Resultsperf+= New-Object PSObject -Property @{
+								$Resultsperf+=New-Object PSObject -Property @{
 			
 									HOST=$row.HOST
 									Instance=$sapinstance
@@ -7554,7 +7554,7 @@ $ex=$null
 									PerfInstance=$row.Type+"|"+$row.MaxBufferinKB+"KB"
 									TYPE=$row.TYPE 
 								}
-								$Resultsperf+= New-Object PSObject -Property @{
+								$Resultsperf+=New-Object PSObject -Property @{
 			
 									HOST=$row.HOST
 									Instance=$sapinstance
@@ -7567,7 +7567,7 @@ $ex=$null
 									PerfInstance=$row.Type+"|"+$row.MaxBufferinKB+"KB"
 									TYPE=$row.TYPE 
 								}
-								$Resultsperf+= New-Object PSObject -Property @{
+								$Resultsperf+=New-Object PSObject -Property @{
 			
 									HOST=$row.HOST
 									Instance=$sapinstance
@@ -7581,7 +7581,7 @@ $ex=$null
 									TYPE=$row.TYPE 
 								}
 								
-								$Resultsperf+= New-Object PSObject -Property @{
+								$Resultsperf+=New-Object PSObject -Property @{
 			
 									HOST=$row.HOST
 									Instance=$sapinstance
@@ -7596,7 +7596,7 @@ $ex=$null
 								}
 
 								#read
-								$Resultsperf+= New-Object PSObject -Property @{
+								$Resultsperf+=New-Object PSObject -Property @{
 			
 									HOST=$row.HOST
 									Instance=$sapinstance
@@ -7609,7 +7609,7 @@ $ex=$null
 									PerfInstance=$row.Type+"|"+$row.MaxBufferinKB+"KB"
 									TYPE=$row.TYPE 
 								}
-								$Resultsperf+= New-Object PSObject -Property @{
+								$Resultsperf+=New-Object PSObject -Property @{
 			
 								HOST=$row.HOST
 								Instance=$sapinstance
@@ -7622,7 +7622,7 @@ $ex=$null
 								PerfInstance=$row.Type+"|"+$row.MaxBufferinKB+"KB"
 								TYPE=$row.TYPE 
 								}
-								$Resultsperf+= New-Object PSObject -Property @{
+								$Resultsperf+=New-Object PSObject -Property @{
 				
 									HOST=$row.HOST
 									Instance=$sapinstance
@@ -7636,7 +7636,7 @@ $ex=$null
 									TYPE=$row.TYPE 
 								}
 								
-								$Resultsperf+= New-Object PSObject -Property @{
+								$Resultsperf+=New-Object PSObject -Property @{
 				
 									HOST=$row.HOST
 									Instance=$sapinstance
@@ -7672,8 +7672,8 @@ $ex=$null
 			   and type not in ( 'TRACE' )
 			   order by type, service_name, s.volume_id; "
 			   
-			   $cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-						   $ds = New-Object system.Data.DataSet ;
+			   $cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+						   $ds =New-Object system.Data.DataSet ;
 			   $ex=$null
 						   Try{
 							   $cmd.fill($ds)
@@ -7695,7 +7695,7 @@ $ex=$null
 							   foreach ($row in $ds.Tables[0].rows)
 							   {
 								   
-								   $Resultsperf+= New-Object PSObject -Property @{
+								   $Resultsperf+=New-Object PSObject -Property @{
 			   
 									   HOST=$row.HOST
 									   Instance=$sapinstance
@@ -7708,7 +7708,7 @@ $ex=$null
 									   PerfCounter="Read_MB_Sec"
 									   PerfValue=[double]$row.ReadMBpersec
 								   }
-								   $Resultsperf+= New-Object PSObject -Property @{
+								   $Resultsperf+=New-Object PSObject -Property @{
 			   
 									   HOST=$row.HOST
 									   Instance=$sapinstance
@@ -7738,8 +7738,8 @@ $ex=$null
 			   from m_savepoints where start_time  > add_seconds('"+$currentruntime+"',-$timespan);"
 			   
 			   
-			   $cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-						   $ds = New-Object system.Data.DataSet ;
+			   $cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+						   $ds =New-Object system.Data.DataSet ;
 			   $ex=$null
 						   Try{
 							   $cmd.fill($ds)
@@ -7760,7 +7760,7 @@ $ex=$null
 							   foreach ($row in $ds.Tables[0].rows)
 							   {
 								   
-								   $Resultsperf+= New-Object PSObject -Property @{
+								   $Resultsperf+=New-Object PSObject -Property @{
 			   
 									   HOST=$row.HOST
 									   Instance=$sapinstance
@@ -7773,7 +7773,7 @@ $ex=$null
 									   PerfCounter="DurationSec"
 									   PerfValue=[double]$row.DurationSec
 								   }
-								   $Resultsperf+= New-Object PSObject -Property @{
+								   $Resultsperf+=New-Object PSObject -Property @{
 			   
 									   HOST=$row.HOST
 									   Instance=$sapinstance
@@ -7786,7 +7786,7 @@ $ex=$null
 									   PerfCounter="CriticalSeconds"
 									   PerfValue=[double]$row.CriticalSeconds
 								   }
-								   $Resultsperf+= New-Object PSObject -Property @{
+								   $Resultsperf+=New-Object PSObject -Property @{
 			   
 									   HOST=$row.HOST
 									   Instance=$sapinstance
@@ -7831,8 +7831,8 @@ MEMORY_SIZE,
 REUSED_MEMORY_SIZE,
 CPU_TIME FROM PUBLIC.M_EXPENSIVE_STATEMENTS WHERE  START_TIME> add_seconds('"+$currentruntime+"',-$timespan)"
 
-			$cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds = New-Object system.Data.DataSet ;
+			$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds =New-Object system.Data.DataSet ;
 $ex=$null
 			Try{
 				$cmd.fill($ds)
@@ -7854,7 +7854,7 @@ $ex=$null
 				Write-Output '  CollectorType="Performance" - Category="Statetment" - Subcategory="Expensive" '
 				foreach ($row in $ds.Tables[0].rows)
 				{
-					$resultsinv+= New-Object PSObject -Property @{
+					$resultsinv+=New-Object PSObject -Property @{
 						HOST=$row.Host
 						Instance=$sapinstance
 						CollectorType="Inventory"
@@ -7919,8 +7919,8 @@ $ex=$null
 			FROM
 			M_SQL_PLAN_CACHE where LAST_EXECUTION_TIMESTAMP >  add_seconds('"+$currentruntime+"',-$timespan)"
 
-			$cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-					$ds = New-Object system.Data.DataSet ;
+			$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+					$ds =New-Object system.Data.DataSet ;
 			$ex=$null
 		  Try{
 			  $cmd.fill($ds)
@@ -7938,7 +7938,7 @@ $ex=$null
 		  foreach ($row in $ds.Tables[0].rows)
 		  {
 
-				  $Resultsinv+= New-Object PSObject -Property @{
+				  $Resultsinv+=New-Object PSObject -Property @{
 
 				  HOST=$row.HOST
 				  Instance=$sapinstance
@@ -8057,8 +8057,8 @@ GROUP BY
 ORDER BY
 MAP(ORDER_BY, 'THREAD_ID',   THREAD_ID, 'any', 'CONNECTION', CONN_ID, 'any'),
 MAP(ORDER_BY, 'THREADS', NUM) DESC"
-$cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-		  $ds = New-Object system.Data.DataSet ;
+$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+		  $ds =New-Object system.Data.DataSet ;
 $ex=$null
 		  Try{
 			  $cmd.fill($ds)|out-null
@@ -8077,7 +8077,7 @@ $ex=$null
 		  {
 			  foreach ($row in $ds.Tables[0].rows)
 			  {
-				  $Resultsinv+= New-Object PSObject -Property @{
+				  $Resultsinv+=New-Object PSObject -Property @{
 					  HOST=$row.HOST.ToLower()
 					  Instance=$sapinstance
 					  CollectorType="Inventory"
@@ -8351,8 +8351,8 @@ WHERE
 ORDER BY
 ROW_NUM
 "
-	   $cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-		  $ds = New-Object system.Data.DataSet ;
+	   $cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+		  $ds =New-Object system.Data.DataSet ;
 	  $ex=$null
 		  Try{
 			  $cmd.fill($ds)|out-null
@@ -8373,7 +8373,7 @@ ROW_NUM
 		  {
 			  foreach ($row in $ds.Tables[0].rows)
 			  {
-				  $Resultsinv+= New-Object PSObject -Property @{
+				  $Resultsinv+=New-Object PSObject -Property @{
 					  HOST=$row.HOST.ToLower()
 					  Instance=$sapinstance
 					  CollectorType="Inventory"
@@ -8546,8 +8546,8 @@ C.CONN_ID,
 C.THREAD_ID,
 C.TRANSACTION_ID
 "
-		   $cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-		  $ds = New-Object system.Data.DataSet ;
+		   $cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+		  $ds =New-Object system.Data.DataSet ;
 	  $ex=$null
 		  Try{
 			  $cmd.fill($ds)|out-null
@@ -8567,7 +8567,7 @@ C.TRANSACTION_ID
 		  {
 			  foreach ($row in $ds.Tables[0].rows)
 			  {
-				  $Resultsinv+= New-Object PSObject -Property @{
+				  $Resultsinv+=New-Object PSObject -Property @{
 					  HOST=$row.HOST.ToLower()
 					  Instance=$sapinstance
 					  CollectorType="Inventory"
@@ -8950,8 +8950,8 @@ SERVICE_NAME
 WITH HINT (NO_JOIN_REMOVAL)"
 }
 
-   $cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-		  $ds = New-Object system.Data.DataSet ;
+   $cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+		  $ds =New-Object system.Data.DataSet ;
 $ex=$null
 		  Try{
 			 # $cmd.fill($ds)|out-null
@@ -9146,8 +9146,8 @@ PORT
 WITH HINT (NO_JOIN_REMOVAL)
 "
 
-  $cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-		  $ds = New-Object system.Data.DataSet ;
+  $cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+		  $ds =New-Object system.Data.DataSet ;
 $ex=$null
 		  Try{
 			  $cmd.fill($ds)|out-null
@@ -9166,7 +9166,7 @@ $ex=$null
 		  {
 			  foreach ($row in $ds.Tables[0].rows)
 			  {
-				  $Resultsinv+= New-Object PSObject -Property @{
+				  $Resultsinv+=New-Object PSObject -Property @{
 					  HOST=$row.HOST.ToLower()
 					  Instance=$sapinstance
 					  CollectorType="Inventory"
@@ -9300,8 +9300,8 @@ PORT,
 SQL_TYPE
 "
 
-  $cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-		  $ds = New-Object system.Data.DataSet ;
+  $cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+		  $ds =New-Object system.Data.DataSet ;
 $ex=$null
 		  Try{
 			  $cmd.fill($ds)|out-null
@@ -9320,7 +9320,7 @@ $ex=$null
 		  {
 			  Foreach($row in $ds.tables[0].rows)
 			  {
-				  $Resultsperf+= New-Object PSObject -Property @{
+				  $Resultsperf+=New-Object PSObject -Property @{
 					  HOST=$SAPHOST
 					  Instance=$sapinstance
 					  CollectorType="Performance"
@@ -9330,7 +9330,7 @@ $ex=$null
 					  PerfInstance='EXECUTIONS'
 					  }
 
-				  $Resultsperf+= New-Object PSObject -Property @{
+				  $Resultsperf+=New-Object PSObject -Property @{
 					  HOST=$SAPHOST
 					  Instance=$sapinstance
 					  CollectorType="Performance"
@@ -9340,7 +9340,7 @@ $ex=$null
 					  PerfInstance='ELAPSED_S'
 					  }
 
-				  $Resultsperf+= New-Object PSObject -Property @{
+				  $Resultsperf+=New-Object PSObject -Property @{
 					  HOST=$SAPHOST
 					  Instance=$sapinstance
 					  CollectorType="Performance"
@@ -9350,7 +9350,7 @@ $ex=$null
 					  PErfInstance='ELA_PER_EXEC_MS'   
 					  }
 
-				  $Resultsperf+= New-Object PSObject -Property @{
+				  $Resultsperf+=New-Object PSObject -Property @{
 					  HOST=$SAPHOST
 					  Instance=$sapinstance
 					  CollectorType="Performance"
@@ -9360,7 +9360,7 @@ $ex=$null
 					  PerfInstance='LOCK_PER_EXEC_MS'
 					  }
 
-				  $Resultsperf+= New-Object PSObject -Property @{
+				  $Resultsperf+=New-Object PSObject -Property @{
 					  HOST=$SAPHOST
 					  Instance=$sapinstance
 					  CollectorType="Performance"
@@ -9418,8 +9418,8 @@ ORDER BY
   1, 2, 3
 "
 
-			$cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds = New-Object system.Data.DataSet ;
+			$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds =New-Object system.Data.DataSet ;
 			$ex=$null
             Try{
 				$cmd.fill($ds)
@@ -9439,7 +9439,7 @@ ORDER BY
 
 			foreach ($row in $ds.Tables[0].rows)
 			{
-				$resultsinv+= New-Object PSObject -Property @{
+				$resultsinv+=New-Object PSObject -Property @{
 					HOST=$row.HOST
 					Instance=$sapinstance
 					CollectorType="Inventory"
@@ -9599,8 +9599,8 @@ ORDER BY
   HOST
 "
 
-			$cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds = New-Object system.Data.DataSet ;
+			$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds =New-Object system.Data.DataSet ;
 			$ex=$null
             Try{
 				$cmd.fill($ds)
@@ -9621,7 +9621,7 @@ $ds.Tables[0].rows
 		  {
 			  Foreach($row in $ds.tables[0].rows)
 			  {
-				  $Resultsperf+= New-Object PSObject -Property @{
+				  $Resultsperf+=New-Object PSObject -Property @{
 					  HOST=$SAPHOST
 					  Instance=$sapinstance
 					  CollectorType="Performance"
@@ -9632,7 +9632,7 @@ $ds.Tables[0].rows
 					  PerfInstance=$hanadb
 		    		  }
 
-                        $Resultsperf+= New-Object PSObject -Property @{
+                        $Resultsperf+=New-Object PSObject -Property @{
 					  HOST=$SAPHOST
 					  Instance=$sapinstance
 					  CollectorType="Performance"
@@ -9643,7 +9643,7 @@ $ds.Tables[0].rows
 					  PerfInstance=$hanadb
 		    		  }
 
-                        $Resultsperf+= New-Object PSObject -Property @{
+                        $Resultsperf+=New-Object PSObject -Property @{
 					  HOST=$SAPHOST
 					  Instance=$sapinstance
 					  CollectorType="Performance"
@@ -9654,7 +9654,7 @@ $ds.Tables[0].rows
 					  PerfInstance=$hanadb
 		    		  }
 
-                        $Resultsperf+= New-Object PSObject -Property @{
+                        $Resultsperf+=New-Object PSObject -Property @{
 					  HOST=$SAPHOST
 					  Instance=$sapinstance
 					  CollectorType="Performance"
@@ -9665,7 +9665,7 @@ $ds.Tables[0].rows
 					  PerfInstance=$hanadb
 		    		  }
 
-                        $Resultsperf+= New-Object PSObject -Property @{
+                        $Resultsperf+=New-Object PSObject -Property @{
 					  HOST=$SAPHOST
 					  Instance=$sapinstance
 					  CollectorType="Performance"
@@ -9676,7 +9676,7 @@ $ds.Tables[0].rows
 					  PerfInstance=$hanadb
 		    		  }
 
-                        $Resultsperf+= New-Object PSObject -Property @{
+                        $Resultsperf+=New-Object PSObject -Property @{
 					  HOST=$SAPHOST
 					  Instance=$sapinstance
 					  CollectorType="Performance"
@@ -9687,7 +9687,7 @@ $ds.Tables[0].rows
 					  PerfInstance=$hanadb
 		    		  }
 
-                        $Resultsperf+= New-Object PSObject -Property @{
+                        $Resultsperf+=New-Object PSObject -Property @{
 					  HOST=$SAPHOST
 					  Instance=$sapinstance
 					  CollectorType="Performance"
@@ -9764,8 +9764,8 @@ ORDER BY
   LOCATION
 "
 
-	$cmd = new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds = New-Object system.Data.DataSet ;
+	$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds =New-Object system.Data.DataSet ;
 			$ex=$null
             Try{
 				$cmd.fill($ds)
@@ -9786,7 +9786,7 @@ ORDER BY
 
 			foreach ($row in $ds.Tables[0].rows)
 			{
-				$resultsinv+= New-Object PSObject -Property @{
+				$resultsinv+=New-Object PSObject -Property @{
 					HOST=$row.HOST
 					Instance=$sapinstance
                     Database=$hanadb
