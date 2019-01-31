@@ -366,8 +366,8 @@ $ex=$null
 				$Ex1=$_.Exception.MEssage
 			}
 			$query="/* OMS */SELECT CURRENT_TIMESTAMP ,add_seconds(CURRENT_TIMESTAMP,-900 ) as LastTime  FROM DUMMY"
-			$cmd =new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds =New-Object system.Data.DataSet ;
+			$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds=New-Object system.Data.DataSet ;
 			$ex=$null
 			Try{
 				$cmd.fill($ds)
@@ -406,8 +406,8 @@ $ex=$null
 
 			#region Collect instance data and databases 
 			$query='/* OMS */ Select * FROM SYS.M_HOST_INFORMATION'
-					$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds =New-Object system.Data.DataSet ;
+					$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds=New-Object system.Data.DataSet ;
 			$ex=$null
 			Try{
 				$cmd.fill($ds)
@@ -459,8 +459,8 @@ $ex=$null
 			$cu=$null
 
 			$query="/* OMS */SELECT * from  SYS.M_SYSTEM_OVERVIEW"
-			$cmd =new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds =New-Object system.Data.DataSet ;
+			$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds=New-Object system.Data.DataSet ;
 			$cmd.fill($ds)
 
 			$Resultsinv=$null
@@ -506,8 +506,8 @@ $ex=$null
 
 
 			$query='/* OMS */ Select * from SYS_Databases.M_Services'
-			$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds =New-Object system.Data.DataSet ;
+			$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds=New-Object system.Data.DataSet ;
 $ex=$null
 			Try{
 				$cmd.fill($ds)
@@ -5067,8 +5067,8 @@ ORDER BY
   M.VALUE
 WITH HINT (NO_SUBPLAN_SHARING)
 "
-			$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds =New-Object system.Data.DataSet ;
+			$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds=New-Object system.Data.DataSet ;
 
 
 $ex=$null
@@ -5137,8 +5137,8 @@ $ex=$null
 #region inventory collection
 
 			$query='/* OMS */ Select * FROM SYS.M_DATABASE'
-			$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds =New-Object system.Data.DataSet ;
+			$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds=New-Object system.Data.DataSet ;
 $ex=$null
 			Try{
 				$cmd.fill($ds)
@@ -5173,8 +5173,8 @@ $ex=$null
 			$Omsinvupload+=,$Resultsinv
 
 			$query="/* OMS */SELECT * FROM SYS.M_SERVICES"
-			$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds =New-Object system.Data.DataSet ;
+			$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds=New-Object system.Data.DataSet ;
 			$ex=$null
             Try{
 				$cmd.fill($ds)
@@ -5260,8 +5260,8 @@ $ex=$null
 			O.HOST
 			"
 
-			$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-					$ds =New-Object system.Data.DataSet ;
+			$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+					$ds=New-Object system.Data.DataSet ;
 			$ex=$null
 					Try{
 						$cmd.fill($ds)|out-null
@@ -5277,8 +5277,8 @@ $ex=$null
 			Write-Output '  CollectorType="Performance" - Category="Host" - Subcategory="OverallUsage" '
 
 			$query="/* OMS */SELECT * from SYS.M_HOST_RESOURCE_UTILIZATION"
-			$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds =New-Object system.Data.DataSet ;
+			$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds=New-Object system.Data.DataSet ;
 			$ex=$null
             Try{
 				$cmd.fill($ds)
@@ -5459,8 +5459,8 @@ $ex=$null
 
 
 			$query="/* OMS */SELECT * FROM SYS.M_BACKUP_CATALOG where SYS_START_TIME    > add_seconds('"+$currentruntime+"',-$timespan)"
-			$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds =New-Object system.Data.DataSet ;
+			$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds=New-Object system.Data.DataSet ;
 			$ex=$null
             Try{
 				$cmd.fill($ds)
@@ -5507,8 +5507,8 @@ $ex=$null
 
 
 			$query='/* OMS */ Select * FROM SYS.M_BACKUP_SIZE_ESTIMATIONS'
-			$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds =New-Object system.Data.DataSet ;
+			$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds=New-Object system.Data.DataSet ;
 $ex=$null
 			Try{
 				$cmd.fill($ds)
@@ -5549,8 +5549,8 @@ $ex=$null
 
 
 			$query='/* OMS */ Select * FROM SYS.M_DATA_VOLUMES'
-			$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds =New-Object system.Data.DataSet ;
+			$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds=New-Object system.Data.DataSet ;
 $ex=$null
 			Try{
 				$cmd.fill($ds)
@@ -5591,8 +5591,8 @@ $ex=$null
 
 
 			$query='/* OMS */ Select * FROM SYS.M_DISKS'
-			$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds =New-Object system.Data.DataSet ;
+			$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds=New-Object system.Data.DataSet ;
 $ex=$null
 			Try{
 				$cmd.fill($ds)
@@ -5634,8 +5634,8 @@ $ex=$null
 
 
 			$query='/* OMS */ Select * FROM SYS.M_DISK_USAGE'
-			$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds =New-Object system.Data.DataSet ;
+			$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds=New-Object system.Data.DataSet ;
 $ex=$null
 			Try{
 				$cmd.fill($ds)
@@ -5672,8 +5672,8 @@ $ex=$null
 
 
 			$query="/* OMS */SELECT * FROM SYS.M_LICENSE"
-			$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds =New-Object system.Data.DataSet ;
+			$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds=New-Object system.Data.DataSet ;
 $ex=$null
 			Try{
 				$cmd.fill($ds)
@@ -5727,8 +5727,8 @@ if($collecttableinv -and (get-date).Minute -lt 15)
 			$query='/* OMS */ Select Host,Port,Loaded,TABLE_NAME,RECORD_COUNT,RAW_RECORD_COUNT_IN_DELTA,MEMORY_SIZE_IN_TOTAL,MEMORY_SIZE_IN_MAIN,MEMORY_SIZE_IN_DELTA 
 from M_CS_TABLES'
 
-			$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds =New-Object system.Data.DataSet ;
+			$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds=New-Object system.Data.DataSet ;
 $ex=$null
 			Try{
 				$cmd.fill($ds)
@@ -5776,8 +5776,8 @@ $ex=$null
 			Write-Output 'CollectorType="Inventory" -   Category="Alerts"'
 
 			$query='/* OMS */ Select * from _SYS_STATISTICS.Statistics_Current_Alerts'
-			$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds =New-Object system.Data.DataSet ;
+			$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds=New-Object system.Data.DataSet ;
 $ex=$null
 			Try{
 				$cmd.fill($ds)
@@ -5826,8 +5826,8 @@ $ex=$null
 
 
 			$query='/* OMS */ Select * from SYS.M_Service_statistics'
-			$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds =New-Object system.Data.DataSet ;
+			$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds=New-Object system.Data.DataSet ;
 $ex=$null
 			Try{
 				$cmd.fill($ds)
@@ -6166,8 +6166,8 @@ GROUP BY
 	CASE WHEN AGGREGATE_BY = 'NONE' OR INSTR(AGGREGATE_BY, 'HOST') != 0 THEN HOST ELSE MAP(BI_HOST, '%', 'any', BI_HOST) END
 ) ORDER BY    SAMPLE_TIME DESC "
 
-			$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds =New-Object system.Data.DataSet ;
+			$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds=New-Object system.Data.DataSet ;
 $ex=$null
 			Try{
 				$cmd.fill($ds)
@@ -6359,8 +6359,8 @@ GROUP BY
 ORDER BY
 SAMPLE_TIME DESC
 WITH HINT (NO_JOIN_REMOVAL)"
-			$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds =New-Object system.Data.DataSet ;
+			$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds=New-Object system.Data.DataSet ;
 $ex=$null
 			Try{
 				$cmd.fill($ds)
@@ -6526,8 +6526,8 @@ $ex=$null
 			Write-Output '  CollectorType="Performance" - Category="Memory" - Subcategory="OverallUsage" '
 
 			$query="/* OMS */SELECT * FROM SYS.M_MEMORY Where PORT=30003" ###HArdcoded change this
-			$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds =New-Object system.Data.DataSet ;
+			$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds=New-Object system.Data.DataSet ;
 $ex=$null
 			Try{
 				$cmd.fill($ds)
@@ -6711,8 +6711,8 @@ $ex=$null
 
 
 			$query="/* OMS */SELECT * FROM SYS.M_SERVICE_MEMORY"
-			$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds =New-Object system.Data.DataSet ;
+			$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds=New-Object system.Data.DataSet ;
 $ex=$null
 			Try{
 				$cmd.fill($ds)
@@ -6900,8 +6900,8 @@ Group by  HOST , PORT,to_varchar(time, 'YYYY-MM-DD HH24:MI')"
 WHERE TIME > add_seconds('"+$currentruntime+"',-$timespan)
 group by Host,Time
 order by Time desc"
-			$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds =New-Object system.Data.DataSet ;
+			$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds=New-Object system.Data.DataSet ;
 $ex=$null
 			Try{
 				$cmd.fill($ds)
@@ -7142,8 +7142,8 @@ MAX(MEMORY_RESIDENT)/1024/1024/1024 as ResidentGB,MAX(MEMORY_TOTAL_RESIDENT/1024
 from SYS.M_LOAD_HISTORY_HOST
 WHERE TIME > add_seconds('"+$currentruntime+"',-$timespan)
 Group by  HOST ,to_varchar(time, 'YYYY-MM-DD HH24:MI')"
-			$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds =New-Object system.Data.DataSet ;
+			$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds=New-Object system.Data.DataSet ;
 $ex=$null
 			Try{
 				$cmd.fill($ds)
@@ -7273,8 +7273,8 @@ $ex=$null
 
 
 			$query='/* OMS */ Select Schema_name,round(sum(Memory_size_in_total)/1024/1024) as "ColunmTablesMBUSed" from M_CS_TABLES group by Schema_name'
-			$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds =New-Object system.Data.DataSet ;
+			$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds=New-Object system.Data.DataSet ;
 $ex=$null
 			Try{
 				$cmd.fill($ds)
@@ -7314,8 +7314,8 @@ $ex=$null
 
 
 			$query='/* OMS */ Select  host,component, sum(Used_memory_size) USed_MEmory_size from public.m_service_component_memory group by host, component'
-			$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds =New-Object system.Data.DataSet ;
+			$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds=New-Object system.Data.DataSet ;
 $ex=$null
 			Try{
 				$cmd.fill($ds)
@@ -7359,8 +7359,8 @@ Join
 union 
 select host, sum(INCLUSIVE_PEAK_ALLOCATION_SIZE) as M from M_HEAP_MEMORY_RESET WHERE depth = 0 group by host ) group by Host )as T2 on T1.Host=T2.Host
 group by T1.host'
-			$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds =New-Object system.Data.DataSet ;
+			$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds=New-Object system.Data.DataSet ;
 $ex=$null
 			Try{
 				$cmd.fill($ds)
@@ -7422,8 +7422,8 @@ $ex=$null
 , 100*(sum(UNCOMPRESSED_SIZE)/sum(MEMORY_SIZE_IN_TOTAL)) Compression_PErcentage
 	FROM SYS.M_CS_ALL_COLUMNS Group by host,Schema_name having sum(Uncompressed_size) >0 '
 
-			$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds =New-Object system.Data.DataSet ;
+			$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds=New-Object system.Data.DataSet ;
 $ex=$null
 			Try{
 				$cmd.fill($ds)
@@ -7523,8 +7523,8 @@ $ex=$null
 					and (write_count <> 0 or read_count <> 0  or avg_trigger_async_write_time <> 0 or avg_trigger_async_read_time <> 0)
 					"
 								   
-				   $cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-				   $ds =New-Object system.Data.DataSet ;
+				   $cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+				   $ds=New-Object system.Data.DataSet ;
 				   $ex=$null
 				   Try{
 					   $cmd.fill($ds)
@@ -7672,8 +7672,8 @@ $ex=$null
 			   and type not in ( 'TRACE' )
 			   order by type, service_name, s.volume_id; "
 			   
-			   $cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-						   $ds =New-Object system.Data.DataSet ;
+			   $cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+						   $ds=New-Object system.Data.DataSet ;
 			   $ex=$null
 						   Try{
 							   $cmd.fill($ds)
@@ -7738,8 +7738,8 @@ $ex=$null
 			   from m_savepoints where start_time  > add_seconds('"+$currentruntime+"',-$timespan);"
 			   
 			   
-			   $cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-						   $ds =New-Object system.Data.DataSet ;
+			   $cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+						   $ds=New-Object system.Data.DataSet ;
 			   $ex=$null
 						   Try{
 							   $cmd.fill($ds)
@@ -7831,8 +7831,8 @@ MEMORY_SIZE,
 REUSED_MEMORY_SIZE,
 CPU_TIME FROM PUBLIC.M_EXPENSIVE_STATEMENTS WHERE  START_TIME> add_seconds('"+$currentruntime+"',-$timespan)"
 
-			$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds =New-Object system.Data.DataSet ;
+			$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds=New-Object system.Data.DataSet ;
 $ex=$null
 			Try{
 				$cmd.fill($ds)
@@ -7919,8 +7919,8 @@ $ex=$null
 			FROM
 			M_SQL_PLAN_CACHE where LAST_EXECUTION_TIMESTAMP >  add_seconds('"+$currentruntime+"',-$timespan)"
 
-			$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-					$ds =New-Object system.Data.DataSet ;
+			$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+					$ds=New-Object system.Data.DataSet ;
 			$ex=$null
 		  Try{
 			  $cmd.fill($ds)
@@ -8057,8 +8057,8 @@ GROUP BY
 ORDER BY
 MAP(ORDER_BY, 'THREAD_ID',   THREAD_ID, 'any', 'CONNECTION', CONN_ID, 'any'),
 MAP(ORDER_BY, 'THREADS', NUM) DESC"
-$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-		  $ds =New-Object system.Data.DataSet ;
+$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+		  $ds=New-Object system.Data.DataSet ;
 $ex=$null
 		  Try{
 			  $cmd.fill($ds)|out-null
@@ -8351,8 +8351,8 @@ WHERE
 ORDER BY
 ROW_NUM
 "
-	   $cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-		  $ds =New-Object system.Data.DataSet ;
+	   $cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+		  $ds=New-Object system.Data.DataSet ;
 	  $ex=$null
 		  Try{
 			  $cmd.fill($ds)|out-null
@@ -8546,8 +8546,8 @@ C.CONN_ID,
 C.THREAD_ID,
 C.TRANSACTION_ID
 "
-		   $cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-		  $ds =New-Object system.Data.DataSet ;
+		   $cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+		  $ds=New-Object system.Data.DataSet ;
 	  $ex=$null
 		  Try{
 			  $cmd.fill($ds)|out-null
@@ -8950,8 +8950,8 @@ SERVICE_NAME
 WITH HINT (NO_JOIN_REMOVAL)"
 }
 
-   $cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-		  $ds =New-Object system.Data.DataSet ;
+   $cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+		  $ds=New-Object system.Data.DataSet ;
 $ex=$null
 		  Try{
 			 # $cmd.fill($ds)|out-null
@@ -9146,8 +9146,8 @@ PORT
 WITH HINT (NO_JOIN_REMOVAL)
 "
 
-  $cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-		  $ds =New-Object system.Data.DataSet ;
+  $cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+		  $ds=New-Object system.Data.DataSet ;
 $ex=$null
 		  Try{
 			  $cmd.fill($ds)|out-null
@@ -9300,8 +9300,8 @@ PORT,
 SQL_TYPE
 "
 
-  $cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-		  $ds =New-Object system.Data.DataSet ;
+  $cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+		  $ds=New-Object system.Data.DataSet ;
 $ex=$null
 		  Try{
 			  $cmd.fill($ds)|out-null
@@ -9418,8 +9418,8 @@ ORDER BY
   1, 2, 3
 "
 
-			$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds =New-Object system.Data.DataSet ;
+			$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds=New-Object system.Data.DataSet ;
 			$ex=$null
             Try{
 				$cmd.fill($ds)
@@ -9599,8 +9599,8 @@ ORDER BY
   HOST
 "
 
-			$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds =New-Object system.Data.DataSet ;
+			$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds=New-Object system.Data.DataSet ;
 			$ex=$null
             Try{
 				$cmd.fill($ds)
@@ -9764,8 +9764,8 @@ ORDER BY
   LOCATION
 "
 
-	$cmd =New-Object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds =New-Object system.Data.DataSet ;
+	$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds=New-Object system.Data.DataSet ;
 			$ex=$null
             Try{
 				$cmd.fill($ds)
