@@ -2800,6 +2800,7 @@
                 "etag": "*",
                 "Type": "Alert",
                 "Name": "[variables('alertArray')[copyIndex()].alertName]",
+                "DisplayName": "[variables('alertArray')[copyIndex()].alertName]",
                 "Description": "[variables('alertArray')[copyIndex()].description]",
                 "Severity": "[variables('alertArray')[copyIndex()].severity]",
                 "Throttling": {
