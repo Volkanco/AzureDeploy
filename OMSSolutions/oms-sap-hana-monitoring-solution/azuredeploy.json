@@ -2738,7 +2738,9 @@
                             "[resourceId('Microsoft.Automation/automationAccounts/variables/', parameters('automationAccountName'), variables('opsInsightWorkspaceID'))]",
                             "[resourceId('Microsoft.Automation/automationAccounts/variables/', parameters('automationAccountName'), variables('opsInsightWorkspaceKey'))]",
                             "[resourceId('Microsoft.Automation/automationAccounts/variables/', parameters('automationAccountName'), variables('createScheduleAutomationAccountName'))]",
-                            "[resourceId('Microsoft.Automation/automationAccounts/variables/', parameters('automationAccountName'), variables('createScheduleResourceGroupName'))]"
+                            "[resourceId('Microsoft.Automation/automationAccounts/variables/', parameters('automationAccountName'), variables('createScheduleResourceGroupName'))]",
+                            "[resourceId('Microsoft.Automation/automationAccounts/variables/', parameters('automationAccountName'), variables('hanaMonitorDefaultUser'))]",
+                            "[resourceId('Microsoft.Automation/automationAccounts/variables/', parameters('automationAccountName'), variables('hanaMonitorDefaultPassword'))]"
                         ]
                     }
                 }
