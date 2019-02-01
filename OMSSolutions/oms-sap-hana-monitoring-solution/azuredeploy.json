@@ -2793,7 +2793,8 @@
             "dependsOn": [
                 "[concat('Microsoft.OperationalInsights/workspaces/', parameters('logAnalyticsWorkspaceName'))]",
                 "[concat('Microsoft.OperationalInsights/workspaces/', parameters('logAnalyticsWorkspaceName'), '/savedSearches/', tolower(variables('alertArray')[copyIndex()].searchCategory), '|', toLower(variables('alertArray')[copyIndex()].searchName))]",
-                "[concat('Microsoft.OperationalInsights/workspaces/', parameters('logAnalyticsWorkspaceName'), '/savedSearches/', tolower(variables('alertArray')[copyIndex()].searchCategory), '|', toLower(variables('alertArray')[copyIndex()].searchName), '/schedules/','schedule-',uniqueString(resourceGroup().id, deployment().name,parameters('logAnalyticsWorkspaceName'), '/', variables('alertArray')[copyIndex()].searchCategory, '|', variables('alertArray')[copyIndex()].searchName))]"
+                "[concat('Microsoft.OperationalInsights/workspaces/', parameters('logAnalyticsWorkspaceName'), '/savedSearches/', tolower(variables('alertArray')[copyIndex()].searchCategory), '|', toLower(variables('alertArray')[copyIndex()].searchName), '/schedules/','schedule-',uniqueString(resourceGroup().id, deployment().name,parameters('logAnalyticsWorkspaceName'), '/', variables('alertArray')[copyIndex()].searchCategory, '|', variables('alertArray')[copyIndex()].searchName))]",
+                "[concat('Microsoft.Insights/actionGroups/', variables('actionGroupName'))]"
             ],
             "properties": {
                 "etag": "*",
@@ -2801,12 +2802,12 @@
                 "Name": "[variables('alertArray')[copyIndex()].alertName]",
                 "Description": "[variables('alertArray')[copyIndex()].description]",
                 "Severity": "[variables('alertArray')[copyIndex()].severity]",
+                "Throttling": {
+                    "DurationInMinutes": "[variables('alertArray')[copyIndex()].alertThrottleInMinutes]"
+                },
                 "Threshold": {
                     "Operator": "[variables('alertArray')[copyIndex()].operator]",
                     "Value": "[variables('alertArray')[copyIndex()].alertTresholdValue]"
-                },
-                "Throttling": {
-                    "DurationInMinutes": "[variables('alertArray')[copyIndex()].alertThrottleInMinutes]"
                 }
             }
         },        
