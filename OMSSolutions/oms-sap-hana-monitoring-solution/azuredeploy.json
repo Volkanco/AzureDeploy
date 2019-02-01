@@ -2808,6 +2808,10 @@
                 "Threshold": {
                     "Operator": "[variables('alertArray')[copyIndex()].operator]",
                     "Value": "[variables('alertArray')[copyIndex()].alertTresholdValue]"
+                },                
+               "AzNsNotification": {
+                    "GroupIds": "[resourceId('Microsoft.Insights/actionGroups',variables('actionGroupName'))]",
+                    "CustomEmailSubject": "[variables('alertArray')[copyIndex()].alertName]"
                 }
             }
         },        
