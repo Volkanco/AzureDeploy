@@ -218,13 +218,7 @@
                 "scheduleQueryTimeSpan": 15,
                 "alertName": "Hana Data Collector Failed to Connect Hana DB",
                 "enabled": false
-            }
-
-
-
-
-
-            ,
+            }            ,
             {
                 "searchName": "High CPU Utilization on Hana Host",
                 "description": "High CPU Utilization on Hana Host. Host utilization was > 80%",
@@ -252,7 +246,7 @@
                 "searchCategory": "Azure SAP HANA Monitor",
                 "scheduleIntervalInMinutes": 15,
                 "scheduleQueryTimeSpan": 15,
-                "alertName": "Hana Data Collector Failed to Connect Hana DB",
+                "alertName": "High Memory Utilization on Hana Host",
                 "enabled": false
             },
             {
@@ -267,7 +261,7 @@
                 "searchCategory": "Azure SAP HANA Monitor",
                 "scheduleIntervalInMinutes": 15,
                 "scheduleQueryTimeSpan": 15,
-                "alertName": "Hana Data Collector Failed to Connect Hana DB",
+                "alertName": "Hana Disk Free Space Alert",
                 "enabled": false
             },
             {
@@ -282,7 +276,7 @@
                 "searchCategory": "Azure SAP HANA Monitor",
                 "scheduleIntervalInMinutes": 15,
                 "scheduleQueryTimeSpan": 15,
-                "alertName": "Hana Data Collector Failed to Connect Hana DB",
+                "alertName": "Hana Services Not ActiveB",
                 "enabled": false
             },
             {
@@ -297,7 +291,7 @@
                 "searchCategory": "Azure SAP HANA Monitor",
                 "scheduleIntervalInMinutes": 15,
                 "scheduleQueryTimeSpan": 15,
-                "alertName": "Hana Data Collector Failed to Connect Hana DB",
+                "alertName": "Medium Priority Alerts Detected for SAP HanaB",
                 "enabled": false
             },
             {
@@ -312,7 +306,7 @@
                 "searchCategory": "Azure SAP HANA Monitor",
                 "scheduleIntervalInMinutes": 15,
                 "scheduleQueryTimeSpan": 15,
-                "alertName": "Hana Data Collector Failed to Connect Hana DB",
+                "alertName": "High Priority Alerts Detected for SAP Hana",
                 "enabled": false
             }
         ]
