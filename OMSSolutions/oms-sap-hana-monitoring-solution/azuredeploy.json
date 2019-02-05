@@ -123,14 +123,14 @@
     "variables": {
         "runbooks": {
             "ingestParentRunbook": {
-                "name": "AzureSAPHanaCollector",
+                "name": "AzureSAPHanaCollector-MS",
                 "version": "1.0.0.1",
                 "description": "Runbook to collect SAP Hana information and metrics into Log Analytics",
                 "type": "PowerShell",
                 "Id": ""
             },
             "ingestSchedulerRunbook": {
-                "name": "AzureSAPHanaInitialization",
+                "name": "AzureSAPHanaInitialization-MS",
                 "version": "1.0.0.1",
                 "description": "Runbook to automatically create required schedules and variables for SAP Hana data collection",
                 "type": "PowerShell",
@@ -221,7 +221,7 @@
             }            ,
             {
                 "searchName": "High CPU Utilization on Hana Host",
-                "description": "High CPU Utilization on Hana Host. Host utilization was > 80%",
+                "description": "High CPU Utilization on Hana Host.  Host utilization was > 80%",
                 "severity": "critical",
                 "query": "let CPUThreshold=80; SAPHana_CL | where CollectorType_s has \"Performance\" | where PerfObject_s ==\"Host\" and PerfCounter_s ==\"CPU_PCT\" | summarize CPU=avg(PerfValue_d) by Host=HOST_s, bin (TimeGenerated, 5m) |where CPU > CPUThreshold",   
                 "alertTresholdValue": 0,
