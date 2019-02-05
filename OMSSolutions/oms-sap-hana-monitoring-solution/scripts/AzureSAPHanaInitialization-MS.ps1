@@ -2,16 +2,11 @@ param
 (
 [Parameter(Mandatory=$false)] [bool] $collectqueryperf=$false,
 [Parameter(Mandatory=$false)] [bool] $collecttableinv=$false,
-[Parameter(Mandatory=$true)] [string] $configfolder,
+[Parameter(Mandatory=$true)] [string] $configfolder="C:\HanaMonitor",
 [Parameter(Mandatory=$true)] [string] $hybridWorkerGroup,
 [Parameter(Mandatory=$true)] [int] $frequency=15
 )
 
-<#
-
-[Parameter(Mandatory=$true)] [string] $defaultProfileUser,
-[Parameter(Mandatory=$true)] [string] $defaultProfilePassword,
-#>
 
 $connectionName = "AzureRunAsConnection"
 try
