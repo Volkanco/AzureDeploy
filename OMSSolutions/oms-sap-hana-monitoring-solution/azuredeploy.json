@@ -276,7 +276,7 @@
                 "searchCategory": "Azure SAP HANA Monitor",
                 "scheduleIntervalInMinutes": 15,
                 "scheduleQueryTimeSpan": 15,
-                "alertName": "Hana Services Not ActiveB",
+                "alertName": "Hana Services Not Active",
                 "enabled": false
             },
             {
@@ -307,6 +307,21 @@
                 "scheduleIntervalInMinutes": 15,
                 "scheduleQueryTimeSpan": 15,
                 "alertName": "High Priority Alerts Detected for SAP Hana",
+                "enabled": false
+            },
+            {
+                "searchName": "SAP HANA Instance Unavailable",
+                "description": "SAP HANA Instance Unavailable , check Hana daemon status",
+                "severity": "critical",
+                "query": "HanaAvailability_CL | summarize arg_max(TimeGenerated, *) by Computer | parse RawData with  Status\" \" FromDate \"-\" EventDate |project Computer , Status ,EventDate , TimeGenerated | where Status == \"Unavailable\" ",
+                "alertTresholdValue": 0,
+                "operator": "gt",
+                "alertThrottleInMinutes": 60,
+                "alertBreach": 1,
+                "searchCategory": "Azure SAP HANA Monitor",
+                "scheduleIntervalInMinutes": 15,
+                "scheduleQueryTimeSpan": 15,
+                "alertName": "SAP HANA Instance Unavailablea",
                 "enabled": false
             }
         ]
