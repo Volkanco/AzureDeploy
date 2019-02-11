@@ -140,7 +140,7 @@ Do {
 
 	$i++
 }
-While ($i -le 4)
+While ($i -le $schcount)
 
 
 
