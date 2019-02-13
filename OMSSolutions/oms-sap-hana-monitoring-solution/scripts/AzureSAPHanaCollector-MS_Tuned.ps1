@@ -8,9 +8,9 @@ param
 
 
 #Write-Output "RB Initial   : $([System.gc]::gettotalmemory('forcefullcollection') /1MB) MB" 
-
-#region login to Azure Arm and retrieve variables
 Enable-AzureRmAlias
+#region login to Azure Arm and retrieve variables
+
 
 #################
 #
@@ -90,6 +90,11 @@ $sapdll="Sap.Data.Hana.v4.5.dll"
 #config folder
 if(!$configfolder){$configfolder="C:\HanaMonitor"}
 
+
+#AutomationVaribale to Track last run time 
+
+$Trackvariable="HanaCollectionTime"
+$RunHistory=@{}
 #endregion
 
 #region Define Required Functions
@@ -234,10 +239,12 @@ $ex=$null
 	   IF($ins.Enabled -eq'true')
         {	
         $colstart=get-date
-		$Omsupload=@()
-		$OmsPerfupload=@()
-		$OmsInvupload=@()
-		$OmsStateupload=@()
+		[System.Collections.ArrayList]$Omsupload=@()
+		[System.Collections.ArrayList]$OmsPerfupload=@()
+		[System.Collections.ArrayList]$OmsInvupload=@()
+		[System.Collections.ArrayList]$OmsStateupload=@()
+
+
 		$saphost=$ins.'hanaserver'
         $sapport=$ins.'port'
         
@@ -313,9 +320,11 @@ $ex=$null
 		
 		IF($ex)
 		{
-			Write-Warning  "Failed to conect to  $hanadb on  $($ins.HanaServer):$($ins.Port)"
+				Write-Warning  "Failed to conect to  $hanadb on  $($ins.HanaServer):$($ins.Port)"
 			write-warning $ex
-			$omsStateupload+= @(New-Object PSObject -Property @{
+			
+               $cu=$null
+               $cu=[PSCustomObject]@{
 				HOST=$saphost
 				PORT=$sapport
 				Database=$hanadb
@@ -328,14 +337,17 @@ $ex=$null
 				Latency=$ping
                 
 			}
-			)
+            $omsStateupload.Add($cu)|Out-Null
+			
 		}
 		
 		IF ($conn.State -eq 'open')
 		{	    
 			
             Write-Output "Succesfully connected to $hanadb on  $($ins.HanaServer):$($ins.Port)"
-            $Omsstateupload+=, @(New-Object PSObject -Property @{
+            
+            $cu=$null
+               $cu=[PSCustomObject]@{
 				HOST=$saphost
 				 PORT=$sapport
 				 Database=$hanadb
@@ -345,21 +357,21 @@ $ex=$null
 				Connection="Successful"
 				PingResult=$pingresult
                 Latency=$ping
-				
-				})
-
-					
+                
+			}
+            $omsStateupload.Add($cu)|Out-Null
+            		
 
 			$rbvariablename=$null
-			$rbvariablename="LastRun-$saphost-$hanadb"
+			$rbvariablename="$saphost-$hanadb"
 
 			$ex1=$null
 			Try{
 					$lasttimestamp=$null
-				$lasttimestamp=Get-AzureRmAutomationVariable `
-				-Name $rbvariablename `
-				-ResourceGroupName $AAResourceGroup `
-				-AutomationAccountName $AAAccount -EA 0
+                    $collHistory=Get-AutomationVariable -Name $Trackvariable
+				
+                    [datetime]$lasttimestamp=($collhistory.psobject.Properties|where{$_.name -eq "$saphost-$hanadb"}).Value
+                    Write-output "Last data colelcttion for $saphost-$hanadb  was at $lasttimestamp"        
 			}
 			Catch
 			{
@@ -377,13 +389,13 @@ $ex=$null
 				$Ex=$_.Exception.MEssage;write-warning $query
 			}
 
-			if($ex1 -ne $null -OR $lasttimestamp.value -eq $null )
+			if($ex1 -ne $null -OR $lasttimestamp -eq $null )
 			{
 				write-warning "Last Run Time not found for $saphost-$hanadb : $ex"
 				$lastruntime=$ds.Tables[0].rows[0].LastTime # we will use this to mark lasst data collection time in HANA
 			}Else
 			{
-				$lastruntime=[datetime]$lasttimestamp.value  # we will use this to mark lasst data collection time in HANA				
+				$lastruntime=[datetime]$lasttimestamp  # we will use this to mark lasst data collection time in HANA				
 			}
 				$currentruntime=($ds.Tables[0].rows[0].CURRENT_TIMESTAMP).tostring('yyyy-MM-dd HH:mm:ss.FF')  #format ddate to Hana timestamp YYYY-MM-DD HH24:MI:SS.FF7. FF
 				$timespan=([datetime]$currentruntime-[datetime]$lastruntime).Totalseconds
@@ -425,7 +437,7 @@ $ex=$null
 			#Host Inventory 
 			Write-Output ' CollectorType="Inventory" , Category="HostInfo"'
 
-			$cu=New-Object PSObject -Property @{
+			$cu=[PSCustomObject]@{
 				HOST=$saphost
 				CollectorType="Inventory"
 				Category="HostInfo"
@@ -451,7 +463,7 @@ $ex=$null
 			}
 
 
-			$OmsInvupload+=@($cu)
+			$OmsInvupload.add($cu)
 
 			$sapinstance=$cu.sid+'-'+$cu.sapsystem
 			$sapversion=$cu.build_version  #use build versionto decide which query to run
@@ -464,12 +476,12 @@ $ex=$null
 			$cmd.fill($ds)
 
 			$Resultsinv=$null
-			$Resultsinv=@(); 
+			[System.Collections.ArrayList]$Resultsinv=@(); 
 			$Resultsstate=$null
-			$Resultsstate=@(); 
+			[System.Collections.ArrayList]$Resultsstate=@(); 
 
 			Write-Output 'CollectorType="Status" -   Category="Host"'
-			$resultsinv+=New-Object PSObject -Property @{
+			$Resultsinv.Add([PSCustomObject]@{
 				HOST=$row.HOST
 				Instance=$sapinstance
 				CollectorType="Inventory"
@@ -482,9 +494,9 @@ $ex=$null
 				'Version'=($ds.Tables[0].rows|where{$_.Name  -eq 'Version'}).Value
 				'MinStartTime'=($ds.Tables[0].rows|where{$_.Name  -eq 'Min Start Time'}).Value
 				'MaxStartTime'=($ds.Tables[0].rows|where{$_.Name  -eq 'Max Start Time'}).Value
-			}
+			})
 
-			$resultsstate+=New-Object PSObject -Property @{
+			$resultsstate.add([PSCustomObject]@{
 				HOST=$row.HOST
 				Instance=$sapinstance
 				CollectorType="State"
@@ -499,10 +511,10 @@ $ex=$null
 				'DISKDATA'=($ds.Tables[0].rows|where{$_.Name  -eq 'DATA'}).Status
 				'DISKLOG'=($ds.Tables[0].rows|where{$_.Name  -eq 'Log'}).Status
 				'DISKTRACE'=($ds.Tables[0].rows|where{$_.Name  -eq 'Trace'}).Status
-			}
+			})
 
-			$Omsinvupload+=,$Resultsinv
-			$Omsstateupload+=,$Resultsstate
+			$Omsinvupload.add($Resultsinv)
+			$Omsstateupload.add($Resultsstate)
 
 
 			$query='/* OMS */ Select * from SYS_Databases.M_Services'
@@ -519,8 +531,8 @@ $ex=$null
 			      
 
 			$Results=$null
-			$Resultsinv=@(); 
-			$Resultsstate=@(); 
+			[System.Collections.ArrayList]$Resultsinv=@(); 
+			[System.Collections.ArrayList]$Resultsstate=@(); 
 
 				$mdc=$null
 			Write-Output ' CollectorType="Inventory" ,  Category="DatabaseState"'
@@ -533,7 +545,7 @@ $ex=$null
             {
 			foreach ($row in $ds.Tables[0].rows)
 			{
-				$resultsinv+=New-Object PSObject -Property @{
+				$resultsinv.add([PSCustomObject]@{
 					HOST=$row.Host
 					Instance=$sapinstance
 					CollectorType="Inventory"
@@ -545,19 +557,20 @@ $ex=$null
 					SQL_PORT=$row.SQL_PORT
 					COORDINATOR_TYPE=$row.COORDINATOR_TYPE
 			
-				}
-				$resultsstate+=New-Object PSObject -Property @{
+				})
+
+				$resultsstate.add([PSCustomObject]@{
 					CollectorType="State"
 					Category="Database"
 					Database=$row.DATABASE_NAME
 					SERVICE_NAME=$row.SERVICE_NAME
 					PROCESS_ID=$row.PROCESS_ID
 					ACTIVE_STATUS=$row.ACTIVE_STATUS 
-				}
+				})
 			}
 
-			$Omsinvupload+=,$Resultsinv
-			$Omsstateupload+=,$Resultsstate
+			$Omsinvupload.Add($Resultsinv)
+			$Omsstateupload.add($Resultsstate)
 
 #get USer DB list 
 
@@ -5101,7 +5114,7 @@ $ex=$null
 			{
 				
 				$cu=$null
-                    $cu=New-Object PSObject -Property @{
+                    $cu=[PSCustomObject]@{
 					CollectorType="State"
 					Category="ConfigurationCheck"
 					Database=$(IF([String]::IsNullOrEmpty($row.DATABASE_NAME)){$hanadb}Else{$row.DATABASE_NAME})
@@ -5125,7 +5138,7 @@ $ex=$null
                 $resultsstate+=$cu
 			}
 
-			$Omsstateupload+=,$Resultsstate
+			$Omsstateupload.add($Resultsstate)
  
 
  }
@@ -5149,14 +5162,14 @@ $ex=$null
 			}
 			 
 			$Resultsinv=$null
-			$Resultsinv=@(); 
+			[System.Collections.ArrayList]$Resultsinv=@(); 
 
 
 			Write-Output ' CollectorType="Inventory" ,  Category="DatabaseInfo"'
 
 			foreach ($row in $ds.Tables[0].rows)
 			{
-				$resultsinv+=New-Object PSObject -Property @{
+				$resultsinv.add([PSCustomObject]@{
 					HOST=$row.HOST
 					Instance=$sapinstance
 					CollectorType="Inventory"
@@ -5167,10 +5180,10 @@ $ex=$null
 					VERSION=$row.VERSION
 					USAGE=$row.USAGE
 
-				}
+				})
 			}
 
-			$Omsinvupload+=,$Resultsinv
+			$Omsinvupload.Add($Resultsinv)
 
 			$query="/* OMS */SELECT * FROM SYS.M_SERVICES"
 			$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
@@ -5185,13 +5198,13 @@ $ex=$null
 			}
 			 
 			$Resultsinv=$null
-			$Resultsinv=@(); 
+			[System.Collections.ArrayList]$Resultsinv=@(); 
 
 			Write-Output 'CollectorType="Inventory" -   Category="Services"'
 
 			foreach ($row in $ds.Tables[0].rows)
 			{
-				$resultsinv+=New-Object PSObject -Property @{
+				$resultsinv.add([PSCustomObject]@{
 					HOST=$row.HOST
 					Instance=$sapinstance
 					CollectorType="Inventory"
@@ -5203,9 +5216,9 @@ $ex=$null
 					ACTIVE_STATUS=$row.ACTIVE_STATUS
 					SQL_PORT=$row.SQL_PORT
 					COORDINATOR_TYPE=$row.COORDINATOR_TYPE
-				}
+				})
 
-				$OmsStateupload+=New-Object PSObject -Property @{
+				$OmsStateupload.add([PSCustomObject]@{
 					HOST=$row.HOST
 					Instance=$sapinstance
 					CollectorType="State"
@@ -5215,10 +5228,10 @@ $ex=$null
 					PROCESS_ID=$row.PROCESS_ID
 					ACTIVE_STATUS=$row.ACTIVE_STATUS
 					
-				}
+				})
 			}
 
-			$Omsinvupload+=,$Resultsinv
+			$Omsinvupload.Add($Resultsinv)
 
 
 
@@ -5293,12 +5306,12 @@ $ex=$null
 
 
 			$Resultsperf=$null
-			$Resultsperf=@(); 
+			[System.Collections.ArrayList]$Resultsperf=@(); 
 			foreach ($row in $ds.Tables[0].rows)
 			{
 				
 
-				$Resultsperf+=New-Object PSObject -Property @{
+				$Resultsperf.add([PSCustomObject]@{
 					HOST=$row.HOST
 					Instance=$sapinstance
 					CollectorType="Performance"
@@ -5308,9 +5321,9 @@ $ex=$null
 					PerfValue=$row.FREE_PHYSICAL_MEMORY/1024/1024/1024
 					SYS_TIMESTAMP=$row.UTC_TIMESTAMP
 					
-				}
+				})
 
-				$Resultsperf+=New-Object PSObject -Property @{
+				$Resultsperf.add([PSCustomObject]@{
 					HOST=$row.HOST
 					Instance=$sapinstance
 					CollectorType="Performance"
@@ -5319,8 +5332,8 @@ $ex=$null
 					PerfInstance=$row.HOST
 					PerfValue=$row.USED_PHYSICAL_MEMORY/1024/1024/1024
 					SYS_TIMESTAMP=$row.UTC_TIMESTAMP
-				}
-				$Resultsperf+=New-Object PSObject -Property @{
+				})
+				$Resultsperf.add([PSCustomObject]@{
 					HOST=$row.HOST
 					Instance=$sapinstance
 					CollectorType="Performance"
@@ -5329,9 +5342,9 @@ $ex=$null
 					PerfInstance=$row.HOST
 					PerfValue=$row.FREE_SWAP_SPACE/1024/1024/1024
 					SYS_TIMESTAMP=$row.UTC_TIMESTAMP
-				}
+				})
 
-				$Resultsperf+=New-Object PSObject -Property @{
+				$Resultsperf.add([PSCustomObject]@{
 					HOST=$row.HOST
 					Instance=$sapinstance
 					CollectorType="Performance"
@@ -5340,8 +5353,9 @@ $ex=$null
 					PerfInstance=$row.HOST
 					PerfValue=$row.USED_SWAP_SPACE/1024/1024/1024
 					SYS_TIMESTAMP=$row.UTC_TIMESTAMP
-				}
-				$Resultsperf+=New-Object PSObject -Property @{
+				})
+
+				$Resultsperf.Add([PSCustomObject]@{
 					HOST=$row.HOST
 					Instance=$sapinstance
 					CollectorType="Performance"
@@ -5350,9 +5364,9 @@ $ex=$null
 					PerfInstance=$row.HOST
 					PerfValue=$row.ALLOCATION_LIMIT/1024/1024/1024
 					SYS_TIMESTAMP=$row.UTC_TIMESTAMP
-				}
+				})
 
-				$Resultsperf+=New-Object PSObject -Property @{
+				$Resultsperf.Add([PSCustomObject]@{
 					HOST=$row.HOST
 					Instance=$sapinstance
 					CollectorType="Performance"
@@ -5361,8 +5375,9 @@ $ex=$null
 					PerfInstance=$row.HOST
 					PerfValue=$row.INSTANCE_TOTAL_MEMORY_USED_SIZE/1024/1024/1024
 					SYS_TIMESTAMP=$row.UTC_TIMESTAMP
-				}
-				$Resultsperf+=New-Object PSObject -Property @{
+				})
+
+				$Resultsperf.Add([PSCustomObject]@{
 					HOST=$row.HOST
 					Instance=$sapinstance
 					CollectorType="Performance"
@@ -5371,9 +5386,9 @@ $ex=$null
 					PerfInstance=$row.HOST
 					PerfValue=$row.INSTANCE_TOTAL_MEMORY_PEAK_USED_SIZE/1024/1024/1024
 					SYS_TIMESTAMP=$row.UTC_TIMESTAMP
-				}
+				})
 
-				$Resultsperf+=New-Object PSObject -Property @{
+				$Resultsperf.Add([PSCustomObject]@{
 					HOST=$row.HOST
 					Instance=$sapinstance
 					CollectorType="Performance"
@@ -5382,9 +5397,9 @@ $ex=$null
 					PerfInstance=$row.HOST
 					PerfValue=$row.INSTANCE_TOTAL_MEMORY_ALLOCATED_SIZE/1024/1024/1024
 					SYS_TIMESTAMP=$row.UTC_TIMESTAMP
-				}
+				})
 
-				$Resultsperf+=New-Object PSObject -Property @{
+				$Resultsperf.Add([PSCustomObject]@{
 					HOST=$row.HOST
 					Instance=$sapinstance
 					CollectorType="Performance"
@@ -5393,9 +5408,9 @@ $ex=$null
 					PerfInstance=$row.HOST
 					PerfValue=$row.INSTANCE_CODE_SIZE/1024/1024/1024
 					SYS_TIMESTAMP=$row.UTC_TIMESTAMP
-				}
+				})
 				
-				$Resultsperf+=New-Object PSObject -Property @{
+				$Resultsperf.Add([PSCustomObject]@{
 					HOST=$row.HOST
 					Instance=$sapinstance
 					CollectorType="Performance"
@@ -5404,8 +5419,8 @@ $ex=$null
 					PerfInstance=$row.HOST
 					PerfValue=$row.INSTANCE_SHARED_MEMORY_ALLOCATED_SIZE/1024/1024/1024
 					SYS_TIMESTAMP=$row.UTC_TIMESTAMP
-				}
-				$Resultsperf+=New-Object PSObject -Property @{
+				})
+				$Resultsperf.Add([PSCustomObject]@{
 					HOST=$row.HOST
 					Instance=$sapinstance
 					CollectorType="Performance"
@@ -5414,8 +5429,9 @@ $ex=$null
 					PerfInstance=$row.HOST
 					PerfValue=$row.TOTAL_CPU_USER_TIME
 					SYS_TIMESTAMP=$row.UTC_TIMESTAMP
-				}
-				$Resultsperf+=New-Object PSObject -Property @{
+				})
+
+				$Resultsperf.Add([PSCustomObject]@{
 					HOST=$row.HOST
 					Instance=$sapinstance
 					CollectorType="Performance"
@@ -5424,8 +5440,9 @@ $ex=$null
 					PerfInstance=$row.HOST
 					PerfValue=$row.TOTAL_CPU_SYSTEM_TIME
 					SYS_TIMESTAMP=$row.UTC_TIMESTAMP
-				}
-				$Resultsperf+=New-Object PSObject -Property @{
+				})
+
+				$Resultsperf.Add([PSCustomObject]@{
 					HOST=$row.HOST
 					Instance=$sapinstance
 					CollectorType="Performance"
@@ -5434,8 +5451,9 @@ $ex=$null
 					PerfInstance=$row.HOST
 					PerfValue=$row.TOTAL_CPU_WIO_TIME
 					SYS_TIMESTAMP=$row.UTC_TIMESTAMP
-				}
-				$Resultsperf+=New-Object PSObject -Property @{
+				})
+
+				$Resultsperf.Add([PSCustomObject]@{
 					HOST=$row.HOST
 					Instance=$sapinstance
 					CollectorType="Performance"
@@ -5444,14 +5462,12 @@ $ex=$null
 					PerfInstance=$row.HOST
 					PerfValue=$row.TOTAL_CPU_IDLE_TIME
 					SYS_TIMESTAMP=$row.UTC_TIMESTAMP
-				}
-
-
+				})
 
 			}
 
 
-			$Omsperfupload+=,$Resultsperf
+			$Omsperfupload.Add($Resultsperf)
             #Write-output  $ds.Tables[0].rows
             #Write-output $query
 
@@ -5472,13 +5488,13 @@ $ex=$null
 			}
 			 
 			$Resultsinv=$null
-			$Resultsinv=@(); 
+			[System.Collections.ArrayList]$Resultsinv=@(); 
 
 
 			Write-Output ' CollectorType="Inventory" ,  Category="BAckupCatalog"'
 			foreach ($row in $ds.Tables[0].rows)
 			{
-				$resultsinv+=New-Object PSObject -Property @{
+				$resultsinv.Add([PSCustomObject]@{
 					Hostname=$saphost
 					Instance=$sapinstance
 					CollectorType="Inventory"
@@ -5499,10 +5515,10 @@ $ex=$null
 					SOURCE_DATABASE_NAME=$row.SOURCE_DATABASE_NAME
 
 
-				}
+				})
 			}
 
-			$Omsinvupload+=,$Resultsinv
+			$Omsinvupload.Add($Resultsinv)
 
 
 
@@ -5521,14 +5537,14 @@ $ex=$null
 			 
 
 			$Resultsinv=$null
-			$Resultsinv=@(); 
+			[System.Collections.ArrayList]$Resultsinv=@(); 
 
 
 			Write-Output ' CollectorType="Inventory" ,  Category="Backup"'
 
 			foreach ($row in $ds.Tables[0].rows)
 			{
-				$resultsinv+=New-Object PSObject -Property @{
+				$resultsinv.Add([PSCustomObject]@{
 					HOST=$saphost
 					Instance=$sapinstance
 					CollectorType="Inventory"
@@ -5540,10 +5556,10 @@ $ex=$null
 					ESTIMATED_SIZE=$row.ESTIMATED_SIZE/1024/1024
 
 
-				}
+				})
 			}
 
-			$Omsinvupload+=,$Resultsinv
+			$Omsinvupload.Add($Resultsinv)
 
 
 
@@ -5551,7 +5567,7 @@ $ex=$null
 			$query='/* OMS */ Select * FROM SYS.M_DATA_VOLUMES'
 			$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
 			$ds=New-Object system.Data.DataSet ;
-$ex=$null
+            $ex=$null
 			Try{
 				$cmd.fill($ds)
 			}
@@ -5563,13 +5579,13 @@ $ex=$null
 			 
 
 			$Resultsinv=$null
-			$Resultsinv=@(); 
+			[System.Collections.ArrayList]$Resultsinv=@(); 
 
 
 			Write-Output ' CollectorType="Inventory" ,  Category="Volumes"'
 			foreach ($row in $ds.Tables[0].rows)
 			{
-				$Resultsinv+=New-Object PSObject -Property @{
+				$resultsinv.Add([PSCustomObject]@{
 					HOST=$row.HOST.tolower() 
 					Instance=$sapinstance                  
 					CollectorType="Inventory"
@@ -5583,10 +5599,10 @@ $ex=$null
 					SIZE=$row.SIZE
 					MAX_SIZE=$row.MAX_SIZE
 
-				}
+				})
 			}
 
-			$Omsinvupload+=,$Resultsinv
+			$Omsinvupload.Add($Resultsinv)
 
 
 
@@ -5605,14 +5621,14 @@ $ex=$null
 			 
 
 			$Resultsinv=$null
-			$Resultsinv=@(); 
+			[System.Collections.ArrayList]$Resultsinv=@(); 
 
 
 			Write-Output 'CollectorType="Inventory" -   Category="Disk"'
 			foreach ($row in $ds.Tables[0].rows)
 			{
 				
-				$Resultsinv+=New-Object PSObject -Property @{
+				$resultsinv.Add([PSCustomObject]@{
 
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -5627,10 +5643,10 @@ $ex=$null
 					TOTAL_SIZE=$row.TOTAL_SIZE/1024/1024/1024
 					USED_SIZE=$row.USED_SIZE/1024/1024/1024
 
-				}
+				})
 			}
 
-			$Omsinvupload+=,$Resultsinv
+			$Omsinvupload.Add($Resultsinv)
 
 
 			$query='/* OMS */ Select * FROM SYS.M_DISK_USAGE'
@@ -5648,13 +5664,13 @@ $ex=$null
 			 
 
 			$Resultsperf=$null
-			$Resultsperf=@(); 
+			[System.Collections.ArrayList]$Resultsperf=@(); 
 
 
 			Write-Output 'CollectorType="Performance" -   Category="DiskUsage"'
 			foreach ($row in $ds.Tables[0].rows)
 			{
-				$Resultsperf+=New-Object PSObject -Property @{
+				$Resultsperf.Add([PSCustomObject]@{
 					HOST=$row.HOST
 					Instance=$sapinstance
 					Database=$Hanadb
@@ -5664,10 +5680,10 @@ $ex=$null
 					PerfInstance=$Hanadb
 					USAGE_TYPE=$row.USAGE_TYPE 
 					PerfValue=$row.USED_SIZE
-				}
+				})
 			}
 
-			$Omsperfupload+=,$Resultsperf
+			$Omsperfupload.Add($Resultsperf)
 
 
 
@@ -5686,13 +5702,13 @@ $ex=$null
 			 
 
 			$Resultsinv=$null
-			$Resultsinv=@(); 
+			[System.Collections.ArrayList]$Resultsinv=@(); 
 
 
 			Write-Output 'CollectorType="Inventory" -   Category="License"'
 			foreach ($row in $ds.Tables[0].rows)
 			{
-				$resultsinv+=New-Object PSObject -Property @{
+				$resultsinv.Add([PSCustomObject]@{
 					HOST=$saphost
 					CollectorType="Inventory"
 					Category="License"
@@ -5713,10 +5729,10 @@ $ex=$null
 					IS_DATABASE_LOCAL=$row.IS_DATABASE_LOCAL
 					MEASUREMENT_XML=$row.MEASUREMENT_XML
 
-				}
+				})
 			}
 
-			$Omsinvupload+=,$Resultsinv
+			$Omsinvupload.Add($Resultsinv)
 
 
 
@@ -5741,7 +5757,7 @@ $ex=$null
 			 
 
 			$Resultsinv=$null
-			$Resultsinv=@(); 
+			[System.Collections.ArrayList]$Resultsinv=@(); 
 
 ### check if needed returns 111835 tables
 
@@ -5749,7 +5765,7 @@ $ex=$null
 
 			foreach ($row in $ds.Tables[0].rows)
 			{
-				$resultsinv+=New-Object PSObject -Property @{
+				$resultsinv.Add([PSCustomObject]@{
 					HOST=$row.HOST.ToLower()
 					Instance=$sapinstance
 					CollectorType="Inventory"
@@ -5763,15 +5779,15 @@ $ex=$null
 					MEMORY_SIZE_IN_TOTAL_MB=$row.MEMORY_SIZE_IN_TOTAL/1024/1024
 					MEMORY_SIZE_IN_MAIN_MB=$row.MEMORY_SIZE_IN_MAIN/1024/1024
 					MEMORY_SIZE_IN_DELTA_MB=$row.MEMORY_SIZE_IN_DELTA/1024/1024
-				}
+				})
 			}
 
-			$Omsinvupload+=,$Resultsinv
+			$Omsinvupload.Add($Resultsinv)
 
 }
 
 			$Resultsinv=$null
-			$Resultsinv=@(); 
+			[System.Collections.ArrayList]$Resultsinv=@(); 
 
 			Write-Output 'CollectorType="Inventory" -   Category="Alerts"'
 
@@ -5792,7 +5808,7 @@ $ex=$null
 
 			foreach ($row in $ds.Tables[0].rows)
 			{
-				$resultsinv+=New-Object PSObject -Property @{
+				$resultsinv.Add([PSCustomObject]@{
 					HOST=$row.ALERT_HOST
 					Instance=$sapinstance
 					CollectorType="Inventory"
@@ -5810,10 +5826,10 @@ $ex=$null
 					ALERT_TIMESTAMP=$row.ALERT_TIMESTAMP
 					ALERT_USERACTION=$row.ALERT_USERACTION
 					SCHEDULE=$row.SCHEDULE
-				}
+				})
 			}
 
-			$Omsinvupload+=,$Resultsinv
+			$Omsinvupload.Add($Resultsinv)
 
 
 #endregion
@@ -5839,7 +5855,7 @@ $ex=$null
 			}
 			 
 			$Resultsperf=$null
-			$Resultsperf=@(); 
+			[System.Collections.ArrayList]$Resultsperf=@(); 
 
 			Write-Output '  CollectorType="Performance" - Category="Host" - Subcategory="OverallUsage" '
 			IF($ds.Tables[0].rows)
@@ -5847,7 +5863,7 @@ $ex=$null
 				foreach ($row in $ds.Tables[0].rows)
 				{
 					
-					$Resultsperf+=New-Object PSObject -Property @{
+					$Resultsperf.Add([PSCustomObject]@{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -5858,8 +5874,9 @@ $ex=$null
 						PerfInstance=$row.SERVICE_NAME
 						PerfCounter="PROCESS_MEMORY_GB"
 						PerfValue=$row.PROCESS_MEMORY_GB/1024/1024/1024
-					}
-					$Resultsperf+=New-Object PSObject -Property @{
+					})
+
+					$Resultsperf.Add([PSCustomObject]@{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -5870,8 +5887,9 @@ $ex=$null
 						PerfInstance=$row.SERVICE_NAME
 						PerfCounter="ACTIVE_REQUEST_COUNT"
 						PerfValue=$row.ACTIVE_REQUEST_COUNT
-					}
-					$Resultsperf+=New-Object PSObject -Property @{
+					})
+
+					$Resultsperf.Add([PSCustomObject]@{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -5882,8 +5900,9 @@ $ex=$null
 						PerfInstance=$row.SERVICE_NAME
 						PerfCounter="TOTAL_CPU"
 						PerfValue=$row.TOTAL_CPU
-					}
-					$Resultsperf+=New-Object PSObject -Property @{
+					})
+
+					$Resultsperf.Add([PSCustomObject]@{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -5894,8 +5913,9 @@ $ex=$null
 						PerfInstance=$row.SERVICE_NAME
 						PerfCounter="PROCESS_CPU_TIME"
 						PerfValue=$row.PROCESS_CPU_TIME
-					}
-					$Resultsperf+=New-Object PSObject -Property @{
+					})
+
+					$Resultsperf.Add([PSCustomObject]@{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -5906,8 +5926,9 @@ $ex=$null
 						PerfInstance=$row.SERVICE_NAME
 						PerfCounter="PHYSICAL_MEMORY_GB"
 						PerfValue=$row.PHYSICAL_MEMORY_GB/1024/1024/1024
-					}
-					$Resultsperf+=New-Object PSObject -Property @{
+					})
+
+					$Resultsperf.Add([PSCustomObject]@{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -5918,8 +5939,9 @@ $ex=$null
 						PerfInstance=$row.SERVICE_NAME
 						PerfCounter="OPEN_FILE_COUNT"
 						PerfValue=$row.OPEN_FILE_COUNT
-					}
-					$Resultsperf+=New-Object PSObject -Property @{
+					})
+
+					$Resultsperf.Add([PSCustomObject]@{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -5930,8 +5952,9 @@ $ex=$null
 						PerfInstance=$row.SERVICE_NAME
 						PerfCounter="PROCESS_PHYSICAL_MEMORY_GB"
 						PerfValue=$row.PROCESS_PHYSICAL_MEMORY_GB/1024/1024/1024
-					}
-					$Resultsperf+=New-Object PSObject -Property @{
+					})
+
+					$Resultsperf.Add([PSCustomObject]@{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -5942,8 +5965,9 @@ $ex=$null
 						PerfInstance=$row.SERVICE_NAME
 						PerfCounter="TOTAL_CPU_TIME"
 						PerfValue=$row.TOTAL_CPU_TIME
-					}
-					$Resultsperf+=New-Object PSObject -Property @{
+					})
+
+					$Resultsperf.Add([PSCustomObject]@{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -5954,8 +5978,9 @@ $ex=$null
 						PerfInstance=$row.SERVICE_NAME
 						PerfCounter="ACTIVE_THREAD_COUNT"
 						PerfValue=$row.ACTIVE_THREAD_COUNT
-					}
-					$Resultsperf+=New-Object PSObject -Property @{
+					})
+
+					$Resultsperf.Add([PSCustomObject]@{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -5966,8 +5991,9 @@ $ex=$null
 						PerfInstance=$row.SERVICE_NAME
 						PerfCounter="FINISHED_NON_INTERNAL_REQUEST_COUNT"
 						PerfValue=$row.FINISHED_NON_INTERNAL_REQUEST_COUNT
-					}
-					$Resultsperf+=New-Object PSObject -Property @{
+					})
+
+					$Resultsperf.Add([PSCustomObject]@{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -5978,8 +6004,9 @@ $ex=$null
 						PerfInstance=$row.SERVICE_NAME
 						PerfCounter="PROCESS_CPU"
 						PerfValue=$row.PROCESS_CPU
-					}
-					$Resultsperf+=New-Object PSObject -Property @{
+					})
+
+					$Resultsperf.Add([PSCustomObject]@{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -5990,8 +6017,9 @@ $ex=$null
 						PerfInstance=$row.SERVICE_NAME
 						PerfCounter="ALL_FINISHED_REQUEST_COUNT"
 						PerfValue=$row.ALL_FINISHED_REQUEST_COUNT
-					}
-					$Resultsperf+=New-Object PSObject -Property @{
+					})
+
+					$Resultsperf.Add([PSCustomObject]@{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -6002,8 +6030,9 @@ $ex=$null
 						PerfInstance=$row.SERVICE_NAME
 						PerfCounter="REQUESTS_PER_SEC"
 						PerfValue=$row.REQUESTS_PER_SEC
-					}
-					$Resultsperf+=New-Object PSObject -Property @{
+					})
+
+					$Resultsperf.Add([PSCustomObject]@{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -6014,8 +6043,9 @@ $ex=$null
 						PerfInstance=$row.SERVICE_NAME
 						PerfCounter="AVAILABLE_MEMORY_GB"
 						PerfValue=$row.AVAILABLE_MEMORY_GB/1024/1024/1024
-					}
-					$Resultsperf+=New-Object PSObject -Property @{
+					})
+
+					$Resultsperf.Add([PSCustomObject]@{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -6026,8 +6056,9 @@ $ex=$null
 						PerfInstance=$row.SERVICE_NAME
 						PerfCounter="THREAD_COUNT"
 						PerfValue=$row.THREAD_COUNT
-					}
-					$Resultsperf+=New-Object PSObject -Property @{
+					})
+
+					$Resultsperf.Add([PSCustomObject]@{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -6038,8 +6069,9 @@ $ex=$null
 						PerfInstance=$row.SERVICE_NAME
 						PerfCounter="TOTAL_MEMORY_GB"
 						PerfValue=$row.TOTAL_MEMORY_GB/1024/1024/1024
-					}
-					$Resultsperf+=New-Object PSObject -Property @{
+					})
+
+					$Resultsperf.Add([PSCustomObject]@{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -6050,8 +6082,9 @@ $ex=$null
 						PerfInstance=$row.SERVICE_NAME
 						PerfCounter="RESPONSE_TIME"
 						PerfValue=$row.RESPONSE_TIME
-					}
-					$Resultsperf+=New-Object PSObject -Property @{
+					})
+
+					$Resultsperf.Add([PSCustomObject]@{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -6062,12 +6095,12 @@ $ex=$null
 						PerfInstance=$row.SERVICE_NAME
 						PerfCounter="PENDING_REQUEST_COUNT"
 						PerfValue=$row.PENDING_REQUEST_COUNT
-					}
+					})
 				}
 
 			}
 
-			$Omsperfupload+=,$Resultsperf
+			$Omsperfupload.Add($Resultsperf)
             #Write-output $ds.Tables[0].rows
             #Write-output $query
 #Updated CPU statictics collection 
@@ -6180,14 +6213,14 @@ $ex=$null
 			 
 
 			$Resultsperf=$null
-			$Resultsperf=@(); 
+			[System.Collections.ArrayList]$Resultsperf=@(); 
 
 			IF($ds.Tables[0].rows)
 			{
 				foreach ($row in $ds.Tables[0].rows)
 				{
 
-					$Resultsperf+=New-Object PSObject -Property @{
+					$Resultsperf.Add([PSCustomObject]@{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -6198,12 +6231,12 @@ $ex=$null
 						PerfInstance=$row.HOST
 						PerfCounter="CPU_PCT"
 						PerfValue=$row.CPU_PCT
-					}
+					})
 
 				}
 			}
 
-			$Omsperfupload+=,$Resultsperf
+			$Omsperfupload.Add($Resultsperf)
 
 
 			$query="/* OMS */Select SAMPLE_TIME ,
@@ -6373,7 +6406,7 @@ $ex=$null
 			 
 
 			$Resultsperf=$null
-			$Resultsperf=@(); 
+			[System.Collections.ArrayList]$Resultsperf=@(); 
 
 
 			IF($ds.Tables[0].rows)
@@ -6381,7 +6414,7 @@ $ex=$null
 				foreach ($row in $ds.Tables[0].rows)
 				{
 
-					$Resultsperf+=New-Object PSObject -Property @{
+					$Resultsperf.Add([PSCustomObject]@{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -6392,8 +6425,9 @@ $ex=$null
 						PerfInstance=$row.PORT
 						PerfCounter="CPU_PCT"
 						PerfValue=$row.CPU
-					}
-					$Resultsperf+=New-Object PSObject -Property @{
+					})
+
+					$Resultsperf.Add([PSCustomObject]@{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -6404,8 +6438,9 @@ $ex=$null
 						PerfInstance=$row.PORT
 						PerfCounter="SYSCPU_PCT"
 						PerfValue=$row.SYS
-					}
-					$Resultsperf+=New-Object PSObject -Property @{
+					})
+
+					$Resultsperf.Add([PSCustomObject]@{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -6416,8 +6451,9 @@ $ex=$null
 						PerfInstance=$row.PORT
 						PerfCounter="Connections"
 						PerfValue=$row.CONNS
-					}
-					$Resultsperf+=New-Object PSObject -Property @{
+					})
+
+					$Resultsperf.Add([PSCustomObject]@{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -6428,8 +6464,9 @@ $ex=$null
 						PerfInstance=$row.PORT
 						PerfCounter="Transactions"
 						PerfValue=$row.TRANS
-					}
-					$Resultsperf+=New-Object PSObject -Property @{
+					})
+
+					$Resultsperf.Add([PSCustomObject]@{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -6440,8 +6477,9 @@ $ex=$null
 						PerfInstance=$row.PORT
 						PerfCounter="Requestspersec"
 						PerfValue=$row.EXE_PS
-					}
-					$Resultsperf+=New-Object PSObject -Property @{
+					})
+
+					$Resultsperf.Add([PSCustomObject]@{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -6452,8 +6490,9 @@ $ex=$null
 						PerfInstance=$row.PORT
 						PerfCounter="ActiveThreads"
 						PerfValue=$row.ACT_THR
-					}
-					$Resultsperf+=New-Object PSObject -Property @{
+					})
+
+					$Resultsperf.Add([PSCustomObject]@{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -6464,9 +6503,9 @@ $ex=$null
 						PerfInstance=$row.PORT
 						PerfCounter="WaitingThreads"
 						PerfValue=$row.WAIT_THR
-					}
+					})
 
-					$Resultsperf+=New-Object PSObject -Property @{
+					$Resultsperf.Add([PSCustomObject]@{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -6477,8 +6516,9 @@ $ex=$null
 						PerfInstance=$row.PORT
 						PerfCounter="ActiveSQLExecutorTHR"
 						PerfValue=$row.ACT_SQL
-					}
-					$Resultsperf+=New-Object PSObject -Property @{
+					})
+
+					$Resultsperf.Add([PSCustomObject]@{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -6489,8 +6529,9 @@ $ex=$null
 						PerfInstance=$row.PORT
 						PerfCounter="PendingSessions"
 						PerfValue=$row.PEND_SESS
-					}
-					$Resultsperf+=New-Object PSObject -Property @{
+					})
+
+					$Resultsperf.Add([PSCustomObject]@{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -6501,8 +6542,9 @@ $ex=$null
 						PerfInstance=$row.PORT
 						PerfCounter="Merges"
 						PerfValue=$row.MERGES
-					}
-					$Resultsperf+=New-Object PSObject -Property @{
+					})
+
+					$Resultsperf.Add([PSCustomObject]@{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -6513,14 +6555,11 @@ $ex=$null
 						PerfInstance=$row.PORT
 						PerfCounter="Unloads"
 						PerfValue=$row.UNLOADS
-					}
-
-
-
+					})
 				}
 			}
 
-			$Omsperfupload+=,$Resultsperf
+			$Omsperfupload.Add($Resultsperf)
 
 
 			Write-Output '  CollectorType="Performance" - Category="Memory" - Subcategory="OverallUsage" '
@@ -6528,7 +6567,7 @@ $ex=$null
 			$query="/* OMS */SELECT * FROM SYS.M_MEMORY Where PORT=30003" ###HArdcoded change this
 			$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
 			$ds=New-Object system.Data.DataSet ;
-$ex=$null
+        $ex=$null
 			Try{
 				$cmd.fill($ds)
 			}
@@ -6540,139 +6579,139 @@ $ex=$null
 			 
 
 			$Resultsperf=$null
-			$Resultsperf=@(); 
+			[System.Collections.ArrayList]$Resultsperf=@(); 
 
 			IF ($ds.tables[0].rows)
 			{
-				$Resultsperf+=New-Object PSObject -Property @{
+				$Resultsperf.Add([PSCustomObject]@{
 					HOST=$SAPHOST
 					Instance=$sapinstance
 					CollectorType="Performance"
 					PerfObject="Memory"
 					PerfCounter="SYSTEM_MEMORY_SIZE"
 					PerfValue=$row.Value/1024/1024/1024
-				}
-				$Resultsperf+=New-Object PSObject -Property @{
+				})
+				$Resultsperf.Add([PSCustomObject]@{
 					HOST=$SAPHOST
 					Instance=$sapinstance
 					CollectorType="Performance"
 					PerfObject="Memory"
 					PerfCounter="SYSTEM_MEMORY_FREE_SIZE"
 					PerfValue=$row.Value/1024/1024/1024
-				}
-				$Resultsperf+=New-Object PSObject -Property @{
+				})
+				$Resultsperf.Add([PSCustomObject]@{
 					HOST=$SAPHOST
 					Instance=$sapinstance
 					CollectorType="Performance"
 					PerfObject="Memory"
 					PerfCounter="PROCESS_MEMORY_SIZE"
 					PerfValue=$row.Value/1024/1024/1024
-				}
-				$Resultsperf+=New-Object PSObject -Property @{
+				})
+				$Resultsperf.Add([PSCustomObject]@{
 					HOST=$SAPHOST
 					Instance=$sapinstance
 					CollectorType="Performance"
 					PerfObject="Memory"
 					PerfCounter="PROCESS_RESIDENT_SIZE"
 					PerfValue=$row.Value/1024/1024/1024
-				}
-				$Resultsperf+=New-Object PSObject -Property @{
+				})
+				$Resultsperf.Add([PSCustomObject]@{
 					HOST=$SAPHOST
 					Instance=$sapinstance
 					CollectorType="Performance"
 					PerfObject="Memory"
 					PerfCounter="PROCESS_CODE_SIZE"
 					PerfValue=$row.Value/1024/1024/1024
-				}
-				$Resultsperf+=New-Object PSObject -Property @{
+				})
+				$Resultsperf.Add([PSCustomObject]@{
 					HOST=$SAPHOST
 					Instance=$sapinstance
 					CollectorType="Performance"
 					PerfObject="Memory"
 					PerfCounter="PROCESS_STACK_SIZE"
 					PerfValue=$row.Value/1024/1024/1024
-				}
-				$Resultsperf+=New-Object PSObject -Property @{
+				})
+				$Resultsperf.Add([PSCustomObject]@{
 					HOST=$SAPHOST
 					Instance=$sapinstance
 					CollectorType="Performance"
 					PerfObject="Memory"
 					PerfCounter="PROCESS_ALLOCATION_LIMIT"
 					PerfValue=$row.Value/1024/1024/1024
-				}
-				$Resultsperf+=New-Object PSObject -Property @{
+				})
+				$Resultsperf.Add([PSCustomObject]@{
 					HOST=$SAPHOST
 					Instance=$sapinstance
 					CollectorType="Performance"
 					PerfObject="Memory"
 					PerfCounter="GLOBAL_ALLOCATION_LIMIT"
 					PerfValue=$row.Value/1024/1024/1024
-				}
-				$Resultsperf+=New-Object PSObject -Property @{
+				})
+				$Resultsperf.Add([PSCustomObject]@{
 					HOST=$SAPHOST
 					Instance=$sapinstance
 					CollectorType="Performance"
 					PerfObject="Memory"
 					PerfCounter="EFFECTIVE_PROCESS_ALLOCATION_LIMIT"
 					PerfValue=$row.Value/1024/1024/1024
-				}
-				$Resultsperf+=New-Object PSObject -Property @{
+				})
+				$Resultsperf.Add([PSCustomObject]@{
 					HOST=$SAPHOST
 					Instance=$sapinstance
 					CollectorType="Performance"
 					PerfObject="Memory"
 					PerfCounter="HEAP_MEMORY_ALLOCATED_SIZE"
 					PerfValue=$row.Value/1024/1024/1024
-				}
-				$Resultsperf+=New-Object PSObject -Property @{
+				})
+				$Resultsperf.Add([PSCustomObject]@{
 					HOST=$SAPHOST
 					Instance=$sapinstance
 					CollectorType="Performance"
 					PerfObject="Memory"
 					PerfCounter="HEAP_MEMORY_USED_SIZE"
 					PerfValue=$row.Value/1024/1024/1024
-				}
-				$Resultsperf+=New-Object PSObject -Property @{
+				})
+				$Resultsperf.Add([PSCustomObject]@{
 					HOST=$SAPHOST
 					Instance=$sapinstance
 					CollectorType="Performance"
 					PerfObject="Memory"
 					PerfCounter="HEAP_MEMORY_FREE_SIZE"
 					PerfValue=$row.Value/1024/1024/1024
-				}
-				$Resultsperf+=New-Object PSObject -Property @{
+				})
+				$Resultsperf.Add([PSCustomObject]@{
 					HOST=$SAPHOST
 					Instance=$sapinstance
 					CollectorType="Performance"
 					PerfObject="Memory"
 					PerfCounter="HEAP_MEMORY_ROOT_ALLOCATED_SIZE"
 					PerfValue=$row.Value/1024/1024/1024
-				}
-				$Resultsperf+=New-Object PSObject -Property @{
+				})
+				$Resultsperf.Add([PSCustomObject]@{
 					HOST=$SAPHOST
 					Instance=$sapinstance
 					CollectorType="Performance"
 					PerfObject="Memory"
 					PerfCounter="HEAP_MEMORY_ROOT_FREE_SIZE"
 					PerfValue=$row.Value/1024/1024/1024
-				}
-				$Resultsperf+=New-Object PSObject -Property @{
+				})
+				$Resultsperf.Add([PSCustomObject]@{
 					HOST=$SAPHOST
 					Instance=$sapinstance
 					CollectorType="Performance"
 					PerfObject="Memory"
 					PerfCounter="SHARED_MEMORY_ALLOCATED_SIZE"
 					PerfValue=$row.Value/1024/1024/1024
-				}
-				$Resultsperf+=New-Object PSObject -Property @{
+				})
+				$Resultsperf.Add([PSCustomObject]@{
 					HOST=$SAPHOST
 					Instance=$sapinstance
 					CollectorType="Performance"
 					PerfObject="Memory"
 					PerfCounter="SHARED_MEMORY_USED_SIZE"
 					PerfValue=$row.Value/1024/1024/1024
-				}
-				$Resultsperf+=New-Object PSObject -Property @{
+				})
+				$Resultsperf.Add([PSCustomObject]@{
 					HOST=$SAPHOST
 					Instance=$sapinstance
 					CollectorType="Performance"
@@ -6680,34 +6719,34 @@ $ex=$null
 					PerfCounter="SHARED_MEMORY_FREE_SIZE"
 					PerfValue=$row.Value/1024/1024/1024
 				}
-				$Resultsperf+=New-Object PSObject -Property @{
+				$Resultsperf.Add([PSCustomObject]@{
 					HOST=$SAPHOST
 					Instance=$sapinstance
 					CollectorType="Performance"
 					PerfObject="Memory"
 					PerfCounter="TOTAL_MEMORY_SIZE_IN_USE"
 					PerfValue=$row.Value/1024/1024/1024
-				}
-				$Resultsperf+=New-Object PSObject -Property @{
+				})
+				$Resultsperf.Add([PSCustomObject]@{
 					HOST=$SAPHOST
 					Instance=$sapinstance
 					CollectorType="Performance"
 					PerfObject="Memory"
 					PerfCounter="COMPACTORS_SIZE"
 					PerfValue=$row.Value/1024/1024/1024
-				}
-				$Resultsperf+=New-Object PSObject -Property @{
+				})
+				$Resultsperf.Add([PSCustomObject]@{
 					HOST=$SAPHOST
 					Instance=$sapinstance
 					CollectorType="Performance"
 					PerfObject="Memory"
 					PerfCounter="COMPACTORS_FREEABLE_SIZE"
 					PerfValue=$row.Value/1024/1024/1024
-				}
+				})
 
 			}
 
-			$Omsperfupload+=,$Resultsperf
+			$Omsperfupload.Add($Resultsperf)
 
 
 			$query="/* OMS */SELECT * FROM SYS.M_SERVICE_MEMORY"
@@ -6726,12 +6765,12 @@ $ex=$null
 			 
 
 			$Resultsperf=$null
-			$Resultsperf=@(); 
+			[System.Collections.ArrayList]$Resultsperf=@(); 
 
 			Write-Output '  CollectorType="Performance" - Category="Service" - Subcategory="MemoryUsage" '
 			foreach ($row in $ds.Tables[0].rows)
 			{
-				$Resultsperf+=New-Object PSObject -Property @{
+				$Resultsperf.Add([PSCustomObject]@{
 
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -6741,8 +6780,9 @@ $ex=$null
 					PerfInstance=$row.PORT
 					PerfCounter="COMPACTORS_ALLOCATED_SIZE"
 					PerfValue=$row.COMPACTORS_ALLOCATED_SIZE/1024/1024/1024
-				}
-				$Resultsperf+=New-Object PSObject -Property @{
+				})
+
+				$Resultsperf.Add([PSCustomObject]@{
 
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -6752,8 +6792,9 @@ $ex=$null
 					PerfInstance=$row.PORT
 					PerfCounter="HEAP_MEMORY_ALLOCATED_SIZE"
 					PerfValue=$row.HEAP_MEMORY_ALLOCATED_SIZE/1024/1024/1024
-				}
-				$Resultsperf+=New-Object PSObject -Property @{
+				})
+
+				$Resultsperf.Add([PSCustomObject]@{
 
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -6763,9 +6804,10 @@ $ex=$null
 					PerfInstance=$row.PORT
 					PerfCounter="HEAP_MEMORY_USED_SIZE"
 					PerfValue=$row.HEAP_MEMORY_USED_SIZE/1024/1024/1024
-				}
+				})
 
-				$Resultsperf+=New-Object PSObject -Property @{
+
+				$Resultsperf.Add([PSCustomObject]@{
 
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -6775,9 +6817,9 @@ $ex=$null
 					PerfInstance=$row.PORT
 					PerfCounter="LOGICAL_MEMORY_SIZE"
 					PerfValue=$row.LOGICAL_MEMORY_SIZE/1024/1024/1024
-				}
+				})
 
-				$Resultsperf+=New-Object PSObject -Property @{
+				$Resultsperf.Add([PSCustomObject]@{
 
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -6787,9 +6829,9 @@ $ex=$null
 					PerfInstance=$row.PORT
 					PerfCounter="TOTAL_MEMORY_USED_SIZE"
 					PerfValue=$row.TOTAL_MEMORY_USED_SIZE/1024/1024/1024
-				}
+				})
 
-				$Resultsperf+=New-Object PSObject -Property @{
+				$Resultsperf.Add([PSCustomObject]@{
 
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -6799,8 +6841,9 @@ $ex=$null
 					PerfInstance=$row.PORT
 					PerfCounter="ALLOCATION_LIMIT"
 					PerfValue=$row.ALLOCATION_LIMIT/1024/1024/1024
-				}
-				$Resultsperf+=New-Object PSObject -Property @{
+				})
+
+				$Resultsperf.Add([PSCustomObject]@{
 
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -6810,10 +6853,10 @@ $ex=$null
 					PerfInstance=$row.PORT
 					PerfCounter="STACK_SIZE"
 					PerfValue=$row.STACK_SIZE/1024/1024/1024
-				}
+				})
 
 
-				$Resultsperf+=New-Object PSObject -Property @{
+				$Resultsperf.Add([PSCustomObject]@{
 
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -6823,8 +6866,9 @@ $ex=$null
 					PerfInstance=$row.PORT
 					PerfCounter="PHYSICAL_MEMORY_SIZE"
 					PerfValue=$row.PHYSICAL_MEMORY_SIZE/1024/1024/1024
-				}
-				$Resultsperf+=New-Object PSObject -Property @{
+				})
+
+				$Resultsperf.Add([PSCustomObject]@{
 
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -6834,8 +6878,9 @@ $ex=$null
 					PerfInstance=$row.PORT
 					PerfCounter="SHARED_MEMORY_USED_SIZE"
 					PerfValue=$row.SHARED_MEMORY_USED_SIZE/1024/1024/1024
-				}
-				$Resultsperf+=New-Object PSObject -Property @{
+				})
+
+				$Resultsperf.Add([PSCustomObject]@{
 
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -6845,9 +6890,9 @@ $ex=$null
 					PerfInstance=$row.PORT
 					PerfCounter="CODE_SIZE"
 					PerfValue=$row.CODE_SIZE/1024/1024/1024
-				}
+				})
 
-				$Resultsperf+=New-Object PSObject -Property @{
+				$Resultsperf.Add([PSCustomObject]@{
 
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -6857,8 +6902,9 @@ $ex=$null
 					PerfInstance=$row.PORT
 					PerfCounter="EFFECTIVE_ALLOCATION_LIMIT"
 					PerfValue=$row.EFFECTIVE_ALLOCATION_LIMIT/1024/1024/1024
-				}
-				$Resultsperf+=New-Object PSObject -Property @{
+				})
+
+				$Resultsperf.Add([PSCustomObject]@{
 
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -6868,8 +6914,9 @@ $ex=$null
 					PerfInstance=$row.PORT
 					PerfCounter="SHARED_MEMORY_ALLOCATED_SIZE"
 					PerfValue=$row.SHARED_MEMORY_ALLOCATED_SIZE/1024/1024/1024
-				}
-				$Resultsperf+=New-Object PSObject -Property @{
+				})
+
+				$Resultsperf.Add([PSCustomObject]@{
 
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -6879,9 +6926,9 @@ $ex=$null
 					PerfInstance=$row.PORT
 					PerfCounter="COMPACTORS_FREEABLE_SIZE"
 					PerfValue=$row.COMPACTORS_FREEABLE_SIZE/1024/1024/1024
-				}
+				})
 			}
-			$Omsperfupload+=,$Resultsperf
+			$Omsperfupload.Add($Resultsperf)
 
 #int ext connection count does not exit check version
 #write-output $ds.Tables[0].rows
@@ -6914,12 +6961,12 @@ $ex=$null
 			 
 
 			$Resultsperf=$null
-			$Resultsperf=@(); 
+			[System.Collections.ArrayList]$Resultsperf=@(); 
 
 			Write-Output '  CollectorType="Performance" - Category="COU,MEmory" - Subcategory="Usage" '
 			foreach ($row in $ds.Tables[0].rows)
 			{
-				$Resultsperf+=New-Object PSObject -Property @{
+				$Resultsperf.Add([PSCustomObject]@{
 
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -6930,8 +6977,8 @@ $ex=$null
 					PerfInstance=$row.PORT
 					PerfCounter="EXTERNAL_CONNECTION_COUNT"
 					PerfValue=$row.EXTERNAL_CONNECTION_COUNT
-				}
-				$Resultsperf+=New-Object PSObject -Property @{
+				})
+				$Resultsperf.Add([PSCustomObject]@{
 
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -6942,8 +6989,8 @@ $ex=$null
 					PerfInstance=$row.PORT
 					PerfCounter="EXTERNAL_TRANSACTION_COUNT"
 					PerfValue=$row.EXTERNAL_TRANSACTION_COUNT
-				}
-				$Resultsperf+=New-Object PSObject -Property @{
+				})
+				$Resultsperf.Add([PSCustomObject]@{
 
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -6954,8 +7001,8 @@ $ex=$null
 					PerfInstance=$row.PORT
 					PerfCounter="STATEMENT_COUNT"
 					PerfValue=$row.STATEMENT_COUNT
-				}
-				$Resultsperf+=New-Object PSObject -Property @{
+				})
+				$Resultsperf.Add([PSCustomObject]@{
 
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -6966,8 +7013,8 @@ $ex=$null
 					PerfInstance=$row.PORT
 					PerfCounter="TRANSACTION_COUNT"
 					PerfValue=$row.TRANSACTION_COUNT
-				}
-				$Resultsperf+=New-Object PSObject -Property @{
+				})
+				$Resultsperf.Add([PSCustomObject]@{
 
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -6978,8 +7025,8 @@ $ex=$null
 					PerfInstance=$row.PORT
 					PerfCounter="SYSTEM_CPU"
 					PerfValue=$row.SYSTEM_CPU
-				}
-				$Resultsperf+=New-Object PSObject -Property @{
+				})
+				$Resultsperf.Add([PSCustomObject]@{
 
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -6990,8 +7037,8 @@ $ex=$null
 					PerfInstance=$row.PORT
 					PerfCounter="MEMORY_USED"
 					PerfValue=$row.MEMORY_USED/1024/1024/1024
-				}
-				$Resultsperf+=New-Object PSObject -Property @{
+				})
+				$Resultsperf.Add([PSCustomObject]@{
 
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -7003,8 +7050,8 @@ $ex=$null
 					PerfInstance=$row.PORT
 					PerfCounter="PROCESS_CPU"
 					PerfValue=$row.PROCESS_CPU
-				}
-				$Resultsperf+=New-Object PSObject -Property @{
+				})
+				$Resultsperf.Add([PSCustomObject]@{
 
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -7015,8 +7062,8 @@ $ex=$null
 					PerfInstance=$row.PORT
 					PerfCounter="IDLE_CONNECTION_COUNT"
 					PerfValue=$row.IDLE_CONNECTION_COUNT
-				}
-				$Resultsperf+=New-Object PSObject -Property @{
+				})
+				$Resultsperf.Add([PSCustomObject]@{
 
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -7027,8 +7074,8 @@ $ex=$null
 					PerfInstance=$row.PORT
 					PerfCounter="MEMORY_ALLOCATION_LIMIT"
 					PerfValue=$row.MEMORY_ALLOCATION_LIMIT/1024/1024/1024
-				}
-				$Resultsperf+=New-Object PSObject -Property @{
+				})
+				$Resultsperf.Add([PSCustomObject]@{
 
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -7039,9 +7086,9 @@ $ex=$null
 					PerfInstance=$row.PORT
 					PerfCounter="HANDLE_COUNT"
 					PerfValue=$row.HANDLE_COUNT
-				}
+				})
 
-				$Resultsperf+=New-Object PSObject -Property @{
+				$Resultsperf.Add([PSCustomObject]@{
 
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -7052,9 +7099,9 @@ $ex=$null
 					PerfInstance=$row.PORT
 					PerfCounter="INTERNAL_TRANSACTION_COUNT"
 					PerfValue=$row.INTERNAL_TRANSACTION_COUNT
-				}
+				})
 
-				$Resultsperf+=New-Object PSObject -Property @{
+				$Resultsperf.Add([PSCustomObject]@{
 
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -7065,9 +7112,9 @@ $ex=$null
 					PerfInstance=$row.PORT
 					PerfCounter="BLOCKED_TRANSACTION_COUNT"
 					PerfValue=$row.BLOCKED_TRANSACTION_COUNT
-				}
+				})
 
-				$Resultsperf+=New-Object PSObject -Property @{
+				$Resultsperf.Add([PSCustomObject]@{
 
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -7078,8 +7125,8 @@ $ex=$null
 					PerfInstance=$row.PORT
 					PerfCounter="USER_TRANSACTION_COUNT"
 					PerfValue=$row.USER_TRANSACTION_COUNT
-				}
-				$Resultsperf+=New-Object PSObject -Property @{
+				})
+				$Resultsperf.Add([PSCustomObject]@{
 
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -7090,10 +7137,10 @@ $ex=$null
 					PerfInstance=$row.PORT
 					PerfCounter="CONNECTION_COUNT"
 					PerfValue=$row.CONNECTION_COUNT
-				}
+				})
 
 
-				$Resultsperf+=New-Object PSObject -Property @{
+				$Resultsperf.Add([PSCustomObject]@{
 
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -7104,8 +7151,8 @@ $ex=$null
 					PerfInstance=$row.PORT
 					PerfCounter="SWAP_IN"
 					PerfValue=$row.SWAP_IN
-				}
-				$Resultsperf+=New-Object PSObject -Property @{
+				})
+				$Resultsperf.Add([PSCustomObject]@{
 
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -7116,8 +7163,8 @@ $ex=$null
 					PerfInstance=$row.PORT
 					PerfCounter="PING_TIME"
 					PerfValue=$row.PING_TIME
-				}
-				$Resultsperf+=New-Object PSObject -Property @{
+				})
+				$Resultsperf.Add([PSCustomObject]@{
 
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -7128,9 +7175,9 @@ $ex=$null
 					PerfInstance=$row.PORT
 					PerfCounter="INTERNAL_CONNECTION_COUNT"
 					PerfValue=$row.INTERNAL_CONNECTION_COUNT
-				}
+				})
 			}
-			$Omsperfupload+=,$Resultsperf
+			$Omsperfupload.Add($Resultsperf)
 
 
 			$query="/* OMS */SELECT  HOST,to_varchar(time, 'YYYY-MM-DD HH24:MI') as TIME, ROUND(AVG(CPU),0)as CPU_Total ,
@@ -7155,7 +7202,7 @@ $ex=$null
 			}
 			 
 			$Resultsperf=$null
-			$Resultsperf=@(); 
+			[System.Collections.ArrayList]$Resultsperf=@(); 
 
 			IF ($ds.Tables[0].rows)
 			{
@@ -7166,7 +7213,7 @@ $ex=$null
 				{
 					
 
-					$Resultsperf+=New-Object PSObject -Property @{
+					$Resultsperf.Add([PSCustomObject]@{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -7177,8 +7224,8 @@ $ex=$null
 						PerfInstance=$row.HOST
 						PerfCounter="USEDMEMORYGB"
 						PerfValue=$row.USEDMEMORYGB
-					}
-					$Resultsperf+=New-Object PSObject -Property @{
+					})
+					$Resultsperf.Add([PSCustomObject]@{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -7189,8 +7236,8 @@ $ex=$null
 						PerfInstance=$row.HOST
 						PerfCounter="ALLOCATIONLIMITGB"
 						PerfValue=$row.ALLOCATIONLIMITGB
-					}
-					$Resultsperf+=New-Object PSObject -Property @{
+					})
+					$Resultsperf.Add([PSCustomObject]@{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -7201,8 +7248,8 @@ $ex=$null
 						PerfInstance=$row.HOST
 						PerfCounter="RESIDENTGB"
 						PerfValue=$row.RESIDENTGB
-					}
-					$Resultsperf+=New-Object PSObject -Property @{
+					})
+					$Resultsperf.Add([PSCustomObject]@{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -7213,10 +7260,10 @@ $ex=$null
 						PerfInstance=$row.HOST
 						PerfCounter="TOTALRESIDENTGB"
 						PerfValue=$row.TOTALRESIDENTGB
-					}
+					})
 
 
-					$Resultsperf+=New-Object PSObject -Property @{
+					$Resultsperf.Add([PSCustomObject]@{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -7227,8 +7274,8 @@ $ex=$null
 						PerfInstance=$row.HOST
 						PerfCounter="DATABASE_RESIDENTGB"
 						PerfValue=$row.DATABASE_RESIDENTGB
-					}
-					$Resultsperf+=New-Object PSObject -Property @{
+					})
+					$Resultsperf.Add([PSCustomObject]@{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -7239,9 +7286,9 @@ $ex=$null
 						PerfInstance=$row.HOST
 						PerfCounter="NETWORK_OUT_MB"
 						PerfValue=$row.NETWORK_OUT_MB
-					}
+					})
 
-					$Resultsperf+=New-Object PSObject -Property @{
+					$Resultsperf.Add([PSCustomObject]@{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -7252,9 +7299,9 @@ $ex=$null
 						PerfInstance=$row.HOST
 						PerfCounter="CPU_TOTAL"
 						PerfValue=$row.CPU_TOTAL
-					}
+					})
 
-					$Resultsperf+=New-Object PSObject -Property @{
+					$Resultsperf.Add([PSCustomObject]@{
 
 						HOST=$row.HOST
 						Instance=$sapinstance
@@ -7265,9 +7312,9 @@ $ex=$null
 						PerfInstance=$row.HOST
 						PerfCounter="NETWORK_IN_MB"
 						PerfValue=$row.NETWORK_IN_MB
-					}
+					})
 				}
-				$Omsperfupload+=,$Resultsperf
+				$Omsperfupload.Add($Resultsperf)
 
 			}
 
@@ -7288,7 +7335,7 @@ $ex=$null
 			 
 
 			$Resultsperf=$null
-			$Resultsperf=@(); 
+			[System.Collections.ArrayList]$Resultsperf=@(); 
 
 
 			IF ($ds.Tables[0].rows)
@@ -7296,7 +7343,7 @@ $ex=$null
 				Write-Output '  CollectorType="Performance" - Category="TaBle" - Subcategory="OverallUsage" '
 				foreach($row in $ds.Tables[0].rows)
 				{
-					$Resultsperf+=  New-Object PSObject -Property @{
+					$Resultsperf.Add(  [PSCustomObject]@{
 						HOST=$SAPHOST
 						Instance=$sapinstance
 						CollectorType="Performance"
@@ -7304,13 +7351,13 @@ $ex=$null
 						PerfCounter="ColunmTablesMBUSed"
 						PerfInstance=$row.SCHEMA_NAME
 						PerfValue=$row.ColunmTablesMBUSed
-					}
+					})
 
 
 				}
 
 			}
-			$Omsperfupload+=,$Resultsperf
+			$Omsperfupload.Add($Resultsperf)
 
 
 			$query='/* OMS */ Select  host,component, sum(Used_memory_size) USed_MEmory_size from public.m_service_component_memory group by host, component'
@@ -7328,7 +7375,7 @@ $ex=$null
 			 
 
 			$Resultsperf=$null
-			$Resultsperf=@(); 
+			[System.Collections.ArrayList]$Resultsperf=@(); 
 
 
 			IF ($ds.Tables[0].rows)
@@ -7337,7 +7384,7 @@ $ex=$null
 				Write-Output '  CollectorType="Performance" - Category="Memory" - Subcategory="Usage" '
 				foreach ($row in $ds.Tables[0].rows)
 				{
-					$Resultsperf+=  New-Object PSObject -Property @{
+					$Resultsperf.Add(  [PSCustomObject]@{
 						HOST=$row.HOST
 						Instance=$sapinstance
 						CollectorType="Performance"
@@ -7346,10 +7393,10 @@ $ex=$null
 						PerfInstance=$row.COMPONENT
 						PerfValue=$row.USED_MEMORY_SIZE/1024/1024
 
-					}
+					})
 				}
 
-				$Omsperfupload+=,$Resultsperf
+				$Omsperfupload.Add($Resultsperf)
 			}
 
 
@@ -7372,14 +7419,14 @@ $ex=$null
 			}
 			 
 			$Resultsperf=$null
-			$Resultsperf=@(); 
+			[System.Collections.ArrayList]$Resultsperf=@(); 
 
 
 			IF ($ds.Tables[0].rows)
 			{
 
 				Write-Output '  CollectorType="Performance" - Category="MEmory" - Subcategory="Usage" '
-				$Resultsperf+=New-Object PSObject -Property @{
+				$Resultsperf.Add([PSCustomObject]@{
 					HOST=$ds.tables[0].rows[0].HOST
 					Database=$hanadb
 					CollectorType="Performance"
@@ -7389,8 +7436,8 @@ $ex=$null
 					PerfInstance=$ds.tables[0].rows[0].HOST
 					PerfValue=$ds.tables[0].rows[0].UsedMemoryGB
 					
-				}
-				$Resultsperf+=New-Object PSObject -Property @{
+				})
+				$Resultsperf.Add([PSCustomObject]@{
 					HOST=$ds.tables[0].rows[0].HOST
 					Database=$hanadb
 					CollectorType="Performance"
@@ -7400,8 +7447,8 @@ $ex=$null
 					PerfInstance=$ds.tables[0].rows[0].HOST
 					PerfValue=$ds.tables[0].rows[0].DatabaseResident
 					
-				}
-				$Resultsperf+=New-Object PSObject -Property @{
+				})
+				$Resultsperf.Add([PSCustomObject]@{
 					HOST=$ds.tables[0].rows[0].HOST
 					Database=$hanadb
 					Instance=$sapinstance
@@ -7411,9 +7458,9 @@ $ex=$null
 					PerfInstance=$ds.tables[0].rows[0].HOST
 					PerfValue=$ds.tables[0].rows[0].PeakGB
 					
-				}
+				})
 			}
-			$Omsperfupload+=,$Resultsperf
+			$Omsperfupload.Add($Resultsperf)
 
 # check takes long time to calculate
 
@@ -7436,7 +7483,7 @@ $ex=$null
 			 
 
 			$Resultsperf=$null
-			$Resultsperf=@(); 
+			[System.Collections.ArrayList]$Resultsperf=@(); 
 
 
 			IF ($ds.Tables[0].rows)
@@ -7446,7 +7493,7 @@ $ex=$null
 				foreach ($row in $ds.Tables[0].rows)
 				{
 					
-					$Resultsperf+=New-Object PSObject -Property @{
+					$Resultsperf.Add([PSCustomObject]@{
 						HOST=$row.Host
 						Instance=$sapinstance
 						CollectorType="Performance"
@@ -7456,8 +7503,8 @@ $ex=$null
 						PerfInstance=$row.Schema_NAme
 						PerfValue=$row.RECORD_COUNT
 						
-					}
-					$Resultsperf+=New-Object PSObject -Property @{
+					})
+					$Resultsperf.Add([PSCustomObject]@{
 						HOST=$row.Host
 						Instance=$sapinstance
 						CollectorType="Performance"
@@ -7467,8 +7514,8 @@ $ex=$null
 						PerfInstance=$row.Schema_NAme
 						PerfValue=$row.COMPRESSED_SIZE/1024/1024
 						
-					}
-					$Resultsperf+=New-Object PSObject -Property @{
+					})
+					$Resultsperf.Add([PSCustomObject]@{
 						HOST=$row.Host
 						Instance=$sapinstance
 						Database=$Hanadb
@@ -7478,8 +7525,8 @@ $ex=$null
 						PerfInstance=$row.Schema_NAme
 						PerfValue=$row.UNCOMPRESSED_SIZE/1024/1024
 						
-					}
-					$Resultsperf+=New-Object PSObject -Property @{
+					})
+					$Resultsperf.Add([PSCustomObject]@{
 						HOST=$row.Host
 						Instance=$sapinstance
 						CollectorType="Performance"
@@ -7489,8 +7536,8 @@ $ex=$null
 						PerfInstance=$row.Schema_NAme
 						PerfValue=$row.COMPRESSION_RATIO
 						
-					}
-					$Resultsperf+=New-Object PSObject -Property @{
+					})
+					$Resultsperf.Add([PSCustomObject]@{
 						HOST=$row.Host
 						Instance=$sapinstance
 						CollectorType="Performance"
@@ -7500,9 +7547,9 @@ $ex=$null
 						PerfInstance=$row.Schema_NAme
 						PerfValue=$row.COMPRESSION_PERCENTAGE
 
-					}
+					})
 				}
-				$Omsperfupload+=,$Resultsperf
+				$Omsperfupload.Add($Resultsperf)
 
 
 			}
@@ -7541,7 +7588,7 @@ $ex=$null
 					   foreach ($row in $ds.Tables[0].rows)
 					   {
 
-								$Resultsperf+=New-Object PSObject -Property @{
+								$Resultsperf.Add([PSCustomObject]@{
 			
 									HOST=$row.HOST
 									Instance=$sapinstance
@@ -7553,8 +7600,8 @@ $ex=$null
 									PerfValue=[double]$row.TRIGGER_ASYNC_WRITE_COUNT
 									PerfInstance=$row.Type+"|"+$row.MaxBufferinKB+"KB"
 									TYPE=$row.TYPE 
-								}
-								$Resultsperf+=New-Object PSObject -Property @{
+								})
+								$Resultsperf.Add([PSCustomObject]@{
 			
 									HOST=$row.HOST
 									Instance=$sapinstance
@@ -7566,8 +7613,8 @@ $ex=$null
 									PerfValue=[double]$row.AvgTriggerAsyncWriteMicroS 
 									PerfInstance=$row.Type+"|"+$row.MaxBufferinKB+"KB"
 									TYPE=$row.TYPE 
-								}
-								$Resultsperf+=New-Object PSObject -Property @{
+								})
+								$Resultsperf.Add([PSCustomObject]@{
 			
 									HOST=$row.HOST
 									Instance=$sapinstance
@@ -7579,9 +7626,9 @@ $ex=$null
 									PerfValue=[double]$row.WRITE_COUNT
 									PerfInstance=$row.Type+"|"+$row.MaxBufferinKB+"KB"
 									TYPE=$row.TYPE 
-								}
+								})
 								
-								$Resultsperf+=New-Object PSObject -Property @{
+								$Resultsperf.Add([PSCustomObject]@{
 			
 									HOST=$row.HOST
 									Instance=$sapinstance
@@ -7593,10 +7640,10 @@ $ex=$null
 									PerfValue=[double]$row.AvgWriteTimeMicros
 									PerfInstance=$row.Type+"|"+$row.MaxBufferinKB+"KB"
 									TYPE=$row.TYPE 
-								}
+								})
 
 								#read
-								$Resultsperf+=New-Object PSObject -Property @{
+								$Resultsperf.Add([PSCustomObject]@{
 			
 									HOST=$row.HOST
 									Instance=$sapinstance
@@ -7608,8 +7655,8 @@ $ex=$null
 									PerfValue=[double]$row.TRIGGER_ASYNC_READ_COUNT
 									PerfInstance=$row.Type+"|"+$row.MaxBufferinKB+"KB"
 									TYPE=$row.TYPE 
-								}
-								$Resultsperf+=New-Object PSObject -Property @{
+								})
+								$Resultsperf.Add([PSCustomObject]@{
 			
 								HOST=$row.HOST
 								Instance=$sapinstance
@@ -7621,8 +7668,8 @@ $ex=$null
 								PerfValue=[double]$row.AvgTriggerAsyncReadMicroS 
 								PerfInstance=$row.Type+"|"+$row.MaxBufferinKB+"KB"
 								TYPE=$row.TYPE 
-								}
-								$Resultsperf+=New-Object PSObject -Property @{
+								})
+								$Resultsperf.Add([PSCustomObject]@{
 				
 									HOST=$row.HOST
 									Instance=$sapinstance
@@ -7634,9 +7681,9 @@ $ex=$null
 									PerfValue=[double]$row.READ_COUNT
 									PerfInstance=$row.Type+"|"+$row.MaxBufferinKB+"KB"
 									TYPE=$row.TYPE 
-								}
+								})
 								
-								$Resultsperf+=New-Object PSObject -Property @{
+								$Resultsperf.Add([PSCustomObject]@{
 				
 									HOST=$row.HOST
 									Instance=$sapinstance
@@ -7648,11 +7695,11 @@ $ex=$null
 									PerfValue=[double]$row.AvgReadTimeMicros
 									PerfInstance=$row.Type+"|"+$row.MaxBufferinKB+"KB"
 									TYPE=$row.TYPE 
-								}			
+								})			
 	   									 
 					   }
 	   
-					   $Omsperfupload+=,$Resultsperf
+					   $Omsperfupload.Add($Resultsperf)
 				   }
 
 			    #volume throughput
@@ -7685,7 +7732,7 @@ $ex=$null
 							
 			   
 						   $Resultsperf=$null
-						   $Resultsperf=@(); 
+						   [System.Collections.ArrayList]$Resultsperf=@(); 
 			   
 			   
 						   IF ($ds.Tables[0].rows)
@@ -7695,7 +7742,7 @@ $ex=$null
 							   foreach ($row in $ds.Tables[0].rows)
 							   {
 								   
-								   $Resultsperf+=New-Object PSObject -Property @{
+								   $Resultsperf.Add([PSCustomObject]@{
 			   
 									   HOST=$row.HOST
 									   Instance=$sapinstance
@@ -7707,8 +7754,8 @@ $ex=$null
 									   PerfInstance=$row.Type
 									   PerfCounter="Read_MB_Sec"
 									   PerfValue=[double]$row.ReadMBpersec
-								   }
-								   $Resultsperf+=New-Object PSObject -Property @{
+								   })
+								   $Resultsperf.Add([PSCustomObject]@{
 			   
 									   HOST=$row.HOST
 									   Instance=$sapinstance
@@ -7720,12 +7767,12 @@ $ex=$null
 									   PerfInstance=$row.Type
 									   PerfCounter="Write_MB_Sec"
 									   PerfValue=[double]$row.WriteMBpersec
-								   }
+								   })
 			   
 													 
 							   }
 			   
-							   $Omsperfupload+=,$Resultsperf
+							   $Omsperfupload.Add($Resultsperf)
 						   }
 			   #Save Point Duration
 			   
@@ -7750,7 +7797,7 @@ $ex=$null
 						   }
 								 
 						   $Resultsperf=$null
-						   $Resultsperf=@(); 
+						   [System.Collections.ArrayList]$Resultsperf=@(); 
 			   
 			   
 						   IF ($ds.Tables[0].rows)
@@ -7760,7 +7807,7 @@ $ex=$null
 							   foreach ($row in $ds.Tables[0].rows)
 							   {
 								   
-								   $Resultsperf+=New-Object PSObject -Property @{
+								   $Resultsperf.Add([PSCustomObject]@{
 			   
 									   HOST=$row.HOST
 									   Instance=$sapinstance
@@ -7772,8 +7819,8 @@ $ex=$null
 									   PerfInstance=$row.VOLUME_ID
 									   PerfCounter="DurationSec"
 									   PerfValue=[double]$row.DurationSec
-								   }
-								   $Resultsperf+=New-Object PSObject -Property @{
+								   })
+								   $Resultsperf.Add([PSCustomObject]@{
 			   
 									   HOST=$row.HOST
 									   Instance=$sapinstance
@@ -7785,8 +7832,8 @@ $ex=$null
 									   PerfInstance=$row.VOLUME_ID
 									   PerfCounter="CriticalSeconds"
 									   PerfValue=[double]$row.CriticalSeconds
-								   }
-								   $Resultsperf+=New-Object PSObject -Property @{
+								   })
+								   $Resultsperf.Add([PSCustomObject]@{
 			   
 									   HOST=$row.HOST
 									   Instance=$sapinstance
@@ -7798,12 +7845,12 @@ $ex=$null
 									   PerfInstance=$row.VOLUME_ID
 									   PerfCounter="SizeMB"
 									   PerfValue=[double]$row.SizeMB
-								   }
+								   })
 			   
 													 
 							   }
 			   
-							   $Omsperfupload+=,$Resultsperf
+							   $Omsperfupload.Add($Resultsperf)
 						   }
 			   
 
@@ -7845,7 +7892,7 @@ $ex=$null
 			 
 
 			$Resultsinv=$null
-			$Resultsinv=@(); 
+			[System.Collections.ArrayList][System.Collections.ArrayList]$Resultsinv=@(); 
 
 
 			IF($ds.Tables[0])
@@ -7854,7 +7901,7 @@ $ex=$null
 				Write-Output '  CollectorType="Performance" - Category="Statetment" - Subcategory="Expensive" '
 				foreach ($row in $ds.Tables[0].rows)
 				{
-					$resultsinv+=New-Object PSObject -Property @{
+					$resultsinv.add([PSCustomObject]@{
 						HOST=$row.Host
 						Instance=$sapinstance
 						CollectorType="Inventory"
@@ -7882,9 +7929,9 @@ $ex=$null
 						MEMORY_SIZE=$row.MEMORY_SIZE
 						REUSED_MEMORY_SIZE=$row.REUSED_MEMORY_SIZE
 						CPU_TIME=$row.CPU_TIME
-					}
+					})
 				}
-				$Omsinvupload+=,$Resultsinv
+				$Omsinvupload.Add($Resultsinv)
 			}
 
 
@@ -7933,12 +7980,12 @@ $ex=$null
 		   
 
 		  $Resultsinv=$null
-		  $Resultsinv=@(); 
+		  [System.Collections.ArrayList]$Resultsinv=@(); 
 
 		  foreach ($row in $ds.Tables[0].rows)
 		  {
 
-				  $Resultsinv+=New-Object PSObject -Property @{
+				  $resultsinv.Add([PSCustomObject]@{
 
 				  HOST=$row.HOST
 				  Instance=$sapinstance
@@ -7973,7 +8020,7 @@ $ex=$null
 				  TOTAL_EXECUTION_MEMORY_SIZE=$row.TOTAL_EXECUTION_MEMORY_SIZE                                   
 			   }
 		  }
-		  $Omsinvupload+=,$Resultsinv
+		  $Omsinvupload.Add($Resultsinv)
 
 
 				
@@ -8071,13 +8118,13 @@ $ex=$null
 		   
 
 		  $Resultsinv=$null
-		  $Resultsinv=@(); 
+		  [System.Collections.ArrayList]$Resultsinv=@(); 
 
 		  IF($ds[0].Tables.rows)
 		  {
 			  foreach ($row in $ds.Tables[0].rows)
 			  {
-				  $Resultsinv+=New-Object PSObject -Property @{
+				  $resultsinv.Add([PSCustomObject]@{
 					  HOST=$row.HOST.ToLower()
 					  Instance=$sapinstance
 					  CollectorType="Inventory"
@@ -8095,9 +8142,9 @@ $ex=$null
 					  APP_USER=$row.APP_USER 
 					  DURATION_S=[double]$row.DURATION_S 
 					  CPU_TIME_S=[double]$row.CPU_TIME_S
-				  }
+				  })
 			  }
-			  $Omsinvupload+=,$Resultsinv
+			  $Omsinvupload.Add($Resultsinv)
 		  }
 # Tables - LArgest Inventory 
 	  $query="/* OMS */SELECT OWNER,
@@ -8366,14 +8413,14 @@ ROW_NUM
 
 		  
 		  $Resultsinv=$null
-		  $Resultsinv=@(); 
+		  [System.Collections.ArrayList]$Resultsinv=@(); 
 
 
 		  IF($ds[0].Tables.rows)
 		  {
 			  foreach ($row in $ds.Tables[0].rows)
 			  {
-				  $Resultsinv+=New-Object PSObject -Property @{
+				  $resultsinv.Add([PSCustomObject]@{
 					  HOST=$row.HOST.ToLower()
 					  Instance=$sapinstance
 					  CollectorType="Inventory"
@@ -8386,9 +8433,9 @@ ROW_NUM
 					  POS=$row.POS
 					  COLS=$row.COLS
 					  RECORDS=[long]$row.RECORDS    
-				  }
+				  })
 			  }
-			  $Omsinvupload+=,$Resultsinv
+			  $Omsinvupload.Add($Resultsinv)
 		  }
 
 #inventory Sessions    
@@ -8560,14 +8607,14 @@ C.TRANSACTION_ID
 		   
 
 		  $Resultsinv=$null
-		  $Resultsinv=@(); 
+		  [System.Collections.ArrayList]$Resultsinv=@(); 
 
 
 		  IF($ds[0].Tables.rows)
 		  {
 			  foreach ($row in $ds.Tables[0].rows)
 			  {
-				  $Resultsinv+=New-Object PSObject -Property @{
+				  $resultsinv.Add([PSCustomObject]@{
 					  HOST=$row.HOST.ToLower()
 					  Instance=$sapinstance
 					  CollectorType="Inventory"
@@ -8593,9 +8640,9 @@ C.TRANSACTION_ID
 					  TRANSACTION_TYPE =$row.TRANSACTION_TYPE 
 					  APP_USER =$row.APP_USER 
 
-				  }
+				  })
 			  }
-			  $Omsinvupload+=,$Resultsinv
+			  $Omsinvupload.Add($Resultsinv)
 		  }
 
   $checkfreq=$timespan 
@@ -8965,7 +9012,7 @@ $ex=$null
 
 	  
 		  $Resultsinv=$null
-		  $Resultsinv=@(); 
+		  [System.Collections.ArrayList]$Resultsinv=@(); 
 
 #FIX TIME
 
@@ -9159,14 +9206,14 @@ $ex=$null
 		  }
 
   $Resultsinv=$null
-		  $Resultsinv=@(); 
+		  [System.Collections.ArrayList]$Resultsinv=@(); 
 
 
 		  IF($ds[0].Tables.rows)
 		  {
 			  foreach ($row in $ds.Tables[0].rows)
 			  {
-				  $Resultsinv+=New-Object PSObject -Property @{
+				  $resultsinv.Add([PSCustomObject]@{
 					  HOST=$row.HOST.ToLower()
 					  Instance=$sapinstance
 					  CollectorType="Inventory"
@@ -9186,9 +9233,9 @@ $ex=$null
 					  APP_SOURCE=$row.APP_SOURCE
 
 
-									  }
+									  })
 			  }
-			  $Omsinvupload+=,$Resultsinv
+			  $Omsinvupload.Add($Resultsinv)
 		  }
 
 
@@ -9314,13 +9361,13 @@ $ex=$null
 		   
 		 
 		  $Resultsperf=$null
-		  $Resultsperf=@(); 
+		  [System.Collections.ArrayList]$Resultsperf=@(); 
 
 		  IF ($ds.tables[0].rows)
 		  {
 			  Foreach($row in $ds.tables[0].rows)
 			  {
-				  $Resultsperf+=New-Object PSObject -Property @{
+				  $Resultsperf.Add([PSCustomObject]@{
 					  HOST=$SAPHOST
 					  Instance=$sapinstance
 					  CollectorType="Performance"
@@ -9328,9 +9375,9 @@ $ex=$null
 					  PerfCounter=$row.SQL_TYPE
 					  PerfValue=[double]$row.EXECUTIONS
 					  PerfInstance='EXECUTIONS'
-					  }
+					  })
 
-				  $Resultsperf+=New-Object PSObject -Property @{
+				  $Resultsperf.Add([PSCustomObject]@{
 					  HOST=$SAPHOST
 					  Instance=$sapinstance
 					  CollectorType="Performance"
@@ -9338,9 +9385,9 @@ $ex=$null
 					  PerfCounter=$row.SQL_TYPE
 					  PerfValue=[double]$row.ELAPSED_S
 					  PerfInstance='ELAPSED_S'
-					  }
+					  })
 
-				  $Resultsperf+=New-Object PSObject -Property @{
+				  $Resultsperf.Add([PSCustomObject]@{
 					  HOST=$SAPHOST
 					  Instance=$sapinstance
 					  CollectorType="Performance"
@@ -9348,9 +9395,9 @@ $ex=$null
 					  PerfCounter=$row.SQL_TYPE
 					  PerfValue=[double]$row.ELA_PER_EXEC_MS
 					  PErfInstance='ELA_PER_EXEC_MS'   
-					  }
+					  })
 
-				  $Resultsperf+=New-Object PSObject -Property @{
+				  $Resultsperf.Add([PSCustomObject]@{
 					  HOST=$SAPHOST
 					  Instance=$sapinstance
 					  CollectorType="Performance"
@@ -9358,9 +9405,9 @@ $ex=$null
 					  PerfCounter=$row.SQL_TYPE
 					  PerfValue=[double]$row.LOCK_PER_EXEC_MS
 					  PerfInstance='LOCK_PER_EXEC_MS'
-					  }
+					  })
 
-				  $Resultsperf+=New-Object PSObject -Property @{
+				  $Resultsperf.Add([PSCustomObject]@{
 					  HOST=$SAPHOST
 					  Instance=$sapinstance
 					  CollectorType="Performance"
@@ -9368,9 +9415,9 @@ $ex=$null
 					  PerfCounter=$row.SQL_TYPE
 					  PerfValue=[double]$row.MAX_ELA_MS 
 					  PerfInstance='MAX_ELA_MS'
-					  }
+					  })
 				  }
-				  $OmsPerfupload+=,$Resultsperf
+				  $Omsperfupload.Add($Resultsperf)
 					
 		  }
 
@@ -9431,7 +9478,7 @@ ORDER BY
 			}
 
 	        $Resultsinv=$null
-			$Resultsinv=@(); 
+			[System.Collections.ArrayList]$Resultsinv=@(); 
 
 
 
@@ -9439,7 +9486,7 @@ ORDER BY
 
 			foreach ($row in $ds.Tables[0].rows)
 			{
-				$resultsinv+=New-Object PSObject -Property @{
+				$resultsinv.Add([PSCustomObject]@{
 					HOST=$row.HOST
 					Instance=$sapinstance
 					CollectorType="Inventory"
@@ -9456,10 +9503,10 @@ ORDER BY
                     STATUS=$row.STATUS
                     STATUS_DETAILS=$row.STATUS_DETAILS
                     SEC_ACTIVE=$row.SEC_ACTIVE
-				}
+				})
 			}
 
-			$Omsinvupload+=,$Resultsinv
+			$Omsinvupload.Add($Resultsinv)
 
 
 #Replication_Bandwidth
@@ -9615,13 +9662,13 @@ ORDER BY
 $ds.Tables[0].rows
 
 		  $Resultsperf=$null
-		  $Resultsperf=@(); 
+		  [System.Collections.ArrayList]$Resultsperf=@(); 
 
 		  IF ($ds.tables[0].rows)
 		  {
 			  Foreach($row in $ds.tables[0].rows)
 			  {
-				  $Resultsperf+=New-Object PSObject -Property @{
+				  $Resultsperf.Add([PSCustomObject]@{
 					  HOST=$SAPHOST
 					  Instance=$sapinstance
 					  CollectorType="Performance"
@@ -9630,9 +9677,9 @@ $ds.Tables[0].rows
 					  PerfCounter='PERSISTENCE_GB'
 					  PerfValue=[double]$row.PERSISTENCE_GB
 					  PerfInstance=$hanadb
-		    		  }
+		    		  })
 
-                        $Resultsperf+=New-Object PSObject -Property @{
+                        $Resultsperf.Add([PSCustomObject]@{
 					  HOST=$SAPHOST
 					  Instance=$sapinstance
 					  CollectorType="Performance"
@@ -9641,9 +9688,9 @@ $ds.Tables[0].rows
 					  PerfCounter='DATA_SIZE_GB'
 					  PerfValue=[double]$row.DATA_SIZE_GB
 					  PerfInstance=$hanadb
-		    		  }
+		    		  })
 
-                        $Resultsperf+=New-Object PSObject -Property @{
+                        $Resultsperf.Add([PSCustomObject]@{
 					  HOST=$SAPHOST
 					  Instance=$sapinstance
 					  CollectorType="Performance"
@@ -9652,9 +9699,9 @@ $ds.Tables[0].rows
 					  PerfCounter='LOG_SIZE_GB'
 					  PerfValue=[double]$row.LOG_SIZE_GB
 					  PerfInstance=$hanadb
-		    		  }
+		    		  })
 
-                        $Resultsperf+=New-Object PSObject -Property @{
+                        $Resultsperf.Add([PSCustomObject]@{
 					  HOST=$SAPHOST
 					  Instance=$sapinstance
 					  CollectorType="Performance"
@@ -9663,9 +9710,9 @@ $ds.Tables[0].rows
 					  PerfCounter='TOTAL_SIZE_GB'
 					  PerfValue=[double]$row.TOTAL_SIZE_GB 
 					  PerfInstance=$hanadb
-		    		  }
+		    		  })
 
-                        $Resultsperf+=New-Object PSObject -Property @{
+                        $Resultsperf.Add([PSCustomObject]@{
 					  HOST=$SAPHOST
 					  Instance=$sapinstance
 					  CollectorType="Performance"
@@ -9674,9 +9721,9 @@ $ds.Tables[0].rows
 					  PerfCounter='LOG_PCT'
 					  PerfValue=[double]$row.LOG_PCT
 					  PerfInstance=$hanadb
-		    		  }
+		    		  })
 
-                        $Resultsperf+=New-Object PSObject -Property @{
+                        $Resultsperf.Add([PSCustomObject]@{
 					  HOST=$SAPHOST
 					  Instance=$sapinstance
 					  CollectorType="Performance"
@@ -9685,9 +9732,9 @@ $ds.Tables[0].rows
 					  PerfCounter='AVG_BANDWIDTH_MBIT'
 					  PerfValue=[double]$row.AVG_BANDWIDTH_MBIT
 					  PerfInstance=$hanadb
-		    		  }
+		    		  })
 
-                        $Resultsperf+=New-Object PSObject -Property @{
+                        $Resultsperf.Add([PSCustomObject]@{
 					  HOST=$SAPHOST
 					  Instance=$sapinstance
 					  CollectorType="Performance"
@@ -9696,10 +9743,10 @@ $ds.Tables[0].rows
 					  PerfCounter='SIMPLE_BANDWIDTH_MBIT'
 					  PerfValue=[double]$row.SIMPLE_BANDWIDTH_MBIT
 					  PerfInstance=$hanadb
-		    		  }
+		    		  })
 					  
 				  }
-				  $OmsPerfupload+=,$Resultsperf
+				  $Omsperfupload.Add($Resultsperf)
 					
 		  }
 
@@ -9778,7 +9825,7 @@ ORDER BY
 
             write-output "TABLE LOCATIONS"
             $Resultsinv=$null
-			$Resultsinv=@(); 
+			[System.Collections.ArrayList]$Resultsinv=@(); 
 
 
 
@@ -9786,7 +9833,7 @@ ORDER BY
 
 			foreach ($row in $ds.Tables[0].rows)
 			{
-				$resultsinv+=New-Object PSObject -Property @{
+				$resultsinv.Add([PSCustomObject]@{
 					HOST=$row.HOST
 					Instance=$sapinstance
                     Database=$hanadb
@@ -9798,10 +9845,10 @@ ORDER BY
                     TABLE_NAME=$row.TABLE_NAME
                     LOCATION=$row.LOCATION
                     NUM=[int]$row.NUM
-				}
+				})
 			}
 
-			$Omsinvupload+=,$Resultsinv
+			$Omsinvupload.Add($Resultsinv)
 
 
 
@@ -9812,8 +9859,8 @@ ORDER BY
 
 			$AzLAUploadsuccess=0
 			$AzLAUploaderror=0
-			
-			$Omsperfupload+=@(New-Object PSObject -Property @{
+			$cu=$null
+			$cu=@([PSCustomObject]@{
 				HOST=$saphost
 				Database=$hanadb
 				CollectorType="Performance"
@@ -9822,6 +9869,7 @@ ORDER BY
 				PerfValue=($colend-$colstart).Totalseconds
 				
 			})
+            $Omsperfupload.add($cu)|out-null
 			$message="{0} inventory data, {1}  state data and {2} performance data will be uploaded to OMS Log Analytics " -f $Omsinvupload.count,$OmsStateupload.count,$OmsPerfupload.count
 			write-output $message
 
@@ -9900,27 +9948,15 @@ ORDER BY
 
 			IF($AzLAUploadsuccess -gt 0)
 			{
-				if($lasttimestamp.value)
-				{
+                $RunHistory.Add("$saphost-$hanadb",$currentruntime)
+                $collhistory1=Get-AutomationVariable -Name $Trackvariable 
 
-					write-output " updating ast run time to $date"
-					Set-AzureRmAutomationVariable `
-						-AutomationAccountName $AAAccount `
-						-Encrypted 0 `
-						-Name $rbvariablename `
-						-ResourceGroupName $AAResourceGroup `
-						-Value $currentruntime
-
-				}Else
-				{
-					New-AzureRmAutomationVariable `
-					-AutomationAccountName $AAAccount `
-					-ResourceGroupName $AAResourceGroup `
-							-Value $currentruntime `
-					-Encrypted 0 `
-					-Name $rbvariablename `
-					-Description "last time collection run"  -EA 0
-				}
+                IF( ($collhistory1.psobject.Properties|where{$_.name -eq "$saphost-$hanadb"}).Value)
+                {
+                    ($collhistory1.psobject.Properties|where{$_.name -eq "$saphost-$hanadb"}).Value=$currentruntime
+                
+                }
+               Set-AutomationVariable -Name $Trackvariable -Value $collhistory1             		
 
 			}
 			
@@ -9936,7 +9972,7 @@ ORDER BY
 			$Omsstateupload=@()
 		    write-warning "Uploading connection failed event for $saphost : $hanadb "
 				
-				$Omsstateupload+= @(New-Object PSObject -Property @{
+				$Omsstateupload+= @([PSCustomObject]@{
 					HOST=$saphost
 					 PORT=$sapport
 					 Database=$hanadb
