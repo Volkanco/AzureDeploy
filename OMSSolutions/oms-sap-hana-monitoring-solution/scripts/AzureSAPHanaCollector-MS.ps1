@@ -402,7 +402,7 @@ $ex=$null
 
                 $hourlySchedule=$false    
             }
-                $hourlySchedule=$true
+       
 
 			#region Collect instance data and databases 
 			$query='/* OMS */ Select * FROM SYS.M_HOST_INFORMATION'
