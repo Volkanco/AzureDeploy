@@ -3,14 +3,36 @@ param
 [Parameter(Mandatory=$false)] [bool] $collecttableinv=$false,
 [Parameter(Mandatory=$false)] [string] $configfolder="C:\HanaMonitor",
 [Parameter(Mandatory=$false)] [bool] $debuglog=$false,
-[Parameter(Mandatory=$false)] [bool] $useManagedIdentity=$false
+[Parameter(Mandatory=$false)] [bool] $useManagedIdentity=$false,
+[Parameter(Mandatory=$false)] [string] $runmode="default"
 )
 
 
-#Write-Output "RB Initial   : $([System.gc]::gettotalmemory('forcefullcollection') /1MB) MB" 
-Enable-AzureRmAlias
-#region login to Azure Arm and retrieve variables
+#Runmode  options :
+#   "default  - Regulat checks every 15 min"
+#   "daily - Long running checks  ( Hana Config Cheks and Hana Table Inventory"
+#   With Daily switch Long Running  collections can be scheduled seperately 
+#
 
+
+IF($runmode -eq 'default')
+{
+    Write-Output  " Default Runmode selected - regular checks  will be performed"
+}Elseif($runmode -eq 'daily')
+{
+    Write-Output  " Daily Runmode selected - Hana Configurations Checks will be performed"
+}Else
+{
+    #fallback to defualt mode 
+    Write-Warning "Invalid runbmode specified"
+    Write-Warning "Vaild Runmode  options ;"
+    Write-Warning "default  - Regular checks every 15 min"
+    Write-Warning "daily - Long running checks  ( Hana Config Cheks and aAna Table Inventory"
+    $runmode="default"
+}
+
+#region login to Azure Arm and retrieve variables
+Enable-AzureRmAlias  # Needed for backward compatibility in Az Powershell
 
 #################
 #
@@ -44,15 +66,13 @@ catch {
     $connectedtoAzure=$false
 }
 
+Write-output " Connected to Azure :  $connectedtoAzure"
 $AAResourceGroup = Get-AutomationVariable -Name 'AzureSAPHanaMonitoring-AzureAutomationResourceGroup-MS-Mgmt'
 $AAAccount = Get-AutomationVariable -Name 'AzureSAPHanaMonitoring-AzureAutomationAccount-MS-Mgmt'
 
 $varText= "AAResourceGroup = $AAResourceGroup , AAAccount = $AAAccount"
 
 #endregion
-
-
-#Write-Output "RB Initial   : $([System.gc]::gettotalmemory('forcefullcollection') /1MB) MB" 
 
 
 
@@ -76,7 +96,7 @@ $rbworkername=$env:COMPUTERNAME
 
 
 #For shared key use either the primary or seconday Connected Sources client authentication key   
-#$sharedKey = Get-AutomationVariable -Name 'AzureSAIngestion-OPSINSIGHTS_WS_KEY-MS-Mgmt-SA'
+
 #define API Versions for REST API  Calls
 
 # OMS log analytics custom log name
@@ -239,7 +259,7 @@ $ex=$null
     $trackhost=@()  
     $colstart=get-date  
 
-                #Enable collection of config minicheck at 4 AM 
+     #Enable collection of config minicheck and table inventory at 4 AM 
     IF((get-date).Minute -in (0..14) -and (get-date).Hour -eq 4)
     {
         $runconfigchecks=$true
@@ -252,21 +272,15 @@ $ex=$null
 	{
 	   IF($ins.Enabled -eq'true')
         {	
-        
-        
-        
-        
+                
 		[System.Collections.ArrayList]$Omsupload=@()
 		[System.Collections.ArrayList]$OmsPerfupload=@()
 		[System.Collections.ArrayList]$OmsInvupload=@()
 		[System.Collections.ArrayList]$OmsStateupload=@()
         
-
 		$saphost=$ins.'hanaserver'
         $sapport=$ins.'port'
-        
-        
-
+         
 		If($ins.UserAsset -match 'default')
 		{
 			$user=Get-AutomationVariable -Name "AzureHanaMonitorUser"
@@ -276,9 +290,6 @@ $ex=$null
 			$user=Get-AutomationVariable -Name $ins.UserAsset+"User"
 			$password=Get-AutomationVariable -Name $ins.UserAsset+"Password"
 		}
-
- $user="OmsMonitor"
- $password="OmsMon@2017@"
 
         Write-output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss'))  Processing $($ins.HanaServer) - $($ins.Database) "
 		$constring="Server={0}:{1};Database={2};UserID={3};Password={4}" -f $ins.HanaServer,$ins.Port,$ins.Database,$user,$password
@@ -343,7 +354,7 @@ $ex=$null
 		
 		IF($ex)
 		{
-				Write-Warning  "Failed to conect to  $hanadb on  $($ins.HanaServer):$($ins.Port)"
+			Write-Warning  "Failed to conect to  $hanadb on  $($ins.HanaServer):$($ins.Port)"
 			write-warning $ex
 			
                $cu=$null
@@ -385,15 +396,21 @@ $ex=$null
                 
 			}
             $omsStateupload.Add($cu)|Out-Null
+            		
 
 			$rbvariablename=$null
 			$rbvariablename="LastRun-$saphost-$hanadb"
+           
 
 			$ex1=$null
 			Try{
 					$lasttimestamp=$null
-				[datetime]$lasttimestamp=Get-AutomationVariable -Name $rbvariablename `
-				
+				<#$lasttimestamp=Get-AzureRmAutomationVariable `
+				-Name $rbvariablename `
+				-ResourceGroupName $AAResourceGroup `
+				-AutomationAccountName $AAAccount -EA 0#>
+                [datetime]$lasttimestamp=Get-AutomationVariable -Name $rbvariablename
+                Get-AutomationVariable -Name $rbvariablename
 			}
 			Catch
 			{
@@ -412,13 +429,13 @@ $ex=$null
 				$Ex=$_.Exception.MEssage;write-warning "Failed to run Query1"
 			}
 
-			if($lasttimestamp -eq $null )
+			if($lasttimestamp -eq $null)
 			{
 				write-warning "Last Run Time not found for $saphost-$hanadb : $ex"
 				$lastruntime=$ds.Tables[0].rows[0].LastTime # we will use this to mark lasst data collection time in HANA
 			}Else
 			{
-				$lastruntime=[datetime]$lasttimestamp   # we will use this to mark lasst data collection time in HANA				
+				$lastruntime=[datetime]$lasttimestamp  # we will use this to mark lasst data collection time in HANA				
 			}
 				$currentruntime=($ds.Tables[0].rows[0].CURRENT_TIMESTAMP).tostring('yyyy-MM-dd HH:mm:ss.FF')  #format ddate to Hana timestamp YYYY-MM-DD HH24:MI:SS.FF7. FF
 				$timespan=([datetime]$currentruntime-[datetime]$lastruntime).Totalseconds
@@ -429,10 +446,60 @@ $ex=$null
 
                 }
 
+            #this is used to calculate UTC time conversion in data collection 
+#			$utcdiff=NEW-TIMESPAN –Start $ds[0].Tables[0].rows[0].UTC_TIMESTAMP  –End $ds[0].Tables[0].rows[0].SYS_TIMESTAMP 
+			$query="/* OMS */
+			SELECT 
+			O.HOST,
+			N.VALUE TIMEZONE_NAME,
+			LPAD(O.VALUE, 17) TIMEZONE_OFFSET_S
+			FROM
+			( SELECT                      /* Modification section */
+			'%' HOST
+			FROM
+			DUMMY
+			) BI,
+			( SELECT
+			HOST,
+			VALUE
+			FROM
+			M_HOST_INFORMATION
+			WHERE
+			KEY = 'timezone_offset'
+			) O,
+			( SELECT
+			HOST,
+			VALUE
+			FROM
+			M_HOST_INFORMATION
+			WHERE
+			KEY = 'timezone_name'
+			) N
+			WHERE
+			O.HOST LIKE BI.HOST AND
+			N.HOST = O.HOST
+			ORDER BY
+			O.HOST
+			"
 
+			$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+					$ds=New-Object system.Data.DataSet ;
+			$ex=$null
+					Try{
+						$cmd.fill($ds)|out-null
+					}
+					Catch
+					{
+						$Ex=$_.Exception.MEssage;write-warning $query
+						write-warning  $ex 
+					}
+					
+					$utcdiff=$ds.Tables[0].rows[0].TIMEZONE_OFFSET_S
                 
-
-			#region Collect instance data and databases 
+    #region default collections
+        If($runmode -eq 'default')
+        {
+	
 			$query='/* OMS -Query2*/ Select * FROM SYS.M_HOST_INFORMATION'
 					$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
 			$ds=New-Object system.Data.DataSet ;
@@ -541,7 +608,7 @@ $ex=$null
 			$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
 			$ds=New-Object system.Data.DataSet ;
             Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) - Query4- CollectorType=Inventory , Category=Database"  
-$ex=$null
+            $ex=$null
 			Try{
 				$cmd.fill($ds)
 			}
@@ -604,25 +671,27 @@ $ex=$null
 
 
 
-#region inventory collection
 
-			$query='/* OMS -Query5*/ Select * FROM SYS.M_DATABASE'
+
+			$query='/* OMS */ Select * FROM SYS.M_DATABASE'
 			$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
 			$ds=New-Object system.Data.DataSet ;
-            Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query5 CollectorType=Inventory , Category=Database"  
-$ex=$null
+            Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) CollectorType=Inventory , Category=Database"  
+            
+            $ex=$null
 			Try{
 				$cmd.fill($ds)
 			}
 			Catch
 			{
-				$Ex=$_.Exception.MEssage;write-warning "Failed to run Query5"
+				$Ex=$_.Exception.MEssage;write-warning $query
 			}
 			 
 			$Resultsinv=$null
 			[System.Collections.ArrayList]$Resultsinv=@(); 
 
 
+			Write-Output ' CollectorType="Inventory" ,  Category="DatabaseInfo"'
 
 			foreach ($row in $ds.Tables[0].rows)
 			{
@@ -642,9 +711,7 @@ $ex=$null
 
 			$Omsinvupload.Add($Resultsinv)|Out-Null
 
-
-  Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query6 CollectorType=Inventory , Category=Services" 
-			$query="/* OMS -Query6*/SELECT * FROM SYS.M_SERVICES"
+			$query="/* OMS */SELECT * FROM SYS.M_SERVICES"
 			$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
 			$ds=New-Object system.Data.DataSet ;
 			$ex=$null
@@ -653,7 +720,7 @@ $ex=$null
 			}
 			Catch
 			{
-				$Ex=$_.Exception.MEssage;write-warning "Failed to run Query6"
+				$Ex=$_.Exception.MEssage;write-warning $query
 			}
 			 
 			$Resultsinv=$null
@@ -694,60 +761,8 @@ $ex=$null
 
 
 
-		
-
-#this is used to calculate UTC time conversion in data collection 
-#			$utcdiff=NEW-TIMESPAN –Start $ds[0].Tables[0].rows[0].UTC_TIMESTAMP  –End $ds[0].Tables[0].rows[0].SYS_TIMESTAMP 
-			$query="/* OMS -Query7*/
-			SELECT 
-			O.HOST,
-			N.VALUE TIMEZONE_NAME,
-			LPAD(O.VALUE, 17) TIMEZONE_OFFSET_S
-			FROM
-			( SELECT                      /* Modification section */
-			'%' HOST
-			FROM
-			DUMMY
-			) BI,
-			( SELECT
-			HOST,
-			VALUE
-			FROM
-			M_HOST_INFORMATION
-			WHERE
-			KEY = 'timezone_offset'
-			) O,
-			( SELECT
-			HOST,
-			VALUE
-			FROM
-			M_HOST_INFORMATION
-			WHERE
-			KEY = 'timezone_name'
-			) N
-			WHERE
-			O.HOST LIKE BI.HOST AND
-			N.HOST = O.HOST
-			ORDER BY
-			O.HOST
-			"
-
-			$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-					$ds=New-Object system.Data.DataSet ;
-			$ex=$null
-					Try{
-						$cmd.fill($ds)|out-null
-					}
-					Catch
-					{
-						$Ex=$_.Exception.MEssage;write-warning "Failed to run Query7"
-						write-warning  $ex 
-					}
-					
-					$utcdiff=$ds.Tables[0].rows[0].TIMEZONE_OFFSET_S
-            #Write-output $query
-			Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query8 CollectorType=Performance - Category=Host - Subcategory=OverallUsage"  
-			$query="/* OMS -Query8*/SELECT * from SYS.M_HOST_RESOURCE_UTILIZATION"
+  			Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) CollectorType=Performance - Category=Host - Subcategory=OverallUsage"  
+			$query="/* OMS */SELECT * from SYS.M_HOST_RESOURCE_UTILIZATION"
 			$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
 			$ds=New-Object system.Data.DataSet ;
 			$ex=$null
@@ -762,13 +777,10 @@ $ex=$null
 			
 			} 
 
-
 			$Resultsperf=$null
 			[System.Collections.ArrayList]$Resultsperf=@(); 
 			foreach ($row in $ds.Tables[0].rows)
 			{
-				
-
 				$Resultsperf.add([PSCustomObject]@{
 					HOST=$row.HOST
 					Instance=$sapinstance
@@ -924,15 +936,14 @@ $ex=$null
 
 			}
 
-
 			$Omsperfupload.Add($Resultsperf)|Out-Null
-            #Write-output  $ds.Tables[0].rows
-            #Write-output $query
 
-#CollectorType="Inventory" or "Performance"
-        Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query9 CollectorType=Inventory - Category=BAckupCatalog"  
 
-			$query="/* OMS Query9 */SELECT * FROM SYS.M_BACKUP_CATALOG where SYS_START_TIME    > add_seconds('"+$currentruntime+"',-$timespan)"
+
+        #CollectorType="Inventory" or "Performance"
+        Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) CollectorType=Inventory - Category=BAckupCatalog"  
+
+			$query="/* OMS */SELECT * FROM SYS.M_BACKUP_CATALOG where SYS_START_TIME    > add_seconds('"+$currentruntime+"',-$timespan)"
 			$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
 			$ds=New-Object system.Data.DataSet ;
 			$ex=$null
@@ -941,7 +952,7 @@ $ex=$null
 			}
 			Catch
 			{
-				$Ex=$_.Exception.MEssage;write-warning "Failed to run Query9"
+				$Ex=$_.Exception.MEssage;write-warning $query
                 write-warning  $ex 
 			}
 			 
@@ -978,9 +989,9 @@ $ex=$null
 
 			$Omsinvupload.Add($Resultsinv)|Out-Null
 
-Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query10 CollectorType=Inventory - Category=BAckupSize"  
+Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) CollectorType=Inventory - Category=BAckupSize"  
 
-			$query='/* OMS -Query10*/ Select * FROM SYS.M_BACKUP_SIZE_ESTIMATIONS'
+			$query='/* OMS */ Select * FROM SYS.M_BACKUP_SIZE_ESTIMATIONS'
 			$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
 			$ds=New-Object system.Data.DataSet ;
 $ex=$null
@@ -989,7 +1000,7 @@ $ex=$null
 			}
 			Catch
 			{
-				$Ex=$_.Exception.MEssage;write-warning "Failed to run Query10"
+				$Ex=$_.Exception.MEssage;write-warning $query
                 write-warning  $ex 
 			}
 			 
@@ -1019,9 +1030,9 @@ $ex=$null
 			$Omsinvupload.Add($Resultsinv)|Out-Null
 
 
-Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query11 CollectorType=Inventory - Category=Volumes"  
+Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) CollectorType=Inventory - Category=Volumes"  
 
-			$query='/* OMS -Query11 */ Select * FROM SYS.M_DATA_VOLUMES'
+			$query='/* OMS */ Select * FROM SYS.M_DATA_VOLUMES'
 			$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
 			$ds=New-Object system.Data.DataSet ;
             $ex=$null
@@ -1030,7 +1041,7 @@ Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query11 CollectorTyp
 			}
 			Catch
 			{
-				$Ex=$_.Exception.MEssage;write-warning "Failed to run Query11"
+				$Ex=$_.Exception.MEssage;write-warning $query
                 write-warning  $ex 
 			}
 			 
@@ -1060,9 +1071,9 @@ Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query11 CollectorTyp
 
 			$Omsinvupload.Add($Resultsinv)|Out-Null
 
-Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query12 CollectorType=Inventory - Category=Disks"  
+Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) CollectorType=Inventory - Category=Disks"  
 
-			$query='/* OMS -Query12*/ Select * FROM SYS.M_DISKS'
+			$query='/* OMS */ Select * FROM SYS.M_DISKS'
 			$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
 			$ds=New-Object system.Data.DataSet ;
 $ex=$null
@@ -1071,7 +1082,7 @@ $ex=$null
 			}
 			Catch
 			{
-				$Ex=$_.Exception.MEssage;write-warning "Failed to run Query12"
+				$Ex=$_.Exception.MEssage;write-warning $query
                 write-warning  $ex 
 			}
 			 
@@ -1103,8 +1114,8 @@ $ex=$null
 
 			$Omsinvupload.Add($Resultsinv)
 
-Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query13 CollectorType=PErformance - Category=DiskUsage"  
-			$query='/* OMS -Query13*/ Select * FROM SYS.M_DISK_USAGE'
+Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) CollectorType=PErformance - Category=DiskUsage"  
+			$query='/* OMS */ Select * FROM SYS.M_DISK_USAGE'
 			$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
 			$ds=New-Object system.Data.DataSet ;
 $ex=$null
@@ -1113,7 +1124,7 @@ $ex=$null
 			}
 			Catch
 			{
-				$Ex=$_.Exception.MEssage;write-warning "Failed to run Query13"
+				$Ex=$_.Exception.MEssage;write-warning $query
                 write-warning  $ex 
 			}
 			 
@@ -1140,9 +1151,9 @@ $ex=$null
 
 			$Omsperfupload.Add($Resultsperf)|Out-Null
 
-Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query14 CollectorType=Inventory - Category=License"  
+Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) CollectorType=Inventory - Category=License"  
 
-			$query="/* OMS -Query14*/SELECT * FROM SYS.M_LICENSE"
+			$query="/* OMS */SELECT * FROM SYS.M_LICENSE"
 			$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
 			$ds=New-Object system.Data.DataSet ;
 $ex=$null
@@ -1151,7 +1162,7 @@ $ex=$null
 			}
 			Catch
 			{
-				$Ex=$_.Exception.MEssage;write-warning "Failed to run Query14"
+				$Ex=$_.Exception.MEssage;write-warning $query
                 write-warning  $ex 
 			}
 			 
@@ -1196,8 +1207,8 @@ if($collecttableinv -and (get-date).Minute -lt 15)
 {
 
 
-Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query15 CollectorType=Inventory - Category=Tables"  
-			$query='/* OMS -Query15*/ Select Host,Port,Loaded,TABLE_NAME,RECORD_COUNT,RAW_RECORD_COUNT_IN_DELTA,MEMORY_SIZE_IN_TOTAL,MEMORY_SIZE_IN_MAIN,MEMORY_SIZE_IN_DELTA 
+Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) CollectorType=Inventory - Category=Tables"  
+			$query='/* OMS */ Select Host,Port,Loaded,TABLE_NAME,RECORD_COUNT,RAW_RECORD_COUNT_IN_DELTA,MEMORY_SIZE_IN_TOTAL,MEMORY_SIZE_IN_MAIN,MEMORY_SIZE_IN_DELTA 
 from M_CS_TABLES'
 
 			$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
@@ -1208,7 +1219,7 @@ $ex=$null
 			}
 			Catch
 			{
-				$Ex=$_.Exception.MEssage;write-warning "Failed to run Query15"
+				$Ex=$_.Exception.MEssage;write-warning $query
                 write-warning  $ex 
 			}
 			 
@@ -1246,8 +1257,8 @@ $ex=$null
 			$Resultsinv=$null
 			[System.Collections.ArrayList]$Resultsinv=@(); 
 
-Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query16 CollectorType=Inventory - Category=Alerts"  
-			$query='/* OMS -Query16*/ Select * from _SYS_STATISTICS.Statistics_Current_Alerts'
+Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) CollectorType=Inventory - Category=Alerts"  
+			$query='/* OMS */ Select * from _SYS_STATISTICS.Statistics_Current_Alerts'
 			$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
 			$ds=New-Object system.Data.DataSet ;
 $ex=$null
@@ -1256,7 +1267,7 @@ $ex=$null
 			}
 			Catch
 			{
-				$Ex=$_.Exception.MEssage;write-warning "Failed to run Query16"
+				$Ex=$_.Exception.MEssage;write-warning $query
                 write-warning  $ex 
 			}
 			 
@@ -1288,16 +1299,16 @@ $ex=$null
 			$Omsinvupload.Add($Resultsinv)|Out-Null
 
 
-#endregion
 
 
 
 
-#region PErformance collection
+
+
 # Service CPU 
 
-Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query17 CollectorType=PErformance - Category=Host Subcategory=OverallUsage"  
-			$query='/* OMS Query17*/ Select * from SYS.M_Service_statistics'
+Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query5 CollectorType=PErformance - Category=Host Subcategory=OverallUsage"  
+			$query='/* OMS Query5*/ Select * from SYS.M_Service_statistics'
 			$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
 			$ds=New-Object system.Data.DataSet ;
 $ex=$null
@@ -1306,7 +1317,7 @@ $ex=$null
 			}
 			Catch
 			{
-				$Ex=$_.Exception.MEssage;write-warning "Failed to run Query17"
+				$Ex=$_.Exception.MEssage;write-warning "Failed to run Query5"
                 write-warning  $ex 
 			}
 			 
@@ -1558,9 +1569,9 @@ $ex=$null
 			$Omsperfupload.Add($Resultsperf)|Out-Null
       
 #Updated CPU statictics collection 
-Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query18  CollectorType=Performance - Category=Host - CPU"
+Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query6  CollectorType=Performance - Category=Host - CPU"
 
-			$query="/* OMS -Query18*/SELECT SAMPLE_TIME,HOST,
+			$query="/* OMS -Query6*/SELECT SAMPLE_TIME,HOST,
 LPAD(ROUND(CPU_PCT), 7) CPU_PCT,
 LPAD(TO_DECIMAL(USED_MEM_GB, 10, 2), 11) USED_MEM_GB,
 LPAD(ROUND(USED_MEM_PCT), 7) MEM_PCT,
@@ -1661,7 +1672,7 @@ $ex=$null
 			}
 			Catch
 			{
-				$Ex=$_.Exception.MEssage;write-warning "Failed to run Query18"
+				$Ex=$_.Exception.MEssage;write-warning "Failed to run Query6"
                 write-warning  $ex 
 			}
 			 
@@ -1694,9 +1705,9 @@ $ex=$null
 
 If($false) # Not Enabled 
 {
-Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query19 CollectorType=PErformance - Category=Service - Metrics CPU, Connections,Threads"
+Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query7 CollectorType=PErformance - Category=Service - Metrics CPU, Connections,Threads"
 
-			$query="/* OMS -Query19*/Select SAMPLE_TIME ,
+			$query="/* OMS -Query7*/Select SAMPLE_TIME ,
 HOST,
 LPAD(PORT, 5) PORT,
 LPAD(ROUND(PING_MS), 7) PING_MS,
@@ -1857,7 +1868,7 @@ $ex=$null
 			}
 			Catch
 			{
-				$Ex=$_.Exception.MEssage;write-warning "Failed to run Query19"
+				$Ex=$_.Exception.MEssage;write-warning "Failed to run Query7"
                 write-warning  $ex 
 			}
 			 
@@ -2019,10 +2030,10 @@ $ex=$null
 			$Omsperfupload.Add($Resultsperf)|Out-Null
 }
 
-Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query20 CollectorType=PErformance - Category=Memory  Subcategory=OverallUsage"
+Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query8 CollectorType=PErformance - Category=Memory  Subcategory=OverallUsage"
 
 
-			$query="/* OMS -Query20*/SELECT * FROM SYS.M_MEMORY INNER JOIN SYS.M_Services on SYS.M_MEMORY.Port=SYS.M_Services.port Where SERVICE_NAME='indexserver'" 
+			$query="/* OMS -Query8*/SELECT * FROM SYS.M_MEMORY INNER JOIN SYS.M_Services on SYS.M_MEMORY.Port=SYS.M_Services.port Where SERVICE_NAME='indexserver'" 
 			$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
 			$ds=New-Object system.Data.DataSet ;
         $ex=$null
@@ -2031,7 +2042,7 @@ Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query20 CollectorTyp
 			}
 			Catch
 			{
-				$Ex=$_.Exception.MEssage;write-warning "Failed to run Query20"
+				$Ex=$_.Exception.MEssage;write-warning "Failed to run Query8"
                 write-warning  $ex 
 			}
 			 
@@ -2206,9 +2217,9 @@ Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query20 CollectorTyp
 
 			$Omsperfupload.Add($Resultsperf)|Out-Null
 
-Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query21 CollectorType=PErformance - Category=Memory  Subcategory=Service"
+Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query9 CollectorType=PErformance - Category=Memory  Subcategory=Service"
 
-			$query="/* OMS -Query21 */SELECT * FROM SYS.M_SERVICE_MEMORY"
+			$query="/* OMS -Query9 */SELECT * FROM SYS.M_SERVICE_MEMORY"
 			$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
 			$ds=New-Object system.Data.DataSet ;
 $ex=$null
@@ -2217,7 +2228,7 @@ $ex=$null
 			}
 			Catch
 			{
-				$Ex=$_.Exception.MEssage;write-warning "Failed to run Query21"
+				$Ex=$_.Exception.MEssage;write-warning "Failed to run Query9"
 
                 write-warning  $ex 
 			}
@@ -2391,9 +2402,9 @@ $ex=$null
 
 #int ext connection count does not exit check version
 
-Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query22 CollectorType=PErformance - Category=Service Metrics"
+Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query10 CollectorType=PErformance - Category=Service Metrics"
 
-			$query="/* OMS -Query22*/SELECT  HOST , PORT , to_varchar(time, 'YYYY-MM-DD HH24:MI') as TIME, ROUND(AVG(CPU),0)as PROCESS_CPU , ROUND(AVG(SYSTEM_CPU),0) as SYSTEM_CPU , 
+			$query="/* OMS -Query10*/SELECT  HOST , PORT , to_varchar(time, 'YYYY-MM-DD HH24:MI') as TIME, ROUND(AVG(CPU),0)as PROCESS_CPU , ROUND(AVG(SYSTEM_CPU),0) as SYSTEM_CPU , 
 MAX(MEMORY_USED) as MEMORY_USED , MAX(MEMORY_ALLOCATION_LIMIT) as MEMORY_ALLOCATION_LIMIT , SUM(HANDLE_COUNT) as HANDLE_COUNT , 
 ROUND(AVG(PING_TIME),0) as PING_TIME, MAX(SWAP_IN) as SWAP_IN ,SUM(CONNECTION_COUNT) as CONNECTION_COUNT, SUM(TRANSACTION_COUNT)  as TRANSACTION_COUNT,  SUM(BLOCKED_TRANSACTION_COUNT) as BLOCKED_TRANSACTION_COUNT , SUM(STATEMENT_COUNT) as STATEMENT_COUNT
 from SYS.M_LOAD_HISTORY_SERVICE 
@@ -2414,7 +2425,7 @@ $ex=$null
 			Catch
 			{
 				$Ex=$_.Exception.MEssage
-                write-warning  $ex ;write-warning "Failed to run Query22"
+                write-warning  $ex ;write-warning "Failed to run Query10"
 			}
 			 
 
@@ -2637,9 +2648,9 @@ $ex=$null
 			}
 			$Omsperfupload.Add($Resultsperf)|Out-Null
 
-Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss'))  Query23 CollectorType=PErformance - Category=Host  Subcategory=Memory"
+Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss'))  Query11 CollectorType=PErformance - Category=Host  Subcategory=Memory"
 
-			$query="/* OMS - Query23 */SELECT  HOST,to_varchar(time, 'YYYY-MM-DD HH24:MI') as TIME, ROUND(AVG(CPU),0)as CPU_Total ,
+			$query="/* OMS - Query11 */SELECT  HOST,to_varchar(time, 'YYYY-MM-DD HH24:MI') as TIME, ROUND(AVG(CPU),0)as CPU_Total ,
 ROUND(AVG(Network_IN)/1024/1024,2)as Network_IN_MB,ROUND(AVG(Network_OUT)/1024/1024,2) as Network_OUT_MB,
 MAX(MEMORY_RESIDENT)/1024/1024/1024 as ResidentGB,MAX(MEMORY_TOTAL_RESIDENT/1024/1024/1024 )as TotalResidentGB
 ,MAX(MEMORY_USED/1024/1024/1024) as UsedMemoryGB
@@ -2656,7 +2667,7 @@ $ex=$null
 			}
 			Catch
 			{
-				$Ex=$_.Exception.MEssage;write-warning "Failed to run Query23"
+				$Ex=$_.Exception.MEssage;write-warning "Failed to run Query11"
                     write-warning  $ex 
 			}
 			 
@@ -2777,10 +2788,10 @@ $ex=$null
 
 			}
 
-Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss'))  Query24 CollectorType=PErformance - Category=Table  Subcategory=MemUsage"
+Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss'))  Query12 CollectorType=PErformance - Category=Table  Subcategory=MemUsage"
 
 
-			$query='/* OMS -Query24*/ Select Schema_name,round(sum(Memory_size_in_total)/1024/1024) as "ColunmTablesMBUSed" from M_CS_TABLES group by Schema_name'
+			$query='/* OMS -Query12*/ Select Schema_name,round(sum(Memory_size_in_total)/1024/1024) as "ColunmTablesMBUSed" from M_CS_TABLES group by Schema_name'
 			$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
 			$ds=New-Object system.Data.DataSet ;
 $ex=$null
@@ -2789,7 +2800,7 @@ $ex=$null
 			}
 			Catch
 			{
-				$Ex=$_.Exception.MEssage;write-warning "Failed to run Query24"
+				$Ex=$_.Exception.MEssage;write-warning "Failed to run Query12"
                 write-warning  $ex 
 			}
 
@@ -2820,9 +2831,9 @@ $ex=$null
 			}
 			$Omsperfupload.Add($Resultsperf)|Out-Null
 
-Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query25 CollectorType=PErformance - Category=Memory  Subcategory=Component"
+Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query13 CollectorType=PErformance - Category=Memory  Subcategory=Component"
 
-			$query='/* OMS -Query25 */ Select  host,component, sum(Used_memory_size) USed_MEmory_size from public.m_service_component_memory group by host, component'
+			$query='/* OMS -Query13 */ Select  host,component, sum(Used_memory_size) USed_MEmory_size from public.m_service_component_memory group by host, component'
 			$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
 			$ds=New-Object system.Data.DataSet ;
 $ex=$null
@@ -2831,7 +2842,7 @@ $ex=$null
 			}
 			Catch
 			{
-				$Ex=$_.Exception.MEssage;write-warning "Failed to run Query25"
+				$Ex=$_.Exception.MEssage;write-warning "Failed to run Query13"
                 write-warning  $ex 
 			}
 			 
@@ -2862,10 +2873,10 @@ $ex=$null
 			}
 
 
-Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query26 CollectorType=PErformance - Category=Memory  Used, Resident,PEak"
+Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query14 CollectorType=PErformance - Category=Memory  Used, Resident,PEak"
 
 
-			$query='/* OMS -Query26 */ Select t1.host,round(sum(t1.Total_memory_used_size/1024/1024/1024),1) as "UsedMemoryGB",round(sum(t1.physical_memory_size/1024/1024/1024),2) "DatabaseResident" ,SUM(T2.Peak) as PeakGB from m_service_memory  as T1 
+			$query='/* OMS -Query14 */ Select t1.host,round(sum(t1.Total_memory_used_size/1024/1024/1024),1) as "UsedMemoryGB",round(sum(t1.physical_memory_size/1024/1024/1024),2) "DatabaseResident" ,SUM(T2.Peak) as PeakGB from m_service_memory  as T1 
 Join 
 (Select  Host, ROUND(SUM(M)/1024/1024/1024,2) Peak from (Select  host,SUM(CODE_SIZE+SHARED_MEMORY_ALLOCATED_SIZE) as M from sys.M_SERVICE_MEMORY group by host  
 union 
@@ -2879,7 +2890,7 @@ $ex=$null
 			}
 			Catch
 			{
-				$Ex=$_.Exception.MEssage;write-warning "Failed to run Query26"
+				$Ex=$_.Exception.MEssage;write-warning "Failed to run Query14"
                 write-warning  $ex 
 			}
 			 
@@ -2930,8 +2941,8 @@ $ex=$null
 IF($false) #disable Colelction
 {
 
-Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query27 CollectorType=PErformance - Category=Compression  "
-			$query='/* OMS -Query27  */ Select  host,schema_name ,sum(DISTINCT_COUNT) RECORD_COUNT,
+Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query15 CollectorType=PErformance - Category=Compression  "
+			$query='/* OMS -Query15  */ Select  host,schema_name ,sum(DISTINCT_COUNT) RECORD_COUNT,
 	sum(MEMORY_SIZE_IN_TOTAL) COMPRESSED_SIZE,	sum(UNCOMPRESSED_SIZE) UNCOMPRESSED_SIZE, (sum(UNCOMPRESSED_SIZE)/sum(MEMORY_SIZE_IN_TOTAL)) Compression_Ratio
 , 100*(sum(UNCOMPRESSED_SIZE)/sum(MEMORY_SIZE_IN_TOTAL)) Compression_PErcentage
 	FROM SYS.M_CS_ALL_COLUMNS Group by host,Schema_name having sum(Uncompressed_size) >0 '
@@ -2944,7 +2955,7 @@ $ex=$null
 			}
 			Catch
 			{
-				$Ex=$_.Exception.MEssage;write-warning "Failed to run Query27"
+				$Ex=$_.Exception.MEssage;write-warning "Failed to run Query15"
                 write-warning  $ex 
 			}
 			 
@@ -3024,9 +3035,9 @@ $ex=$null
 }
 
 
-Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query28 CollectorType=PErformance - Category=Volumes Subcategory=IOStat"
+Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query16 CollectorType=PErformance - Category=Volumes Subcategory=IOStat"
 			#volume IO Latency and  throughput
-					$query="/* OMS -Query28*/select host, port ,type,
+					$query="/* OMS -Query16*/select host, port ,type,
 					round(max_io_buffer_size / 1024,0) `"MaxBufferinKB`",
 					trigger_async_write_count,
 					avg_trigger_async_write_time as `"AvgTriggerAsyncWriteMicroS`",
@@ -3048,7 +3059,7 @@ Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query28 CollectorTyp
 					   }
 				   Catch
 				   {
-					   $Ex=$_.Exception.MEssage;write-warning "Failed to run Query28"
+					   $Ex=$_.Exception.MEssage;write-warning "Failed to run Query16"
 				   }
 							
 				   IF ($ds.Tables[0].rows)
@@ -3174,9 +3185,9 @@ Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query28 CollectorTyp
 
 			    #volume throughput
 
-Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query29 CollectorType=PErformance - Category=Volumes Subcategory=Throughput"
+Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query17 CollectorType=PErformance - Category=Volumes Subcategory=Throughput"
 
-				$query="/* OMS -Query29*/select v.host, v.port, v.service_name, s.type,
+				$query="/* OMS -Query17*/select v.host, v.port, v.service_name, s.type,
 				round(s.total_read_size / 1024 / 1024, 3) as `"ReadsMB`",
 				round(s.total_read_size / case s.total_read_time when 0 then -1 else
 			   s.total_read_time end, 3) as `"ReadMBpersec`",
@@ -3200,7 +3211,7 @@ Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query29 CollectorTyp
 						   }
 						   Catch
 						   {
-							   $Ex=$_.Exception.MEssage;write-warning "Failed to run Query29"
+							   $Ex=$_.Exception.MEssage;write-warning $query
 						   }
 							
 			   
@@ -3249,9 +3260,9 @@ Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query29 CollectorTyp
 						   }
 			   #Save Point Duration
 
-Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query30 CollectorType=PErformance - Category=Savepoint"
+Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query18 CollectorType=PErformance - Category=Savepoint"
 			   
-			   $query="/* OMS - Query30 */select start_time, volume_id,
+			   $query="/* OMS - Query18 */select start_time, volume_id,
 				round(duration / 1000000) as `"DurationSec`",
 				round(critical_phase_duration / 1000000) as `"CriticalSeconds`",
 				round(total_size / 1024 / 1024) as `"SizeMB`",
@@ -3268,7 +3279,7 @@ Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query30 CollectorTyp
 						   }
 						   Catch
 						   {
-							   $Ex=$_.Exception.MEssage;write-warning "Failed to run Query30"
+							   $Ex=$_.Exception.MEssage;write-warning $query
 						   }
 								 
 						   $Resultsperf=$null
@@ -3327,9 +3338,9 @@ Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query30 CollectorTyp
 			   
 							   $Omsperfupload.Add($Resultsperf)|Out-Null
 						   }
-	Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query31 CollectorType=PErformance - Category=Statement Subcategory=Expensive"		   
+	Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query19 CollectorType=PErformance - Category=Statement Subcategory=Expensive"		   
 
-			$query="/* OMS -Query31*/Select HOST,
+			$query="/* OMS -Query19*/Select HOST,
 PORT,
 CONNECTION_ID,
 TRANSACTION_ID,
@@ -3361,7 +3372,7 @@ $ex=$null
 			}
 			Catch
 			{
-				$Ex=$_.Exception.MEssage;write-warning "Failed to run Query31"
+				$Ex=$_.Exception.MEssage;write-warning "Failed to run Query19"
                 write-warning  $ex 
 			}
 			 
@@ -3410,10 +3421,10 @@ $ex=$null
 
 
 
-	Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query32 CollectorType=Inventory - Category=Statement"
+	Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query20 CollectorType=Inventory - Category=Statement"
 				
 
-			$query="/* OMS -Query32 */SELECT 
+			$query="/* OMS -Query20 */SELECT 
 			HOST,
 			PORT,
 			SCHEMA_NAME,
@@ -3448,7 +3459,7 @@ $ex=$null
 		  }
 		  Catch
 		  {
-			  $Ex=$_.Exception.MEssage;write-warning "failed to run query32"
+			  $Ex=$_.Exception.MEssage;write-warning $query
 			  write-warning  $ex 
 		  }
 		   
@@ -3497,10 +3508,10 @@ $ex=$null
 		  $Omsinvupload.Add($Resultsinv)|Out-Null
 
 
-Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query33 CollectorType=Inventory - Category=Threads"				
+Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query21 CollectorType=Inventory - Category=Threads"				
 
 
-$query="/* OMS -Query33*/SELECT HOST,
+$query="/* OMS -Query21*/SELECT HOST,
 LPAD(PORT, 5) PORT,
 SERVICE_NAME SERVICE,
 LPAD(NUM, 5) NUM,
@@ -3585,7 +3596,7 @@ $ex=$null
 		  }
 		  Catch
 		  {
-			  $Ex=$_.Exception.MEssage;write-warning "Failed to run Query33"
+			  $Ex=$_.Exception.MEssage;write-warning "Failed to run Query21"
 			  write-warning  $ex 
 		  }
 		   
@@ -3620,13 +3631,14 @@ $ex=$null
 			  $Omsinvupload.Add($Resultsinv)|Out-Null
 		  }
 
+
 #inventory Sessions    
 
 
-Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query34 CollectorType=Inventory - Category=Sessions"		
+Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query23 CollectorType=Inventory - Category=Sessions"		
 
 
-$query="/* OMS -Query34*/SELECT  C.HOST,
+$query="/* OMS -Query23*/SELECT  C.HOST,
 LPAD(C.PORT, 5) PORT,
 S.SERVICE_NAME SERVICE,
 IFNULL(LPAD(C.CONN_ID, 7), '') CONN_ID,
@@ -3788,7 +3800,7 @@ C.TRANSACTION_ID
 		  }
 		  Catch
 		  {
-			  $Ex=$_.Exception.MEssage;write-warning "Failed to run Query34"
+			  $Ex=$_.Exception.MEssage;write-warning "Failed to run Query23"
 			  write-warning  $ex 
 		  }
 		   
@@ -4210,9 +4222,9 @@ $ex=$null
 	  $checkfreq=$timespan 
 IF($firstrun){$checkfreq=2592000}Else{$checkfreq=$timespan } 
 
-Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query35 CollectorType=Inventory - Category=Connections"	
+Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query24 CollectorType=Inventory - Category=Connections"	
 
-$query="/* OMS -Query35*/SELECT   BEGIN_TIME,
+$query="/* OMS -Query24*/SELECT   BEGIN_TIME,
 HOST,
 LPAD(PORT, 5) PORT,
 SERVICE_NAME SERVICE,
@@ -4394,7 +4406,7 @@ $ex=$null
 		  }
 		  Catch
 		  {
-			  $Ex=$_.Exception.MEssage;write-warning "Failed to run Query35"
+			  $Ex=$_.Exception.MEssage;write-warning "Failed to run Query24"
 			  write-warning  $ex 
 		  }
 
@@ -4432,9 +4444,9 @@ $ex=$null
 		  }
 
 
-Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query36 CollectorType=PErformance - Category=ConnectionStatistics"	
+Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query25 CollectorType=PErformance - Category=ConnectionStatistics"	
 
-$query="/* OMS -Query36*/ SELECT  HOST,
+$query="/* OMS -Query25*/ SELECT  HOST,
 PORT,
 SERVICE_NAME SERVICE,
 SQL_TYPE,
@@ -4548,7 +4560,7 @@ $ex=$null
 		  }
 		  Catch
 		  {
-			  $Ex=$_.Exception.MEssage;write-warning "Failed to run Query36"
+			  $Ex=$_.Exception.MEssage;write-warning "Failed to run Query25"
 			  write-warning  $ex 
 		  }
 		   
@@ -4615,11 +4627,11 @@ $ex=$null
 		  }
 
 
-#Region replication Monitoring 
 
-Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query37 CollectorType=Inventory - Category=Replication_Status"	
 
-$query="/* OMS -Query37*/ SELECT   R.SITE_NAME ,R.SECONDARY_SITE_NAME,R.HOST,R.SECONDARY_HOST,
+Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query26 CollectorType=Inventory - Category=Replication_Status"	
+
+$query="/* OMS -Query26*/ SELECT   R.SITE_NAME ,R.SECONDARY_SITE_NAME,R.HOST,R.SECONDARY_HOST,
  R.SITE_NAME || ' -> ' || R.SECONDARY_SITE_NAME PATH,
   R.HOST || ' -> ' || R.SECONDARY_HOST HOSTS,
   LPAD(TO_VARCHAR(R.PORT), 5) PORT,
@@ -4666,7 +4678,7 @@ ORDER BY
 			}
 			Catch
 			{
-				$Ex=$_.Exception.MEssage;write-warning "Failed to run Query37"
+				$Ex=$_.Exception.MEssage;write-warning "Failed to run Query26"
                 write-warning  $ex 
 			}
 
@@ -4704,9 +4716,9 @@ ORDER BY
 
 #Replication_Bandwidth
 
-Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query38 CollectorType=Inventory - Category=Replication_Bandwith"	
+Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query27 CollectorType=Inventory - Category=Replication_Bandwith"	
 
-$query="/* OMS -Query38 */ SELECT  SNAPSHOT_TIME,
+$query="/* OMS -Query27 */ SELECT  SNAPSHOT_TIME,
   HOST,
   LPAD(TO_DECIMAL(PERSISTENCE_MB / 1024, 10, 2) , 14) PERSISTENCE_GB,
   LPAD(TO_DECIMAL(DATA_SIZE_MB / 1024, 10, 2), 12) DATA_SIZE_GB,
@@ -4849,12 +4861,11 @@ ORDER BY
 			}
 			Catch
 			{
-				$Ex=$_.Exception.MEssage;write-warning "Failed to run Query38"
+				$Ex=$_.Exception.MEssage;write-warning "Failed to run Query27"
                 write-warning  $ex 
 			}
 
 		 
-
 
 		  $Resultsperf=$null
 		  [System.Collections.ArrayList]$Resultsperf=@(); 
@@ -4947,9 +4958,9 @@ ORDER BY
 
 
 # Table Locations
-Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query39 CollectorType=Inventory - Category=TableLocations"	
+Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query28 CollectorType=Inventory - Category=TableLocations"	
 
-$query="/* OMS -Query39 */SELECT HOST,
+$query="/* OMS -Query28 */SELECT HOST,
   PORT,
   SERVICE_NAME SERVICE,
   SCHEMA_NAME,
@@ -5014,7 +5025,7 @@ ORDER BY
 			}
 			Catch
 			{
-				$Ex=$_.Exception.MEssage;write-warning "Failed to run Query39"
+				$Ex=$_.Exception.MEssage;write-warning "Failed to run Query28"
                 write-warning  $ex 
 			}
 
@@ -5048,8 +5059,6 @@ ORDER BY
 
             Write-Output "Elapsed Time : $([math]::round($stopwatch.Elapsed.TotalSeconds,0))"
 
-		
-#endregion
 
 
 			$AzLAUploadsuccess=0
@@ -5127,339 +5136,18 @@ ORDER BY
 					}
 				}
 			}
+    }
+
+    #endregion
 
 
 
+#region SAP Mini Checks
 
-
-
-#SAP Mini Checks and LArgest tables 
-
-#($trackhost|where {$_.host -eq "Host1"}).ConfigCheckRun
-Write-output "Checking if Minichecks should run!"
-
-
-IF($runconfigchecks -and $trackhost.Host -notcontains $saphost)
+IF($runmode -eq 'daily') 
 {
 
-
-
-
-# Tables - LArgest Inventory 
-
-
-Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query40 CollectorType=Inventory - Category=Tables - Largest"		
-	  $query="/* OMS -Query40*/SELECT OWNER,
-TABLE_NAME,
-S,                                        /* 'C' --> column store, 'R' --> row store */
-LOADED L,                                 /* 'Y' --> fully loaded, 'P' --> partially loaded, 'N' --> not loaded */
-HOST,
-B T,                                      /* 'X' if table belongs to list of technical tables (SAP Note 2388483) */
-U,                                        /* 'X' if unique index exists for table */
-LPAD(ROW_NUM, 3) POS,
-LPAD(COLS, 4) COLS,
-LPAD(RECORDS, 12) RECORDS,
-LPAD(TO_DECIMAL(TOTAL_DISK_MB / 1024, 10, 2), 7) DISK_GB,
-LPAD(TO_DECIMAL(MAX_TOTAL_MEM_MB / 1024, 10, 2), 10) MAX_MEM_GB,
-LPAD(TO_DECIMAL(TOTAL_MEM_MB / 1024, 10, 2), 10) CUR_MEM_GB,
-LPAD(TO_DECIMAL(`"TO`TAL_MEM_%`", 9, 2), 5) `"MEM_%`",
-LPAD(TO_DECIMAL(SUM(`"TOTAL_MEM_%`") OVER (ORDER BY ROW_NUM), 5, 2), 5) `"CUM_%`",
-LPAD(PARTITIONS, 5) `"PART.`",
-LPAD(TO_DECIMAL(TABLE_MEM_MB / 1024, 10, 2), 10) TAB_MEM_GB,
-LPAD(INDEXES, 4) `"IND.`",
-LPAD(TO_DECIMAL(INDEX_MEM_MB / 1024, 10, 2), 10) IND_MEM_GB,
-LPAD(LOBS, 4) LOBS,
-LPAD(TO_DECIMAL(LOB_MB / 1024, 10, 2), 6) LOB_GB
-FROM
-( SELECT
-  OWNER,
-  TABLE_NAME,
-  HOST,
-  B,
-  CASE WHEN UNIQUE_INDEXES = 0 THEN ' ' ELSE 'X' END U,
-  MAP(STORE, 'COLUMN', 'C', 'ROW', 'R') S,
-  COLS,
-  RECORDS,
-  TABLE_MEM_MB + INDEX_MEM_RS_MB TOTAL_MEM_MB,
-  IFNULL(MAX_MEM_MB, TABLE_MEM_MB + INDEX_MEM_RS_MB) MAX_TOTAL_MEM_MB,
-  TABLE_MEM_MB - INDEX_MEM_CS_MB TABLE_MEM_MB,             /* Indexes are contained in CS table size */
-  LOADED,
-  TOTAL_DISK_MB,
-  CASE 
-	WHEN SUM(TABLE_MEM_MB + INDEX_MEM_RS_MB) OVER () * 100 = 0 THEN 0 
-	ELSE (TABLE_MEM_MB +  INDEX_MEM_RS_MB) / SUM(TABLE_MEM_MB + INDEX_MEM_RS_MB) OVER () * 100 
-  END `"TOTAL_MEM_%`",
-  PARTITIONS,
-  INDEXES,
-  INDEX_MEM_RS_MB + INDEX_MEM_CS_MB INDEX_MEM_MB,
-  LOBS,
-  LOB_MB,
-  ROW_NUMBER () OVER ( ORDER BY MAP ( ORDER_BY, 
-	'TOTAL_DISK',  TOTAL_DISK_MB, 
-	'CURRENT_MEM', TABLE_MEM_MB + INDEX_MEM_RS_MB, 
-	'MAX_MEM',     IFNULL(MAX_MEM_MB, TABLE_MEM_MB + INDEX_MEM_RS_MB),
-	'TABLE_MEM',   TABLE_MEM_MB - INDEX_MEM_CS_MB, 
-	'INDEX_MEM',   INDEX_MEM_RS_MB + INDEX_MEM_CS_MB ) 
-	DESC, OWNER,   TABLE_NAME ) ROW_NUM,
-  RESULT_ROWS,
-  ORDER_BY
-FROM
-( SELECT
-	T.SCHEMA_NAME OWNER,
-	T.TABLE_NAME,
-	TS.HOST,
-	CASE WHEN T.TABLE_NAME IN
-	( 'BALHDR', 'BALHDRP', 'BALM', 'BALMP', 'BALDAT', 'BALC', 
-	  'BAL_INDX', 'EDIDS', 'EDIDC', 'EDIDOC', 'EDI30C', 'EDI40', 'EDID4',
-	  'IDOCREL', 'SRRELROLES', 'SWFGPROLEINST', 'SWP_HEADER', 'SWP_NODEWI', 'SWPNODE',
-	  'SWPNODELOG', 'SWPSTEPLOG', 'SWW_CONT', 'SWW_CONTOB', 'SWW_WI2OBJ', 'SWWCNTP0',
-	  'SWWCNTPADD', 'SWWEI', 'SWWLOGHIST', 'SWWLOGPARA', 'SWWWIDEADL', 'SWWWIHEAD', 
-	  'SWWWIRET', 'SWZAI', 'SWZAIENTRY', 'SWZAIRET', 'SWWUSERWI',                  
-	  'BDCP', 'BDCPS', 'BDCP2', 'DBTABLOG', 'DBTABPRT', 
-	  'ARFCSSTATE', 'ARFCSDATA', 'ARFCRSTATE', 'TRFCQDATA',
-	  'TRFCQIN', 'TRFCQOUT', 'TRFCQSTATE', 'SDBAH', 'SDBAD', 'DBMSGORA', 'DDLOG',
-	  'APQD', 'TST01', 'TST03', 'TSPEVJOB', 'TXMILOGRAW', 'TSPEVDEV', 
-	  'SNAP', 'SMO8FTCFG', 'SMO8FTSTP', 'SMO8_TMSG', 'SMO8_TMDAT', 
-	  'SMO8_DLIST', 'SMW3_BDOC', 'SMW3_BDOC1', 'SMW3_BDOC2', 
-	  'SMW3_BDOC4', 'SMW3_BDOC5', 'SMW3_BDOC6', 'SMW3_BDOC7', 'SMW3_BDOCQ', 'SMWT_TRC',
-	  'TPRI_PAR', 'RSBMLOGPAR', 'RSBMLOGPAR_DTP', 'RSBMNODES', 'RSBMONMESS',
-	  'RSBMONMESS_DTP', 'RSBMREQ_DTP', 'RSCRTDONE', 'RSDELDONE', 'RSHIEDONE',
-	  'RSLDTDONE', 'RSMONFACT', 'RSMONICTAB', 'RSMONIPTAB', 'RSMONMESS', 'RSMONRQTAB', 'RSREQDONE',
-	  'RSRULEDONE', 'RSSELDONE', 'RSTCPDONE', 'RSUICDONE',
-	  'VBDATA', 'VBMOD', 'VBHDR', 'VBERROR', 'ENHLOG',
-	  'VDCHGPTR', 'JBDCPHDR2', 'JBDCPPOS2', 'SWELOG', 'SWELTS', 'SWFREVTLOG',
-	  'ARDB_STAT0', 'ARDB_STAT1', 'ARDB_STAT2', 'TAAN_DATA', 'TAAN_FLDS', 'TAAN_HEAD', 'QRFCTRACE', 'QRFCLOG',
-	  'DDPRS', 'TBTCO', 'TBTCP', 'TBTCS', 'MDMFDBEVENT', 'MDMFDBID', 'MDMFDBPR',
-	  'RSRWBSTORE', 'RSRWBINDEX', '/SAPAPO/LISMAP', '/SAPAPO/LISLOG', 
-	  'CCMLOG', 'CCMLOGD', 'CCMSESSION', 'CCMOBJLST', 'CCMOBJKEYS',
-	  'RSBATCHCTRL', 'RSBATCHCTRL_PAR', 'RSBATCHDATA', 'RSBATCHHEADER', 'RSBATCHPROT', 'RSBATCHSTACK',
-	  'SXMSPMAST', 'SXMSPMAST2', 'SXMSPHIST', 
-	  'SXMSPHIST2', 'SXMSPFRAWH', 'SXMSPFRAWD', 'SXMSCLUR', 'SXMSCLUR2', 'SXMSCLUP',
-	  'SXMSCLUP2', 'SWFRXIHDR', 'SWFRXICNT', 'SWFRXIPRC', 
-	  'XI_AF_MSG', 'XI_AF_MSG_AUDIT', 'BC_MSG', 'BC_MSG_AUDIT',
-	  'SMW0REL', 'SRRELROLES', 'COIX_DATA40', 'T811E', 'T811ED', 
-	  'T811ED2', 'RSDDSTATAGGR', 'RSDDSTATAGGRDEF', 'RSDDSTATCOND', 'RSDDSTATDTP',
-	  'RSDDSTATDELE', 'RSDDSTATDM', 'RSDDSTATEVDATA', 'RSDDSTATHEADER',
-	  'RSDDSTATINFO', 'RSDDSTATLOGGING', 'RSERRORHEAD', 'RSERRORLOG',
-	  'DFKKDOUBTD_W', 'DFKKDOUBTD_RET_W', 'RSBERRORLOG', 'INDX',
-	  'SOOD', 'SOOS', 'SOC3', 'SOFFCONT1', 'BCST_SR', 'BCST_CAM',
-	  'SICFRECORDER', 'CRM_ICI_TRACES', 'RSPCINSTANCE', 'RSPCINSTANCET',
-	  'GVD_BGPROCESS', 'GVD_BUFF_POOL_ST', 'GVD_LATCH_MISSES', 
-	  'GVD_ENQUEUE_STAT', 'GVD_FILESTAT', 'GVD_INSTANCE',    
-	  'GVD_PGASTAT', 'GVD_PGA_TARGET_A', 'GVD_PGA_TARGET_H',
-	  'GVD_SERVERLIST', 'GVD_SESSION_EVT', 'GVD_SESSION_WAIT',
-	  'GVD_SESSION', 'GVD_PROCESS', 'GVD_PX_SESSION',  
-	  'GVD_WPTOTALINFO', 'GVD_ROWCACHE', 'GVD_SEGMENT_STAT',
-	  'GVD_SESSTAT', 'GVD_SGACURRRESIZ', 'GVD_SGADYNFREE',  
-	  'GVD_SGA', 'GVD_SGARESIZEOPS', 'GVD_SESS_IO',     
-	  'GVD_SGASTAT', 'GVD_SGADYNCOMP', 'GVD_SEGSTAT',     
-	  'GVD_SPPARAMETER', 'GVD_SHAR_P_ADV', 'GVD_SQLAREA',     
-	  'GVD_SQL', 'GVD_SQLTEXT', 'GVD_SQL_WA_ACTIV',
-	  'GVD_SQL_WA_HISTO', 'GVD_SQL_WORKAREA', 'GVD_SYSSTAT',     
-	  'GVD_SYSTEM_EVENT', 'GVD_DATABASE', 'GVD_CURR_BLKSRV', 
-	  'GVD_DATAGUARD_ST', 'GVD_DATAFILE', 'GVD_LOCKED_OBJEC',
-	  'GVD_LOCK_ACTIVTY', 'GVD_DB_CACHE_ADV', 'GVD_LATCHHOLDER', 
-	  'GVD_LATCHCHILDS', 'GVD_LATCH', 'GVD_LATCHNAME',   
-	  'GVD_LATCH_PARENT', 'GVD_LIBRARYCACHE', 'GVD_LOCK',        
-	  'GVD_MANGD_STANBY', 'GVD_OBJECT_DEPEN', 'GVD_PARAMETER',   
-	  'GVD_LOGFILE', 'GVD_PARAMETER2', 'GVD_TEMPFILE',    
-	  'GVD_UNDOSTAT', 'GVD_WAITSTAT', 'ORA_SNAPSHOT',
-	  '/TXINTF/TRACE', 'RSECLOG', 'RSECUSERAUTH_CL', 'RSWR_DATA',
-	  'RSECVAL_CL', 'RSECHIE_CL', 'RSECTXT_CL', 'RSECSESSION_CL',
-	  'UPC_STATISTIC', 'UPC_STATISTIC2', 'UPC_STATISTIC3',
-	  'RSTT_CALLSTACK', 'RSZWOBJ', 'RSIXWWW', 'RSZWBOOKMARK', 'RSZWVIEW', 
-	  'RSZWITEM', 'RSR_CACHE_DATA_B', 'RSR_CACHE_DATA_C', 'RSR_CACHE_DBS_BL',
-	  'RSR_CACHE_FFB', 'RSR_CACHE_QUERY', 'RSR_CACHE_STATS',
-	  'RSR_CACHE_VARSHB', 'WRI`$_OPTSTAT_HISTGRM_HISTORY',
-	  'WRI`$_OPTSTAT_HISTHEAD_HISTORY', 'WRI`$_OPTSTAT_IND_HISTORY',
-	  'WRI`$_OPTSTAT_TAB_HISTORY', 'WRH`$_ACTIVE_SESSION_HISTORY',
-	  'RSODSACTUPDTYPE', 'TRFC_I_SDATA', 'TRFC_I_UNIT', 'TRFC_I_DEST', 
-	  'TRFC_I_UNIT_LOCK', 'TRFC_I_EXE_STATE', 'TRFC_I_ERR_STATE',
-	  'DYNPSOURCE', 'DYNPLOAD', 'D010TAB', 'REPOSRC', 'REPOLOAD',
-	  'RSOTLOGOHISTORY', 'SQLMD', '/SDF/ZQLMD', 'RSSTATMANREQMDEL',
-	  'RSSTATMANREQMAP', 'RSICPROT', 'RSPCPROCESSLOG',
-	  'DSVASRESULTSGEN', 'DSVASRESULTSSEL', 'DSVASRESULTSCHK', 
-	  'DSVASRESULTSATTR', 'DSVASREPODOCS', 'DSVASSESSADMIN', 'DOKCLU',
-	  'ORA_SQLC_HEAD', 'ORA_SQLC_DATA', 'CS_AUDIT_LOG_', 'RSBKSELECT',
-	  'SWN_NOTIF', 'SWN_NOTIFTSTMP', 'SWN_SENDLOG', 'JOB_LOG',
-	  'SWNCMONI', 'BC_SLD_CHANGELOG', 'ODQDATA_F', 'STATISTICS_ALERTS', 'STATISTICS_ALERTS_BASE',
-	  'SRT_UTIL_ERRLOG', 'SRT_MONILOG_DATA', 'SRT_RTC_DT_RT', 'SRT_RTC_DATA', 'SRT_RTC_DATA_RT', 
-	  'SRT_CDTC', 'SRT_MMASTER', 'SRT_SEQ_HDR_STAT', 'SRTM_SUB', 'SRT_SEQ_REORG',
-	  'UJ0_STAT_DTL', 'UJ0_STAT_HDR', '/SAPTRX/APPTALOG', '/SAPTRX/AOTREF', 'SSCOOKIE',
-	  'UJF_DOC', 'UJF_DOC_CLUSTER', '/AIF/PERS_XML', 'SE16N_CD_DATA', 'SE16N_CD_KEY',
-	  'RSBKDATA', 'RSBKDATAINFO', 'RSBKDATAPAKID', 'RSBKDATAPAKSEL',
-	  'ECLOG_CALL', 'ECLOG_DATA', 'ECLOG_EXEC', 'ECLOG_EXT', 'ECLOG_HEAD', 'ECLOG_RESTAB', 
-	  'ECLOG_SCNT', 'ECLOG_SCR', 'ECLOG_SEL', 'ECLOG_XDAT',
-	  'CROSS', 'WBCROSSGT', 'WBCROSSI', 'OBJECT_HISTORY', '/SSF/PTAB'
-	) OR
-	  ( T.TABLE_NAME LIKE 'GLOBAL%' AND T.SCHEMA_NAME = '_SYS_STATISTICS' ) OR
-	  ( T.TABLE_NAME LIKE 'HOST%' AND T.SCHEMA_NAME = '_SYS_STATISTICS' ) OR
-	  T.TABLE_NAME LIKE 'ZARIX%' OR
-	  T.TABLE_NAME LIKE '/BI0/0%' OR
-	  T.TABLE_NAME LIKE '/BIC/B%' OR
-	  T.TABLE_NAME LIKE '/BI_/H%' OR
-	  T.TABLE_NAME LIKE '/BI_/I%' OR
-	  T.TABLE_NAME LIKE '/BI_/J%' OR
-	  T.TABLE_NAME LIKE '/BI_/K%' OR
-	  T.TABLE_NAME LIKE '`$BPC`$HC$%' OR
-	  T.TABLE_NAME LIKE '`$BPC`$TMP%'
-	  THEN 'X' ELSE ' ' END B,
-	( SELECT COUNT(*) FROM INDEXES I WHERE I.SCHEMA_NAME = T.SCHEMA_NAME AND I.TABLE_NAME = T.TABLE_NAME AND I.INDEX_TYPE LIKE '%UNIQUE%' ) UNIQUE_INDEXES,
-	CASE WHEN T.IS_COLUMN_TABLE = 'FALSE' THEN 'ROW' ELSE 'COLUMN' END STORE,
-	( SELECT COUNT(*) FROM TABLE_COLUMNS C WHERE C.SCHEMA_NAME = T.SCHEMA_NAME AND C.TABLE_NAME = T.TABLE_NAME ) COLS,
-	T.RECORD_COUNT RECORDS,
-	T.TABLE_SIZE / 1024 / 1024 TABLE_MEM_MB,
-	TS.LOADED,
-	TS.MAX_MEM_MB,
-	TP.DISK_SIZE / 1024 / 1024 TOTAL_DISK_MB,
-	( SELECT GREATEST(COUNT(*), 1) FROM M_CS_PARTITIONS P WHERE P.SCHEMA_NAME = T.SCHEMA_NAME AND P.TABLE_NAME = T.TABLE_NAME ) PARTITIONS,
-	( SELECT COUNT(*) FROM INDEXES I WHERE I.SCHEMA_NAME = T.SCHEMA_NAME AND I.TABLE_NAME = T.TABLE_NAME ) INDEXES,
-	( SELECT IFNULL(SUM(INDEX_SIZE), 0) / 1024 / 1024 FROM M_RS_INDEXES I WHERE I.SCHEMA_NAME = T.SCHEMA_NAME AND I.TABLE_NAME = T.TABLE_NAME ) INDEX_MEM_RS_MB,
-	( SELECT 
-		IFNULL(SUM
-		( CASE INTERNAL_ATTRIBUTE_TYPE
-			WHEN 'TREX_UDIV'         THEN 0                             /* technical necessity, completely treated as `"table`" */
-			WHEN 'ROWID'             THEN 0                             /* technical necessity, completely treated as `"table`" */
-			WHEN 'VALID_FROM'        THEN 0                             /* technical necessity, completely treated as `"table`" */
-			WHEN 'VALID_TO'          THEN 0                             /* technical necessity, completely treated as `"table`" */
-			WHEN 'TEXT'              THEN MEMORY_SIZE_IN_TOTAL          /* both concat attribute and index on it treated as`"index`" */
-			WHEN 'TREX_EXTERNAL_KEY' THEN MEMORY_SIZE_IN_TOTAL          /* both concat attribute and index on it treated as `"index`" */
-			WHEN 'UNKNOWN'           THEN MEMORY_SIZE_IN_TOTAL          /* both concat attribute and index on it treated as `"index`" */
-			WHEN 'CONCAT_ATTRIBUTE'  THEN MEMORY_SIZE_IN_TOTAL          /* both concat attribute and index on it treated as `"index`" */
-			ELSE MAIN_MEMORY_SIZE_IN_INDEX + DELTA_MEMORY_SIZE_IN_INDEX /* index structures on single columns treated as `"index`" */
-		  END
-		), 0) / 1024 / 1024
-	  FROM 
-		M_CS_ALL_COLUMNS C 
-	  WHERE 
-		C.SCHEMA_NAME = T.SCHEMA_NAME AND 
-		C.TABLE_NAME = T.TABLE_NAME
-	) INDEX_MEM_CS_MB,
-	( SELECT IFNULL(MAX(MAP(CS_DATA_TYPE_NAME, 'ST_MEMORY_LOB', 'M', 'LOB', 'H', 'ST_DISK_LOB', 'D', 'U')), '') || COUNT(*)
-		FROM TABLE_COLUMNS C 
-	  WHERE C.SCHEMA_NAME = T.SCHEMA_NAME AND C.TABLE_NAME = T.TABLE_NAME AND DATA_TYPE_NAME IN ( 'BLOB', 'CLOB', 'NCLOB', 'TEXT' ) ) LOBS,
-	( SELECT IFNULL(SUM(PHYSICAL_SIZE), 0) / 1024 / 1024 FROM M_TABLE_LOB_FILES L WHERE L.SCHEMA_NAME = T.SCHEMA_NAME AND L.TABLE_NAME = T.TABLE_NAME ) LOB_MB,
-	BI.ONLY_TECHNICAL_TABLES,
-	BI.RESULT_ROWS,
-	BI.ORDER_BY
-  FROM
-  ( SELECT                                       /* Modification section */
-	  '%' SCHEMA_NAME,
-	  '%' TABLE_NAME,
-	  '%' STORE,                             /* ROW, COLUMN, % */
-	  ' ' ONLY_TECHNICAL_TABLES,
-	  50 RESULT_ROWS,
-	  'TOTAL_DISK' ORDER_BY                    /* TOTAL_DISK, CURRENT_MEM, MAX_MEM, TABLE_MEM, INDEX_MEM */
-	FROM
-	  DUMMY
-  ) BI,
-	M_TABLES T,
-	( SELECT 
-		SCHEMA_NAME, 
-		TABLE_NAME, 
-		MAP(MIN(HOST), MAX(HOST), MIN(HOST), 'various') HOST, 
-		MAP(MAX(LOADED), 'NO', 'N', 'FULL', 'Y', 'PARTIALLY', 'P') LOADED,
-		SUM(ESTIMATED_MAX_MEMORY_SIZE_IN_TOTAL) / 1024 / 1024 MAX_MEM_MB
-	  FROM 
-		M_CS_TABLES 
-	  GROUP BY 
-		SCHEMA_NAME, 
-		TABLE_NAME 
-	  UNION
-	  ( SELECT 
-		  SCHEMA_NAME, 
-		  TABLE_NAME, 
-		  MAP(MIN(HOST), MAX(HOST), MIN(HOST), 'various') HOST, 
-		  'Y' LOADED,
-		  NULL MAX_MEM_MB
-		FROM 
-		  M_RS_TABLES 
-		GROUP BY 
-		  SCHEMA_NAME, 
-		  TABLE_NAME 
-	  )
-	) TS,
-	M_TABLE_PERSISTENCE_STATISTICS TP
-  WHERE
-	T.SCHEMA_NAME LIKE BI.SCHEMA_NAME AND
-	T.TABLE_NAME LIKE BI.TABLE_NAME AND
-	T.SCHEMA_NAME = TP.SCHEMA_NAME AND
-	T.TABLE_NAME = TP.TABLE_NAME AND
-	T.SCHEMA_NAME = TS.SCHEMA_NAME AND
-	T.TABLE_NAME = TS.TABLE_NAME AND
-	( BI.STORE = '%' OR
-	  BI.STORE = 'ROW' AND T.IS_COLUMN_TABLE = 'FALSE' OR
-	  BI.STORE = 'COLUMN' AND T.IS_COLUMN_TABLE = 'TRUE'
-	)
-)
-WHERE
-  ( ONLY_TECHNICAL_TABLES = ' ' OR B = 'X' )
-)
-WHERE
-( RESULT_ROWS = -1 OR ROW_NUM <= RESULT_ROWS )
-ORDER BY
-ROW_NUM
-"
-	   $cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-		  $ds=New-Object system.Data.DataSet ;
-	  $ex=$null
-		  Try{
-			  $cmd.fill($ds)|out-null
-		  }
-		  Catch
-		  {
-			  $Ex=$_.Exception.MEssage;write-warning "Failed to run Query40"
-			  write-warning  $ex 
-		  }
-		   
-
-		  
-		  $Resultsinv=$null
-		  [System.Collections.ArrayList]$Resultsinv=@(); 
-
-
-		  IF($ds[0].Tables.rows)
-		  {
-			  foreach ($row in $ds.Tables[0].rows)
-			  {
-				  $resultsinv.Add([PSCustomObject]@{
-					  HOST=$row.HOST.ToLower()
-					  Instance=$sapinstance
-					  CollectorType="Inventory"
-					  Category="Tables"
-					  Subcategory="Largest"
-					  Database=$Hanadb
-					  TableName=$row.TABLE_NAME
-					  StoreType=$row.S
-					  Loaded=$row.L
-					  POS=$row.POS
-					  COLS=$row.COLS
-					  RECORDS=[long]$row.RECORDS    
-				  })|Out-Null
-			  }
-			  
-		  }
-
-            If($resultsinv)
-			{
-				$jsonlogs=$null
-				$dataitem=$null
-				
-                $jsonlogs= ConvertTo-Json -InputObject $resultsinv
-					$post=$null; 
-					$post=Post-OMSData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
-					if ($post -in (200..299))
-					{
-						$AzLAUploadsuccess++
-					}Else
-					{
-						$AzLAUploaderror++
-					}
-			
-			}
-
-
-$query="/* OMS -Query41 */WITH  
+$query="/* OMS -Query29 */WITH  
 TEMP_INDEXES AS
 ( SELECT
     *
@@ -9953,7 +9641,7 @@ WITH HINT (NO_SUBPLAN_SHARING)
 "
 			$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
 			$ds=New-Object system.Data.DataSet ;
-            Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query41 CollectorType=State , Category=ConfigurationCheck"  
+            Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query29 CollectorType=State , Category=ConfigurationCheck"  
 
 $ex=$null
 			Try{
@@ -9961,7 +9649,7 @@ $ex=$null
 			}
 			Catch
 			{
-				$Ex=$_.Exception.MEssage;write-warning "Failed to run Query41"
+				$Ex=$_.Exception.MEssage;write-warning "Failed to run Query29"
 			}
 			      
 
@@ -10030,11 +9718,332 @@ $ex=$null
 			
 			}
 
-
  
 
- }
+}
+ #endregion
 
+#region Hana Table Inventory
+IF($runmode -eq 'daily'  -and $collecttableinv -eq $true)  #run only in daily schedule  with Table inventory switch 
+ {
+
+    Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query22 CollectorType=Inventory - Category=Tables - Largest"	
+
+	  $query="/* OMS -Query22*/SELECT OWNER,
+TABLE_NAME,
+S,                                        /* 'C' --> column store, 'R' --> row store */
+LOADED L,                                 /* 'Y' --> fully loaded, 'P' --> partially loaded, 'N' --> not loaded */
+HOST,
+B T,                                      /* 'X' if table belongs to list of technical tables (SAP Note 2388483) */
+U,                                        /* 'X' if unique index exists for table */
+LPAD(ROW_NUM, 3) POS,
+LPAD(COLS, 4) COLS,
+LPAD(RECORDS, 12) RECORDS,
+LPAD(TO_DECIMAL(TOTAL_DISK_MB / 1024, 10, 2), 7) DISK_GB,
+LPAD(TO_DECIMAL(MAX_TOTAL_MEM_MB / 1024, 10, 2), 10) MAX_MEM_GB,
+LPAD(TO_DECIMAL(TOTAL_MEM_MB / 1024, 10, 2), 10) CUR_MEM_GB,
+LPAD(TO_DECIMAL(`"TO`TAL_MEM_%`", 9, 2), 5) `"MEM_%`",
+LPAD(TO_DECIMAL(SUM(`"TOTAL_MEM_%`") OVER (ORDER BY ROW_NUM), 5, 2), 5) `"CUM_%`",
+LPAD(PARTITIONS, 5) `"PART.`",
+LPAD(TO_DECIMAL(TABLE_MEM_MB / 1024, 10, 2), 10) TAB_MEM_GB,
+LPAD(INDEXES, 4) `"IND.`",
+LPAD(TO_DECIMAL(INDEX_MEM_MB / 1024, 10, 2), 10) IND_MEM_GB,
+LPAD(LOBS, 4) LOBS,
+LPAD(TO_DECIMAL(LOB_MB / 1024, 10, 2), 6) LOB_GB
+FROM
+( SELECT
+  OWNER,
+  TABLE_NAME,
+  HOST,
+  B,
+  CASE WHEN UNIQUE_INDEXES = 0 THEN ' ' ELSE 'X' END U,
+  MAP(STORE, 'COLUMN', 'C', 'ROW', 'R') S,
+  COLS,
+  RECORDS,
+  TABLE_MEM_MB + INDEX_MEM_RS_MB TOTAL_MEM_MB,
+  IFNULL(MAX_MEM_MB, TABLE_MEM_MB + INDEX_MEM_RS_MB) MAX_TOTAL_MEM_MB,
+  TABLE_MEM_MB - INDEX_MEM_CS_MB TABLE_MEM_MB,             /* Indexes are contained in CS table size */
+  LOADED,
+  TOTAL_DISK_MB,
+  CASE 
+	WHEN SUM(TABLE_MEM_MB + INDEX_MEM_RS_MB) OVER () * 100 = 0 THEN 0 
+	ELSE (TABLE_MEM_MB +  INDEX_MEM_RS_MB) / SUM(TABLE_MEM_MB + INDEX_MEM_RS_MB) OVER () * 100 
+  END `"TOTAL_MEM_%`",
+  PARTITIONS,
+  INDEXES,
+  INDEX_MEM_RS_MB + INDEX_MEM_CS_MB INDEX_MEM_MB,
+  LOBS,
+  LOB_MB,
+  ROW_NUMBER () OVER ( ORDER BY MAP ( ORDER_BY, 
+	'TOTAL_DISK',  TOTAL_DISK_MB, 
+	'CURRENT_MEM', TABLE_MEM_MB + INDEX_MEM_RS_MB, 
+	'MAX_MEM',     IFNULL(MAX_MEM_MB, TABLE_MEM_MB + INDEX_MEM_RS_MB),
+	'TABLE_MEM',   TABLE_MEM_MB - INDEX_MEM_CS_MB, 
+	'INDEX_MEM',   INDEX_MEM_RS_MB + INDEX_MEM_CS_MB ) 
+	DESC, OWNER,   TABLE_NAME ) ROW_NUM,
+  RESULT_ROWS,
+  ORDER_BY
+FROM
+( SELECT
+	T.SCHEMA_NAME OWNER,
+	T.TABLE_NAME,
+	TS.HOST,
+	CASE WHEN T.TABLE_NAME IN
+	( 'BALHDR', 'BALHDRP', 'BALM', 'BALMP', 'BALDAT', 'BALC', 
+	  'BAL_INDX', 'EDIDS', 'EDIDC', 'EDIDOC', 'EDI30C', 'EDI40', 'EDID4',
+	  'IDOCREL', 'SRRELROLES', 'SWFGPROLEINST', 'SWP_HEADER', 'SWP_NODEWI', 'SWPNODE',
+	  'SWPNODELOG', 'SWPSTEPLOG', 'SWW_CONT', 'SWW_CONTOB', 'SWW_WI2OBJ', 'SWWCNTP0',
+	  'SWWCNTPADD', 'SWWEI', 'SWWLOGHIST', 'SWWLOGPARA', 'SWWWIDEADL', 'SWWWIHEAD', 
+	  'SWWWIRET', 'SWZAI', 'SWZAIENTRY', 'SWZAIRET', 'SWWUSERWI',                  
+	  'BDCP', 'BDCPS', 'BDCP2', 'DBTABLOG', 'DBTABPRT', 
+	  'ARFCSSTATE', 'ARFCSDATA', 'ARFCRSTATE', 'TRFCQDATA',
+	  'TRFCQIN', 'TRFCQOUT', 'TRFCQSTATE', 'SDBAH', 'SDBAD', 'DBMSGORA', 'DDLOG',
+	  'APQD', 'TST01', 'TST03', 'TSPEVJOB', 'TXMILOGRAW', 'TSPEVDEV', 
+	  'SNAP', 'SMO8FTCFG', 'SMO8FTSTP', 'SMO8_TMSG', 'SMO8_TMDAT', 
+	  'SMO8_DLIST', 'SMW3_BDOC', 'SMW3_BDOC1', 'SMW3_BDOC2', 
+	  'SMW3_BDOC4', 'SMW3_BDOC5', 'SMW3_BDOC6', 'SMW3_BDOC7', 'SMW3_BDOCQ', 'SMWT_TRC',
+	  'TPRI_PAR', 'RSBMLOGPAR', 'RSBMLOGPAR_DTP', 'RSBMNODES', 'RSBMONMESS',
+	  'RSBMONMESS_DTP', 'RSBMREQ_DTP', 'RSCRTDONE', 'RSDELDONE', 'RSHIEDONE',
+	  'RSLDTDONE', 'RSMONFACT', 'RSMONICTAB', 'RSMONIPTAB', 'RSMONMESS', 'RSMONRQTAB', 'RSREQDONE',
+	  'RSRULEDONE', 'RSSELDONE', 'RSTCPDONE', 'RSUICDONE',
+	  'VBDATA', 'VBMOD', 'VBHDR', 'VBERROR', 'ENHLOG',
+	  'VDCHGPTR', 'JBDCPHDR2', 'JBDCPPOS2', 'SWELOG', 'SWELTS', 'SWFREVTLOG',
+	  'ARDB_STAT0', 'ARDB_STAT1', 'ARDB_STAT2', 'TAAN_DATA', 'TAAN_FLDS', 'TAAN_HEAD', 'QRFCTRACE', 'QRFCLOG',
+	  'DDPRS', 'TBTCO', 'TBTCP', 'TBTCS', 'MDMFDBEVENT', 'MDMFDBID', 'MDMFDBPR',
+	  'RSRWBSTORE', 'RSRWBINDEX', '/SAPAPO/LISMAP', '/SAPAPO/LISLOG', 
+	  'CCMLOG', 'CCMLOGD', 'CCMSESSION', 'CCMOBJLST', 'CCMOBJKEYS',
+	  'RSBATCHCTRL', 'RSBATCHCTRL_PAR', 'RSBATCHDATA', 'RSBATCHHEADER', 'RSBATCHPROT', 'RSBATCHSTACK',
+	  'SXMSPMAST', 'SXMSPMAST2', 'SXMSPHIST', 
+	  'SXMSPHIST2', 'SXMSPFRAWH', 'SXMSPFRAWD', 'SXMSCLUR', 'SXMSCLUR2', 'SXMSCLUP',
+	  'SXMSCLUP2', 'SWFRXIHDR', 'SWFRXICNT', 'SWFRXIPRC', 
+	  'XI_AF_MSG', 'XI_AF_MSG_AUDIT', 'BC_MSG', 'BC_MSG_AUDIT',
+	  'SMW0REL', 'SRRELROLES', 'COIX_DATA40', 'T811E', 'T811ED', 
+	  'T811ED2', 'RSDDSTATAGGR', 'RSDDSTATAGGRDEF', 'RSDDSTATCOND', 'RSDDSTATDTP',
+	  'RSDDSTATDELE', 'RSDDSTATDM', 'RSDDSTATEVDATA', 'RSDDSTATHEADER',
+	  'RSDDSTATINFO', 'RSDDSTATLOGGING', 'RSERRORHEAD', 'RSERRORLOG',
+	  'DFKKDOUBTD_W', 'DFKKDOUBTD_RET_W', 'RSBERRORLOG', 'INDX',
+	  'SOOD', 'SOOS', 'SOC3', 'SOFFCONT1', 'BCST_SR', 'BCST_CAM',
+	  'SICFRECORDER', 'CRM_ICI_TRACES', 'RSPCINSTANCE', 'RSPCINSTANCET',
+	  'GVD_BGPROCESS', 'GVD_BUFF_POOL_ST', 'GVD_LATCH_MISSES', 
+	  'GVD_ENQUEUE_STAT', 'GVD_FILESTAT', 'GVD_INSTANCE',    
+	  'GVD_PGASTAT', 'GVD_PGA_TARGET_A', 'GVD_PGA_TARGET_H',
+	  'GVD_SERVERLIST', 'GVD_SESSION_EVT', 'GVD_SESSION_WAIT',
+	  'GVD_SESSION', 'GVD_PROCESS', 'GVD_PX_SESSION',  
+	  'GVD_WPTOTALINFO', 'GVD_ROWCACHE', 'GVD_SEGMENT_STAT',
+	  'GVD_SESSTAT', 'GVD_SGACURRRESIZ', 'GVD_SGADYNFREE',  
+	  'GVD_SGA', 'GVD_SGARESIZEOPS', 'GVD_SESS_IO',     
+	  'GVD_SGASTAT', 'GVD_SGADYNCOMP', 'GVD_SEGSTAT',     
+	  'GVD_SPPARAMETER', 'GVD_SHAR_P_ADV', 'GVD_SQLAREA',     
+	  'GVD_SQL', 'GVD_SQLTEXT', 'GVD_SQL_WA_ACTIV',
+	  'GVD_SQL_WA_HISTO', 'GVD_SQL_WORKAREA', 'GVD_SYSSTAT',     
+	  'GVD_SYSTEM_EVENT', 'GVD_DATABASE', 'GVD_CURR_BLKSRV', 
+	  'GVD_DATAGUARD_ST', 'GVD_DATAFILE', 'GVD_LOCKED_OBJEC',
+	  'GVD_LOCK_ACTIVTY', 'GVD_DB_CACHE_ADV', 'GVD_LATCHHOLDER', 
+	  'GVD_LATCHCHILDS', 'GVD_LATCH', 'GVD_LATCHNAME',   
+	  'GVD_LATCH_PARENT', 'GVD_LIBRARYCACHE', 'GVD_LOCK',        
+	  'GVD_MANGD_STANBY', 'GVD_OBJECT_DEPEN', 'GVD_PARAMETER',   
+	  'GVD_LOGFILE', 'GVD_PARAMETER2', 'GVD_TEMPFILE',    
+	  'GVD_UNDOSTAT', 'GVD_WAITSTAT', 'ORA_SNAPSHOT',
+	  '/TXINTF/TRACE', 'RSECLOG', 'RSECUSERAUTH_CL', 'RSWR_DATA',
+	  'RSECVAL_CL', 'RSECHIE_CL', 'RSECTXT_CL', 'RSECSESSION_CL',
+	  'UPC_STATISTIC', 'UPC_STATISTIC2', 'UPC_STATISTIC3',
+	  'RSTT_CALLSTACK', 'RSZWOBJ', 'RSIXWWW', 'RSZWBOOKMARK', 'RSZWVIEW', 
+	  'RSZWITEM', 'RSR_CACHE_DATA_B', 'RSR_CACHE_DATA_C', 'RSR_CACHE_DBS_BL',
+	  'RSR_CACHE_FFB', 'RSR_CACHE_QUERY', 'RSR_CACHE_STATS',
+	  'RSR_CACHE_VARSHB', 'WRI`$_OPTSTAT_HISTGRM_HISTORY',
+	  'WRI`$_OPTSTAT_HISTHEAD_HISTORY', 'WRI`$_OPTSTAT_IND_HISTORY',
+	  'WRI`$_OPTSTAT_TAB_HISTORY', 'WRH`$_ACTIVE_SESSION_HISTORY',
+	  'RSODSACTUPDTYPE', 'TRFC_I_SDATA', 'TRFC_I_UNIT', 'TRFC_I_DEST', 
+	  'TRFC_I_UNIT_LOCK', 'TRFC_I_EXE_STATE', 'TRFC_I_ERR_STATE',
+	  'DYNPSOURCE', 'DYNPLOAD', 'D010TAB', 'REPOSRC', 'REPOLOAD',
+	  'RSOTLOGOHISTORY', 'SQLMD', '/SDF/ZQLMD', 'RSSTATMANREQMDEL',
+	  'RSSTATMANREQMAP', 'RSICPROT', 'RSPCPROCESSLOG',
+	  'DSVASRESULTSGEN', 'DSVASRESULTSSEL', 'DSVASRESULTSCHK', 
+	  'DSVASRESULTSATTR', 'DSVASREPODOCS', 'DSVASSESSADMIN', 'DOKCLU',
+	  'ORA_SQLC_HEAD', 'ORA_SQLC_DATA', 'CS_AUDIT_LOG_', 'RSBKSELECT',
+	  'SWN_NOTIF', 'SWN_NOTIFTSTMP', 'SWN_SENDLOG', 'JOB_LOG',
+	  'SWNCMONI', 'BC_SLD_CHANGELOG', 'ODQDATA_F', 'STATISTICS_ALERTS', 'STATISTICS_ALERTS_BASE',
+	  'SRT_UTIL_ERRLOG', 'SRT_MONILOG_DATA', 'SRT_RTC_DT_RT', 'SRT_RTC_DATA', 'SRT_RTC_DATA_RT', 
+	  'SRT_CDTC', 'SRT_MMASTER', 'SRT_SEQ_HDR_STAT', 'SRTM_SUB', 'SRT_SEQ_REORG',
+	  'UJ0_STAT_DTL', 'UJ0_STAT_HDR', '/SAPTRX/APPTALOG', '/SAPTRX/AOTREF', 'SSCOOKIE',
+	  'UJF_DOC', 'UJF_DOC_CLUSTER', '/AIF/PERS_XML', 'SE16N_CD_DATA', 'SE16N_CD_KEY',
+	  'RSBKDATA', 'RSBKDATAINFO', 'RSBKDATAPAKID', 'RSBKDATAPAKSEL',
+	  'ECLOG_CALL', 'ECLOG_DATA', 'ECLOG_EXEC', 'ECLOG_EXT', 'ECLOG_HEAD', 'ECLOG_RESTAB', 
+	  'ECLOG_SCNT', 'ECLOG_SCR', 'ECLOG_SEL', 'ECLOG_XDAT',
+	  'CROSS', 'WBCROSSGT', 'WBCROSSI', 'OBJECT_HISTORY', '/SSF/PTAB'
+	) OR
+	  ( T.TABLE_NAME LIKE 'GLOBAL%' AND T.SCHEMA_NAME = '_SYS_STATISTICS' ) OR
+	  ( T.TABLE_NAME LIKE 'HOST%' AND T.SCHEMA_NAME = '_SYS_STATISTICS' ) OR
+	  T.TABLE_NAME LIKE 'ZARIX%' OR
+	  T.TABLE_NAME LIKE '/BI0/0%' OR
+	  T.TABLE_NAME LIKE '/BIC/B%' OR
+	  T.TABLE_NAME LIKE '/BI_/H%' OR
+	  T.TABLE_NAME LIKE '/BI_/I%' OR
+	  T.TABLE_NAME LIKE '/BI_/J%' OR
+	  T.TABLE_NAME LIKE '/BI_/K%' OR
+	  T.TABLE_NAME LIKE '`$BPC`$HC$%' OR
+	  T.TABLE_NAME LIKE '`$BPC`$TMP%'
+	  THEN 'X' ELSE ' ' END B,
+	( SELECT COUNT(*) FROM INDEXES I WHERE I.SCHEMA_NAME = T.SCHEMA_NAME AND I.TABLE_NAME = T.TABLE_NAME AND I.INDEX_TYPE LIKE '%UNIQUE%' ) UNIQUE_INDEXES,
+	CASE WHEN T.IS_COLUMN_TABLE = 'FALSE' THEN 'ROW' ELSE 'COLUMN' END STORE,
+	( SELECT COUNT(*) FROM TABLE_COLUMNS C WHERE C.SCHEMA_NAME = T.SCHEMA_NAME AND C.TABLE_NAME = T.TABLE_NAME ) COLS,
+	T.RECORD_COUNT RECORDS,
+	T.TABLE_SIZE / 1024 / 1024 TABLE_MEM_MB,
+	TS.LOADED,
+	TS.MAX_MEM_MB,
+	TP.DISK_SIZE / 1024 / 1024 TOTAL_DISK_MB,
+	( SELECT GREATEST(COUNT(*), 1) FROM M_CS_PARTITIONS P WHERE P.SCHEMA_NAME = T.SCHEMA_NAME AND P.TABLE_NAME = T.TABLE_NAME ) PARTITIONS,
+	( SELECT COUNT(*) FROM INDEXES I WHERE I.SCHEMA_NAME = T.SCHEMA_NAME AND I.TABLE_NAME = T.TABLE_NAME ) INDEXES,
+	( SELECT IFNULL(SUM(INDEX_SIZE), 0) / 1024 / 1024 FROM M_RS_INDEXES I WHERE I.SCHEMA_NAME = T.SCHEMA_NAME AND I.TABLE_NAME = T.TABLE_NAME ) INDEX_MEM_RS_MB,
+	( SELECT 
+		IFNULL(SUM
+		( CASE INTERNAL_ATTRIBUTE_TYPE
+			WHEN 'TREX_UDIV'         THEN 0                             /* technical necessity, completely treated as `"table`" */
+			WHEN 'ROWID'             THEN 0                             /* technical necessity, completely treated as `"table`" */
+			WHEN 'VALID_FROM'        THEN 0                             /* technical necessity, completely treated as `"table`" */
+			WHEN 'VALID_TO'          THEN 0                             /* technical necessity, completely treated as `"table`" */
+			WHEN 'TEXT'              THEN MEMORY_SIZE_IN_TOTAL          /* both concat attribute and index on it treated as`"index`" */
+			WHEN 'TREX_EXTERNAL_KEY' THEN MEMORY_SIZE_IN_TOTAL          /* both concat attribute and index on it treated as `"index`" */
+			WHEN 'UNKNOWN'           THEN MEMORY_SIZE_IN_TOTAL          /* both concat attribute and index on it treated as `"index`" */
+			WHEN 'CONCAT_ATTRIBUTE'  THEN MEMORY_SIZE_IN_TOTAL          /* both concat attribute and index on it treated as `"index`" */
+			ELSE MAIN_MEMORY_SIZE_IN_INDEX + DELTA_MEMORY_SIZE_IN_INDEX /* index structures on single columns treated as `"index`" */
+		  END
+		), 0) / 1024 / 1024
+	  FROM 
+		M_CS_ALL_COLUMNS C 
+	  WHERE 
+		C.SCHEMA_NAME = T.SCHEMA_NAME AND 
+		C.TABLE_NAME = T.TABLE_NAME
+	) INDEX_MEM_CS_MB,
+	( SELECT IFNULL(MAX(MAP(CS_DATA_TYPE_NAME, 'ST_MEMORY_LOB', 'M', 'LOB', 'H', 'ST_DISK_LOB', 'D', 'U')), '') || COUNT(*)
+		FROM TABLE_COLUMNS C 
+	  WHERE C.SCHEMA_NAME = T.SCHEMA_NAME AND C.TABLE_NAME = T.TABLE_NAME AND DATA_TYPE_NAME IN ( 'BLOB', 'CLOB', 'NCLOB', 'TEXT' ) ) LOBS,
+	( SELECT IFNULL(SUM(PHYSICAL_SIZE), 0) / 1024 / 1024 FROM M_TABLE_LOB_FILES L WHERE L.SCHEMA_NAME = T.SCHEMA_NAME AND L.TABLE_NAME = T.TABLE_NAME ) LOB_MB,
+	BI.ONLY_TECHNICAL_TABLES,
+	BI.RESULT_ROWS,
+	BI.ORDER_BY
+  FROM
+  ( SELECT                                       /* Modification section */
+	  '%' SCHEMA_NAME,
+	  '%' TABLE_NAME,
+	  '%' STORE,                             /* ROW, COLUMN, % */
+	  ' ' ONLY_TECHNICAL_TABLES,
+	  50 RESULT_ROWS,
+	  'TOTAL_DISK' ORDER_BY                    /* TOTAL_DISK, CURRENT_MEM, MAX_MEM, TABLE_MEM, INDEX_MEM */
+	FROM
+	  DUMMY
+  ) BI,
+	M_TABLES T,
+	( SELECT 
+		SCHEMA_NAME, 
+		TABLE_NAME, 
+		MAP(MIN(HOST), MAX(HOST), MIN(HOST), 'various') HOST, 
+		MAP(MAX(LOADED), 'NO', 'N', 'FULL', 'Y', 'PARTIALLY', 'P') LOADED,
+		SUM(ESTIMATED_MAX_MEMORY_SIZE_IN_TOTAL) / 1024 / 1024 MAX_MEM_MB
+	  FROM 
+		M_CS_TABLES 
+	  GROUP BY 
+		SCHEMA_NAME, 
+		TABLE_NAME 
+	  UNION
+	  ( SELECT 
+		  SCHEMA_NAME, 
+		  TABLE_NAME, 
+		  MAP(MIN(HOST), MAX(HOST), MIN(HOST), 'various') HOST, 
+		  'Y' LOADED,
+		  NULL MAX_MEM_MB
+		FROM 
+		  M_RS_TABLES 
+		GROUP BY 
+		  SCHEMA_NAME, 
+		  TABLE_NAME 
+	  )
+	) TS,
+	M_TABLE_PERSISTENCE_STATISTICS TP
+  WHERE
+	T.SCHEMA_NAME LIKE BI.SCHEMA_NAME AND
+	T.TABLE_NAME LIKE BI.TABLE_NAME AND
+	T.SCHEMA_NAME = TP.SCHEMA_NAME AND
+	T.TABLE_NAME = TP.TABLE_NAME AND
+	T.SCHEMA_NAME = TS.SCHEMA_NAME AND
+	T.TABLE_NAME = TS.TABLE_NAME AND
+	( BI.STORE = '%' OR
+	  BI.STORE = 'ROW' AND T.IS_COLUMN_TABLE = 'FALSE' OR
+	  BI.STORE = 'COLUMN' AND T.IS_COLUMN_TABLE = 'TRUE'
+	)
+)
+WHERE
+  ( ONLY_TECHNICAL_TABLES = ' ' OR B = 'X' )
+)
+WHERE
+( RESULT_ROWS = -1 OR ROW_NUM <= RESULT_ROWS )
+ORDER BY
+ROW_NUM
+"
+	   $cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+		  $ds=New-Object system.Data.DataSet ;
+	  $ex=$null
+		  Try{
+			  $cmd.fill($ds)|out-null
+		  }
+		  Catch
+		  {
+			  $Ex=$_.Exception.MEssage;write-warning "Failed to run Query22"
+			  write-warning  $ex 
+		  }
+		   
+
+		  
+		  $Resultsinv=$null
+		  [System.Collections.ArrayList]$Resultsinv=@(); 
+
+
+		  IF($ds[0].Tables.rows)
+		  {
+			  foreach ($row in $ds.Tables[0].rows)
+			  {
+				  $resultsinv.Add([PSCustomObject]@{
+					  HOST=$row.HOST.ToLower()
+					  Instance=$sapinstance
+					  CollectorType="Inventory"
+					  Category="Tables"
+					  Subcategory="Largest"
+					  Database=$Hanadb
+					  TableName=$row.TABLE_NAME
+					  StoreType=$row.S
+					  Loaded=$row.L
+					  POS=$row.POS
+					  COLS=$row.COLS
+					  RECORDS=[long]$row.RECORDS    
+				  })|Out-Null
+			  }
+			
+		  }
+
+           Write-Output "Elapsed Time : $([math]::round($stopwatch.Elapsed.TotalSeconds,0))"
+            If($resultsinv)
+			{
+				$jsonlogs=$null
+				$dataitem=$null
+				
+                $jsonlogs= ConvertTo-Json -InputObject $resultsinv
+					$post=$null; 
+					$post=Post-OMSData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
+					if ($post -in (200..299))
+					{
+						$AzLAUploadsuccess++
+					}Else
+					{
+						$AzLAUploaderror++
+					}
+			
+			}
+
+
+
+
+
+ }
             
             	$colend=get-date
             
@@ -10068,34 +10077,24 @@ $ex=$null
 				{
 
 					write-output " updating last run time to $currentruntime for $rbvariablename "
-					
+	
                     Set-AutomationVariable -Name $rbvariablename  -Value $currentruntime 
 
 				}Else
 				{
 					
                     write-output "Creating last run time for   $rbvariablename with value $currentruntime "
-                New-AzureRmAutomationVariable `
-					-AutomationAccountName $AAAccount `
-					-ResourceGroupName $AAResourceGroup `
-							-Value $currentruntime `
-					-Encrypted 0 `
-					-Name $rbvariablename `
-					-Description "last time collection run"  -EA 0
-				}
+                    New-AzureRmAutomationVariable -Name $rbvariablename  -Encrypted 0 -Description "last time collection run" -Value $currentruntime -ResourceGroupName $AAResourceGroup -AutomationAccountName $AAAccount -Verbose
+                }
                       		
 
 			}
 
 
-
-
-
-#endregion
 			
 			$conn.Close()
 
-#endregion
+
 
 		}Else
 		{

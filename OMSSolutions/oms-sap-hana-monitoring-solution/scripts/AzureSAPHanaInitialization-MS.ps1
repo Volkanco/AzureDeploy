@@ -130,7 +130,7 @@ Do {
 	-StartTime (Get-Variable -Name RBStart"$i").Value
 
 
-		$params = @{"collecttableinv" = $collecttableinv;"configfolder" = $configfolder;"debuglog"=$false;"useManagedIdentity"=$false}
+		$params = @{"collecttableinv" = $collecttableinv;"configfolder" = $configfolder;"debuglog"=$false;"useManagedIdentity"=$false;"runmode"="default"}
 		Register-AzureRmAutomationScheduledRunbook `
 		-AutomationAccountName $AAAccount `
 		-ResourceGroupName  $AAResourceGroup `
@@ -142,7 +142,29 @@ Do {
 }
 While ($i -le $schcount)
 
+#finally create a daily schedule for Configuration Checks
+if($(get-date).Hour -lt 4 )
+{
+    $dailyschedule=Get-Date -Hour 4 -Minute 0 -Second 0
+}Else
+{
+    $dailyschedule=(Get-Date -Hour 4 -Minute 0 -Second 0).adddays(1)
+}
 
+
+New-AzureRmAutomationSchedule  `
+	-AutomationAccountName $AAAccount `
+	-DayInterval 1  `
+	-Name "$collectorScheduleName-Daily"
+	-ResourceGroupName $AAResourceGroup `
+	-StartTime $dailyschedule
+
+		$params = @{"collecttableinv" = $collecttableinv;"configfolder" = $configfolder;"debuglog"=$false;"useManagedIdentity"=$false;"runmode"="daily"}
+		Register-AzureRmAutomationScheduledRunbook `
+		-AutomationAccountName $AAAccount `
+		-ResourceGroupName  $AAResourceGroup `
+		-RunbookName $collectorRunbookName  `
+		-ScheduleName "$collectorScheduleName-Daily"  -Parameters $Params -RunOn $hybridworkergroup
 
 
 
