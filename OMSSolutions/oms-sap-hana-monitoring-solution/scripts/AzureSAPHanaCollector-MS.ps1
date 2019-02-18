@@ -405,10 +405,7 @@ $ex=$null
 			$ex1=$null
 			Try{
 					$lasttimestamp=$null
-				<#$lasttimestamp=Get-AzureRmAutomationVariable `
-				-Name $rbvariablename `
-				-ResourceGroupName $AAResourceGroup `
-				-AutomationAccountName $AAAccount -EA 0#>
+		
                 [datetime]$lasttimestamp=Get-AutomationVariable -Name $rbvariablename
                 Get-AutomationVariable -Name $rbvariablename
 			}

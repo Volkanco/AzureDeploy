@@ -295,6 +295,22 @@ $ex=$null
             $stopwatch=[system.diagnostics.stopwatch]::StartNew()
 
    
+            #get last 15 min 
+              $timequery="/* OMS -Query1 */SELECT CURRENT_TIMESTAMP ,add_seconds(CURRENT_TIMESTAMP,-900 ) as LastTime  FROM DUMMY"
+			$cmd=new-object Sap.Data.Hana.HanaDataAdapter($timequery, $conn);
+			$ds=New-Object system.Data.DataSet ;
+			$ex=$null
+			
+            Try{
+				$cmd.fill($ds)
+			}
+			Catch
+			{
+				$Ex=$_.Exception.MEssage;write-warning "Failed to run Query1"
+			}
+
+			$lastruntime=($ds.Tables[0].rows[0].LastTime).tostring('yyyy-MM-dd HH:mm:ss.FF')
+            $currentruntime=($ds.Tables[0].rows[0].CURRENT_TIMESTAMP).tostring('yyyy-MM-dd HH:mm:ss.FF')
 
 
 			$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
