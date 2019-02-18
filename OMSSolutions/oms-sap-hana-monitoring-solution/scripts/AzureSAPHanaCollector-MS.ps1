@@ -10369,12 +10369,12 @@ ROW_NUM
 		}Else
 		{
 
-			#send connectivity failure event
+				#send connectivity failure event
 			
-			[System.Collections.ArrayList]$Omsstateupload=@()
+			$Omsstateupload=@()
 		    write-warning "Uploading connection failed event for $saphost : $hanadb "
 				
-				$Omsstateupload.ADD([PSCustomObject]@{
+				$Omsstateupload+=([PSCustomObject]@{
 					HOST=$saphost
 					 PORT=$sapport
 					 Database=$hanadb
@@ -10383,10 +10383,8 @@ ROW_NUM
 					SubCategory="Host"
 					Connection="Failed"
 					ErrorMessage=$ex
-					PingResult=$pingresult
-					
-				})|out-null
-
+					PingResult=$pingresult					
+				})
 				$jsonlogs=$null
 				
 
