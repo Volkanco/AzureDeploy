@@ -6617,8 +6617,8 @@ FROM
         TO_VARCHAR(SUM(MAP(T.TABLE_NAME, NULL, 0, 1)))
       FROM
       ( SELECT 'QCM_TABLES' NAME, 'QCM%' PATTERN FROM DUMMY UNION ALL
-        SELECT 'BPC_TABLES',      '$BPC$HC$%'    FROM DUMMY UNION ALL
-        SELECT 'BPC_TABLES',      '$BPC$TMP%'    FROM DUMMY
+        SELECT 'BPC_TABLES',      '`$BPC`$HC$%'    FROM DUMMY UNION ALL
+        SELECT 'BPC_TABLES',      '`$BPC`$TMP%'    FROM DUMMY
       ) N LEFT OUTER JOIN
         TEMP_TABLES T ON
           T.TABLE_NAME LIKE N.PATTERN AND
@@ -6710,8 +6710,8 @@ FROM
       WHERE
         ( TABLE_NAME NOT LIKE '/B%/%' OR TABLE_NAME LIKE '/BA1/%' ) AND
         TABLE_NAME NOT LIKE '0BW:BIA%' AND
-        TABLE_NAME NOT LIKE '$BPC$HC$%' AND
-        TABLE_NAME NOT LIKE '$BPC$TMP%' AND
+        TABLE_NAME NOT LIKE '`$BPC`$HC$%' AND
+        TABLE_NAME NOT LIKE '`$BPC`$TMP%' AND
         SUBSTR(TABLE_NAME, 1, 3) != 'TR_' AND            /* BW transformation tables */
         IS_COLUMN_TABLE = 'TRUE' AND
         IS_TEMPORARY = 'FALSE'
@@ -8857,8 +8857,8 @@ FROM
             TC.TABLE_NAME = C.TABLE_NAME AND
             TC.COLUMN_NAME = C.COLUMN_NAME
       ) AC ON
-        ( C.NAME LIKE 'CONCAT_ATTRIBUTES%' AND AC.INTERNAL_ATTRIBUTE_TYPE = 'CONCAT_ATTRIBUTE' AND AC.COLUMN_NAME NOT LIKE '$uc%' OR
-          C.NAME = 'TREX_UDIV_FRAGMENTATION' AND AC.COLUMN_NAME = '$trex_udiv$' )
+        ( C.NAME LIKE 'CONCAT_ATTRIBUTES%' AND AC.INTERNAL_ATTRIBUTE_TYPE = 'CONCAT_ATTRIBUTE' AND AC.COLUMN_NAME NOT LIKE '`$uc%' OR
+          C.NAME = 'TREX_UDIV_FRAGMENTATION' AND AC.COLUMN_NAME = '`$trex_udiv$' )
       GROUP BY
         C.NAME
     )
@@ -9416,7 +9416,7 @@ FROM
     ( SELECT  562,'TABLES', 'MISSING_INVERTED_INDEXES',     'Columns with missing inverted indexes',           '2160391', '=',        '0',             -1,    -1 FROM DUMMY ) UNION ALL 
     ( SELECT  563,'TABLES', 'INDEXES_ON_SPARSE_PREFIXED',   'Indexes on large SPARSE / PREFIXED columns',      '2112604', '=',        '0',             -1,    -1 FROM DUMMY ) UNION ALL 
     ( SELECT  565,'TABLES', 'UDIV_OVERHEAD',                'Tables > 10 Mio. rows and > 200 % UDIV rows',     '2112604', '=',        '0',             -1,    -1 FROM DUMMY ) UNION ALL 
-    ( SELECT  566,'TABLES', 'TREX_UDIV_FRAGMENTATION',      'Tables with fragmented $trex_udiv$ column',       '2112604', '=',        '0',             -1,    -1 FROM DUMMY ) UNION ALL 
+    ( SELECT  566,'TABLES', 'TREX_UDIV_FRAGMENTATION',      'Tables with fragmented `$trex_udiv$ column',       '2112604', '=',        '0',             -1,    -1 FROM DUMMY ) UNION ALL 
     ( SELECT  567,'TABLES', 'LARGE_CS_MVCC_TIMESTAMPS',     'Tables with MVCC timestamps > 5 GB',              '2112604', '=',        '0',             -1,    -1 FROM DUMMY ) UNION ALL 
     ( SELECT  570,'TABLES', 'TEMPORARY_TABLES',             'Number of temporary tables',                      '',        '<=',       '100000',        -1,    -1 FROM DUMMY ) UNION ALL 
     ( SELECT  572,'TABLES', 'NOLOGGING_TABLES',             'Number of NO LOGGING tables',                     '',        '<=',       '7000',          -1,    -1 FROM DUMMY ) UNION ALL 
@@ -10101,10 +10101,10 @@ ROW_NUM
 
 			#send connectivity failure event
 			
-			$Omsstateupload=@()
+			[System.Collections.ArrayList]$Omsstateupload=@()
 		    write-warning "Uploading connection failed event for $saphost : $hanadb "
 				
-				$Omsstateupload+= @([PSCustomObject]@{
+				$Omsstateupload.ADD([PSCustomObject]@{
 					HOST=$saphost
 					 PORT=$sapport
 					 Database=$hanadb
@@ -10115,7 +10115,7 @@ ROW_NUM
 					ErrorMessage=$ex
 					PingResult=$pingresult
 					
-				})
+				})|out-null
 
 				$jsonlogs=$null
 				
