@@ -10298,7 +10298,10 @@ ROW_NUM
 
  Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query4 CollectorType=Inventory - Category=Tables - Largest"	
 
-	  $query="/* OMS -Query44*/SELECT TOP 100 * FROM M_CS_TABLES ORDER by REcord_count desc"
+	  $query="/* OMS -Query44*/SELECT * FROM M_CS_TABLES 
+WHERE TABLE_NAME IN
+(SELECT TOP 50 TABLE_NAME FROM
+( SELECT TABLE_NAME, SUM(RECORD_COUNT) as TOTAL FROM M_CS_TABLES  GROUP BY TABLE_NAME )ORDER by TOTAL DESC)c"
 
 	   $cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
 		  $ds=New-Object system.Data.DataSet ;
@@ -10334,14 +10337,14 @@ ROW_NUM
                         PART_ID=$row.PART_ID
                         SCHEMA_NAME=$row.SCHEMA_NAME
                         MEMORY_SIZE_IN_TOTAL_MB=[math]::Round($row.MEMORY_SIZE_IN_TOTAL/1024/1024,0)
-                        MEMORY_SIZE_IN_MAIN=[math]::Round($row.MEMORY_SIZE_IN_MAIN/1024/1024,0)
-                        MEMORY_SIZE_IN_DELTA =[math]::Round($row.MEMORY_SIZE_IN_DELTA /1024/1024,0)
-                        MEMORY_SIZE_IN_HISTORY_MAIN=[math]::Round($row.MEMORY_SIZE_IN_HISTORY_MAIN/1024/1024,0)
-                        MEMORY_SIZE_IN_HISTORY_DELTA=[math]::Round($row.MEMORY_SIZE_IN_HISTORY_DELTA/1024/1024,0)
-                        MEMORY_SIZE_IN_PAGE_LOADABLE_MAIN=[math]::Round($row.MEMORY_SIZE_IN_PAGE_LOADABLE_MAIN /1024/1024 ,0)
-                        PERSISTENT_MEMORY_SIZE_IN_TOTAL  =[math]::Round($row.PERSISTENT_MEMORY_SIZE_IN_TOTAL/1024/1024,0)
-                        ESTIMATED_MAX_MEMORY_SIZE_IN_TOTAL=[math]::Round($row.ESTIMATED_MAX_MEMORY_SIZE_IN_TOTAL/1024/1024,0)
-                        LAST_ESTIMATED_MEMORY_SIZE =[math]::Round($row.LAST_ESTIMATED_MEMORY_SIZE/1024/1024,0)
+                        MEMORY_SIZE_IN_MAIN_MB=[math]::Round($row.MEMORY_SIZE_IN_MAIN/1024/1024,0)
+                        MEMORY_SIZE_IN_DELTA_MB =[math]::Round($row.MEMORY_SIZE_IN_DELTA /1024/1024,0)
+                        MEMORY_SIZE_IN_HISTORY_MAIN_MB=[math]::Round($row.MEMORY_SIZE_IN_HISTORY_MAIN/1024/1024,0)
+                        MEMORY_SIZE_IN_HISTORY_DELTA_MB=[math]::Round($row.MEMORY_SIZE_IN_HISTORY_DELTA/1024/1024,0)
+                        MEMORY_SIZE_IN_PAGE_LOADABLE_MAIN_MB=[math]::Round($row.MEMORY_SIZE_IN_PAGE_LOADABLE_MAIN /1024/1024 ,0)
+                        PERSISTENT_MEMORY_SIZE_IN_TOTAL_MB  =[math]::Round($row.PERSISTENT_MEMORY_SIZE_IN_TOTAL/1024/1024,0)
+                        ESTIMATED_MAX_MEMORY_SIZE_IN_TOTAL_MB=[math]::Round($row.ESTIMATED_MAX_MEMORY_SIZE_IN_TOTAL/1024/1024,0)
+                        LAST_ESTIMATED_MEMORY_SIZE_MB =[math]::Round($row.LAST_ESTIMATED_MEMORY_SIZE/1024/1024,0)
                         LAST_ESTIMATED_MEMORY_SIZE_TIME  =$row.LAST_ESTIMATED_MEMORY_SIZE_TIME
                         RECORD_COUNT =[long]$row.RECORD_COUNT 
                         RAW_RECORD_COUNT_IN_MAIN   =[long]$row.RAW_RECORD_COUNT_IN_MAIN 
