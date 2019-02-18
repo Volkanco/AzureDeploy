@@ -9997,6 +9997,8 @@ $ex=$null
 IF($runmode -eq 'daily'  -and $collecttableinv -eq $true)  #run only in daily schedule  with Table inventory switch 
  {
 
+ IF($false)
+{
     Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query22 CollectorType=Inventory - Category=Tables - Largest"	
 
 	  $query="/* OMS -Query22*/SELECT OWNER,
@@ -10290,6 +10292,94 @@ ROW_NUM
 			
 		  }
 
+}
+
+### New table query 
+
+ Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query4 CollectorType=Inventory - Category=Tables - Largest"	
+
+	  $query="/* OMS -Query44*/SELECT TOP 100 * FROM M_CS_TABLES ORDER by REcord_count desc"
+
+	   $cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+		  $ds=New-Object system.Data.DataSet ;
+	  $ex=$null
+		  Try{
+			  $cmd.fill($ds)|out-null
+		  }
+		  Catch
+		  {
+			  $Ex=$_.Exception.MEssage;write-warning "Failed to run Query22"
+			  write-warning  $ex 
+		  }
+		   
+
+		  
+		  $Resultsinv=$null
+		  [System.Collections.ArrayList]$Resultsinv=@(); 
+
+
+		  IF($ds[0].Tables.rows)
+		  {
+			  foreach ($row in $ds.Tables[0].rows)
+			  {
+				  $resultsinv.Add([PSCustomObject]@{
+					  HOST=$row.HOST.ToLower()
+                      PORT=$row.Port
+					  Instance=$sapinstance
+					  CollectorType="Inventory"
+					  Category="Tables"
+					  Subcategory="Largest"
+					  Database=$Hanadb
+					  TableName=$row.TABLE_NAME
+                        PART_ID=$row.PART_ID
+                        SCHEMA_NAME=$row.SCHEMA_NAME
+                        MEMORY_SIZE_IN_TOTAL_MB=[math]::Round($row.MEMORY_SIZE_IN_TOTAL/1024/1024,0)
+                        MEMORY_SIZE_IN_MAIN=[math]::Round($row.MEMORY_SIZE_IN_MAIN/1024/1024,0)
+                        MEMORY_SIZE_IN_DELTA =[math]::Round($row.MEMORY_SIZE_IN_DELTA /1024/1024,0)
+                        MEMORY_SIZE_IN_HISTORY_MAIN=[math]::Round($row.MEMORY_SIZE_IN_HISTORY_MAIN/1024/1024,0)
+                        MEMORY_SIZE_IN_HISTORY_DELTA=[math]::Round($row.MEMORY_SIZE_IN_HISTORY_DELTA/1024/1024,0)
+                        MEMORY_SIZE_IN_PAGE_LOADABLE_MAIN=[math]::Round($row.MEMORY_SIZE_IN_PAGE_LOADABLE_MAIN /1024/1024 ,0)
+                        PERSISTENT_MEMORY_SIZE_IN_TOTAL  =[math]::Round($row.PERSISTENT_MEMORY_SIZE_IN_TOTAL/1024/1024,0)
+                        ESTIMATED_MAX_MEMORY_SIZE_IN_TOTAL=[math]::Round($row.ESTIMATED_MAX_MEMORY_SIZE_IN_TOTAL/1024/1024,0)
+                        LAST_ESTIMATED_MEMORY_SIZE =[math]::Round($row.LAST_ESTIMATED_MEMORY_SIZE/1024/1024,0)
+                        LAST_ESTIMATED_MEMORY_SIZE_TIME  =$row.LAST_ESTIMATED_MEMORY_SIZE_TIME
+                        RECORD_COUNT =[long]$row.RECORD_COUNT 
+                        RAW_RECORD_COUNT_IN_MAIN   =[long]$row.RAW_RECORD_COUNT_IN_MAIN 
+                        RAW_RECORD_COUNT_IN_DELTA  =[long]$row.RAW_RECORD_COUNT_IN_DELTA
+                        RAW_RECORD_COUNT_IN_HISTORY_MAIN =[long]$row.RAW_RECORD_COUNT_IN_HISTORY_MAIN   
+                        RAW_RECORD_COUNT_IN_HISTORY_DELTA=[long]$row.RAW_RECORD_COUNT_IN_HISTORY_DELTA  
+                        LAST_COMPRESSED_RECORD_COUNT =[long]$row.LAST_COMPRESSED_RECORD_COUNT 
+                        MAX_UDIV   =$row.MAX_UDIV   
+                        MAX_MERGE_CID=$row.MAX_MERGE_CID
+                        MAX_ROWID  =$row.MAX_ROWID  
+                        IS_DELTA2_ACTIVE =$row.IS_DELTA2_ACTIVE 
+                        IS_DELTA_LOADED  =$row.IS_DELTA_LOADED  
+                        IS_LOG_DELTA =$row.IS_LOG_DELTA 
+                        PERSISTENT_MERGE =$row.PERSISTENT_MERGE 
+                        CREATE_TIME=$row.CREATE_TIME
+                        MODIFY_TIME=$row.MODIFY_TIME
+                        LAST_MERGE_TIME  =$row.LAST_MERGE_TIME  
+                        LAST_REPLAY_LOG_TIME =$row.LAST_REPLAY_LOG_TIME   
+                        LAST_TRUNCATION_TIME =$row.LAST_TRUNCATION_TIME   
+                        LAST_CONSISTENCY_CHECK_TIME=$row.LAST_CONSISTENCY_CHECK_TIME  
+                        LAST_CONSISTENCY_CHECK_ERROR_COUNT=$row.LAST_CONSISTENCY_CHECK_ERROR_COUNT 
+                        LOADED =$row.LOADED 
+                        READ_COUNT =$row.READ_COUNT 
+                        WRITE_COUNT=$row.WRITE_COUNT
+                        MERGE_COUNT=$row.MERGE_COUNT
+                        IS_REPLICA =$row.IS_REPLICA 
+                        UNUSED_RETENTION_PERIOD=$row.UNUSED_RETENTION_PERIOD
+                        PERSISTENT_MEMORY=$row.PERSISTENT_MEMORY 
+				  })|Out-Null
+			  }
+			
+		  }
+
+
+
+
+
+
            Write-Output "Elapsed Time : $([math]::round($stopwatch.Elapsed.TotalSeconds,0))"
             If($resultsinv)
 			{
@@ -10310,7 +10400,7 @@ ROW_NUM
 			}
 
 
-
+ 
 
 
  }
