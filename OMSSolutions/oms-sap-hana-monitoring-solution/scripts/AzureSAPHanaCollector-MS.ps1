@@ -10371,10 +10371,10 @@ ROW_NUM
 
 				#send connectivity failure event
 			
-			$Omsstateupload=@()
+		
 		    write-warning "Uploading connection failed event for $saphost : $hanadb "
 				
-				$Omsstateupload+=([PSCustomObject]@{
+				$Cu=([PSCustomObject]@{
 					HOST=$saphost
 					 PORT=$sapport
 					 Database=$hanadb
@@ -10388,10 +10388,7 @@ ROW_NUM
 				$jsonlogs=$null
 				
 
-				foreach( $dataitem in $Omsstateupload)
-				{
-
-                    $jsonlogs= ConvertTo-Json -InputObject $dataitem
+			   $jsonlogs= ConvertTo-Json -InputObject $cu
 					$post=$null; 
 					$post=Post-OMSData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
 					if ($post -in (200..299))
@@ -10401,7 +10398,7 @@ ROW_NUM
 					{
 						$AzLAUploaderror++
 					}
-				}
+			
 
 			
 
