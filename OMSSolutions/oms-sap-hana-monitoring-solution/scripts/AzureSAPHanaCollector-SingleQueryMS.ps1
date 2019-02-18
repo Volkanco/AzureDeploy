@@ -292,9 +292,9 @@ $ex=$null
 		{	    
 			
             Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Succesfully connected to $hanadb on  $($ins.HanaServer):$($ins.Port)"
-            $stopwatch=[system.diagnostics.stopwatch]::StartNew()
-
-   
+            
+            
+            
             #get last 15 min 
               $timequery="/* OMS -Query1 */SELECT CURRENT_TIMESTAMP ,add_seconds(CURRENT_TIMESTAMP,-900 ) as LastTime  FROM DUMMY"
 			$cmd=new-object Sap.Data.Hana.HanaDataAdapter($timequery, $conn);
@@ -312,6 +312,12 @@ $ex=$null
 			$lastruntime=($ds.Tables[0].rows[0].LastTime).tostring('yyyy-MM-dd HH:mm:ss.FF')
             $currentruntime=($ds.Tables[0].rows[0].CURRENT_TIMESTAMP).tostring('yyyy-MM-dd HH:mm:ss.FF')
 
+            Write-host "Current system time :  $currentruntime"
+            
+            $stopwatch=[system.diagnostics.stopwatch]::StartNew()
+
+   
+            Write-host $Query
 
 			$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
 					$ds=New-Object system.Data.DataSet ;
@@ -324,11 +330,20 @@ $ex=$null
 						$Ex=$_.Exception.MEssage;write-warning $query
 						write-warning  $ex 
 					}
-					
+
+                IF 	($ds.Tables[0].rows)
+                {
 			Write-output "Query run time: 	$([Math]::Round($stopwatch.Elapsed.TotalSeconds,0)) seconds "
-            
-            $ds.Tables[0].rows|select |select -First 10|ft
-1
+            Write-output "First Row"
+            $ds.Tables[0].rows[0]|fl
+            Write-output "First 10 Rows"  
+            $ds.Tables[0].rows|select -First 10|ft
+                }Else
+                {
+                    Write-output "No data returned from query"
+
+                }
+
 
    		
 		$Omsupload=$null
@@ -355,3 +370,4 @@ $ex=$null
 
 
 }
+

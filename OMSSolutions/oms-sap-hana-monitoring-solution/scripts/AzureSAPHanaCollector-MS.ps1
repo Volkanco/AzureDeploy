@@ -5061,10 +5061,10 @@ Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query43 CollectorTyp
   LPAD(TO_DECIMAL(ROUND(WAIT_S), 10, 0), 7) WAIT_S,
   SCHEMA_NAME SCHEMA,
   TABLE_NAME,
-  MAP(LOCK_TYPE, 'RECORD_LOCK', 'R', 'TABLE_LOCK', 'T', 'OBJECT_LOCK', 'T', 'METADATA_LOCK', 'M', LOCK_TYPE) LT,
-  MAP(LOCK_MODE, 'EXCLUSIVE', 'E', 'INTENTIONAL EXCLUSIVE', 'IE', 'SHARED', 'S', LOCK_MODE) LM,
-  FINAL_BLOCKING_SESSION F,
-  ACTIVE A,
+  LOCK_TYPE,
+  LOCK_MODE,
+  FINAL_BLOCKING_SESSION,
+  ACTIVE,
   LPAD(IFNULL(WAIT_CONN, ''), 9) WAIT_CONN,
   LPAD(WAIT_UTID, 11) WAIT_UTID,
   IFNULL(WAIT_STATEMENT_HASH, '') WAIT_STATEMENT_HASH,
@@ -5306,10 +5306,10 @@ ORDER BY
                     WAITS=[int]$row.WAIT_S
                     SCHEMA=$row.SCHEMA
                     TABLE_NAME=$row.TABLE_NAME
-                    LT=[string]$row.LT
-                    LM=[string]$row.LM
-                    F=[string]$row.F
-                    A=[string]$row.A
+                     LOCK_TYPE=$row.LOCK_TYPE
+                     LOCK_MODE=$row.LOCK_MODE
+                     FINAL_BLOCKING_SESSION=$row.FINAL_BLOCKING_SESSION
+                    ACTIVE=$row.ACTIVE
                     WAIT_CONN=$row.WAIT_CONN
                     WAIT_UTID=$row.WAIT_UTID
                     WAIT_STATEMENT_HASH=$row.WAIT_STATEMENT_HASH
