@@ -5139,8 +5139,8 @@ FROM
     ( SELECT                            /* Modification section */
        -- TO_TIMESTAMP('2019/02/18 05:15:00', 'YYYY/MM/DD HH24:MI:SS') BEGIN_TIME,
         --TO_TIMESTAMP('2019/02/18 09:20:00', 'YYYY/MM/DD HH24:MI:SS') END_TIME,
-            add_seconds('"+$currentruntime+"',-900) BEGIN_TIME
-   '"+$currentruntime+"' END_TIME,
+            add_seconds('"+$currentruntime+"',-900) BEGIN_TIME ,
+          TO_TIMESTAMP('9999/02/18 09:20:00', 'YYYY/MM/DD HH24:MI:SS') END_TIME, 
         'UTC' TIMEZONE,                              /* SERVER, UTC */
         '%' HOST,
         '%' PORT,

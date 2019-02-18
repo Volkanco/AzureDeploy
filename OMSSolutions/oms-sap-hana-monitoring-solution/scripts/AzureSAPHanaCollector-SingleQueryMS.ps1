@@ -312,12 +312,12 @@ $ex=$null
 			$lastruntime=($ds.Tables[0].rows[0].LastTime).tostring('yyyy-MM-dd HH:mm:ss.FF')
             $currentruntime=($ds.Tables[0].rows[0].CURRENT_TIMESTAMP).tostring('yyyy-MM-dd HH:mm:ss.FF')
 
-            Write-host "Current system time :  $currentruntime"
+            Write-output "Current system time :  $currentruntime"
             
             $stopwatch=[system.diagnostics.stopwatch]::StartNew()
 
    
-            Write-host $Query
+            Write-output $Query
 
 			$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
 					$ds=New-Object system.Data.DataSet ;
@@ -330,15 +330,18 @@ $ex=$null
 						$Ex=$_.Exception.MEssage;write-warning $query
 						write-warning  $ex 
 					}
-
-                IF 	($ds.Tables[0].rows)
+                Write-output "Query run time: 	$([Math]::Round($stopwatch.Elapsed.TotalSeconds,0)) seconds "
+                IF 	($ds.Tables[0].rows.count -gt 0 )
                 {
-			Write-output "Query run time: 	$([Math]::Round($stopwatch.Elapsed.TotalSeconds,0)) seconds "
+                        Write-output "$($ds.Tables[0].rows.count)  rows returned"
+            
             Write-output "First Row"
             $ds.Tables[0].rows[0]|fl
-            Write-output "First 10 Rows"  
+            Write-output "First 20 Rows"  
             $ds.Tables[0].rows|select -First 10|ft
-                }Else
+
+
+                  }Else
                 {
                     Write-output "No data returned from query"
 
