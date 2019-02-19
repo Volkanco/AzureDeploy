@@ -5139,7 +5139,7 @@ FROM
     ( SELECT                            /* Modification section */
        -- TO_TIMESTAMP('2019/02/18 05:15:00', 'YYYY/MM/DD HH24:MI:SS') BEGIN_TIME,
         --TO_TIMESTAMP('2019/02/18 09:20:00', 'YYYY/MM/DD HH24:MI:SS') END_TIME,
-            add_seconds('"+$currentruntime+"',-900) BEGIN_TIME ,
+            add_seconds('"+$currentruntime+"',(-900-$utcdiff)) BEGIN_TIME ,
           TO_TIMESTAMP('9999/02/18 09:20:00', 'YYYY/MM/DD HH24:MI:SS') END_TIME, 
         'UTC' TIMEZONE,                              /* SERVER, UTC */
         '%' HOST,
@@ -5319,7 +5319,7 @@ ORDER BY
                     BLK_APP_SOURCE=$row.BLK_APP_SOURCE 
                     BLK_STATEMENT_HASH=$row.BLK_STATEMENT_HASH
                     RECORD_ID=$row.RECORD_ID 
-                    SYS_TIMESTAMP =$row. SNAPSHOT_TIME 
+                    SYS_TIMESTAMP=$row.SNAPSHOT_TIME 
 				})|Out-Null
 			}
 
@@ -10301,7 +10301,7 @@ ROW_NUM
 	  $query="/* OMS -Query44*/SELECT * FROM M_CS_TABLES 
 WHERE TABLE_NAME IN
 (SELECT TOP 50 TABLE_NAME FROM
-( SELECT TABLE_NAME, SUM(RECORD_COUNT) as TOTAL FROM M_CS_TABLES  GROUP BY TABLE_NAME )ORDER by TOTAL DESC)c"
+( SELECT TABLE_NAME, SUM(RECORD_COUNT) as TOTAL FROM M_TABLES  GROUP BY TABLE_NAME )ORDER by TOTAL DESC)"
 
 	   $cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
 		  $ds=New-Object system.Data.DataSet ;

@@ -14,7 +14,7 @@ param
 
 #region login to Azure Arm and retrieve variables
 Enable-AzureRmAlias  # Needed for backward compatibility in Az Powershell
-
+<#
 #################
 #
 # add managed identity section
@@ -53,6 +53,8 @@ $AAAccount = Get-AutomationVariable -Name 'AzureSAPHanaMonitoring-AzureAutomatio
 
 $varText= "AAResourceGroup = $AAResourceGroup , AAAccount = $AAAccount"
 
+
+#>
 #endregion
 
 
@@ -312,7 +314,7 @@ $ex=$null
 			$lastruntime=($ds.Tables[0].rows[0].LastTime).tostring('yyyy-MM-dd HH:mm:ss.FF')
             $currentruntime=($ds.Tables[0].rows[0].CURRENT_TIMESTAMP).tostring('yyyy-MM-dd HH:mm:ss.FF')
 
-            Write-output "Current system time :  $currentruntime"
+            Write-output  "Current system time :  $currentruntime"
             
             $stopwatch=[system.diagnostics.stopwatch]::StartNew()
 
@@ -330,6 +332,7 @@ $ex=$null
 						$Ex=$_.Exception.MEssage;write-warning $query
 						write-warning  $ex 
 					}
+               
                 Write-output "Query run time: 	$([Math]::Round($stopwatch.Elapsed.TotalSeconds,0)) seconds "
                 IF 	($ds.Tables[0].rows.count -gt 0 )
                 {
@@ -348,7 +351,8 @@ $ex=$null
                 }
 
 
-   		
+                Write-output "Total run time: 	$([Math]::Round($stopwatch.Elapsed.TotalSeconds,0)) seconds "
+
 		$Omsupload=$null
 		$omsupload=@()
 		$conn.Close()
@@ -360,7 +364,7 @@ $ex=$null
       }
       {
 
-        Write-output "$($rule.Database)  is not enabled for data collection in config file"
+        Write-output "$($ins.Database)  is not enabled for data collection in config file"
       }
 
 	}
