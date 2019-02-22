@@ -4570,7 +4570,7 @@ $ex=$null
 			  Foreach($row in $ds.tables[0].rows)
 			  {
 				  $Resultsperf.Add([PSCustomObject]@{
-					  HOST=$SAPHOST
+					  HOST=$row.HOST
 					  Instance=$sapinstance
 					  CollectorType="Performance"
 					  PerfObject="ConnectionStatistics"
@@ -4580,7 +4580,7 @@ $ex=$null
 					  })|Out-Null
 
 				  $Resultsperf.Add([PSCustomObject]@{
-					  HOST=$SAPHOST
+					  HOST=$row.HOST
 					  Instance=$sapinstance
 					  CollectorType="Performance"
 					  PerfObject="ConnectionStatistics"
@@ -4590,7 +4590,7 @@ $ex=$null
 					  })|Out-Null
 
 				  $Resultsperf.Add([PSCustomObject]@{
-					  HOST=$SAPHOST
+					  HOST=$row.HOST
 					  Instance=$sapinstance
 					  CollectorType="Performance"
 					  PerfObject="ConnectionStatistics"
@@ -4600,7 +4600,7 @@ $ex=$null
 					  })|Out-Null
 
 				  $Resultsperf.Add([PSCustomObject]@{
-					  HOST=$SAPHOST
+					  HOST=$row.HOST
 					  Instance=$sapinstance
 					  CollectorType="Performance"
 					  PerfObject="ConnectionStatistics"
@@ -4610,7 +4610,7 @@ $ex=$null
 					  })|Out-Null
 
 				  $Resultsperf.Add([PSCustomObject]@{
-					  HOST=$SAPHOST
+					  HOST=$row.HOST
 					  Instance=$sapinstance
 					  CollectorType="Performance"
 					  PerfObject="ConnectionStatistics"
