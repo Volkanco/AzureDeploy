@@ -497,6 +497,8 @@ $ex=$null
         If($runmode -eq 'default')
         {
 	
+
+            <#
 			$query='/* OMS -Query2*/ Select * FROM SYS.M_HOST_INFORMATION'
 					$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
 			$ds=New-Object system.Data.DataSet ;
@@ -543,10 +545,129 @@ $ex=$null
 			}
 
 
-			$OmsInvupload.add($cu)|Out-Null
+New Host collection
+
+
+HOST           : sapprddb01
+BUILT_BY       : HPE
+CPU_DETAILS    : 288(576)*3400MHz
+CPU_MHZ        :    3400
+PHYS_MEM_GB    :    11716.35
+SWAP_GB        :    7.99
+OP_SYS         : SLES 12.2
+KERNEL_VERSION : 4.4.121-92.92-default
+CPU_MODEL      : Intel Xeon CPU E7-8890 v4 @ 2.20GHz
+HARDWARE_MODEL : HPE Integrity MC990 X Server
+NOFILE_LIMIT   :      1048576
+
+#>
+
+
+            $query="/* OMS -Query2*/ SELECT   HOST,
+  IFNULL(BUILT_BY,                'n/a') BUILT_BY,
+  IFNULL(CPU_DETAILS,             'n/a') CPU_DETAILS,
+  IFNULL(LPAD(CPU_CLOCK_MHZ, 7),  'n/a') CPU_MHZ,
+  IFNULL(LPAD(PHYS_MEM_GB,   11), 'n/a') PHYS_MEM_GB,
+  IFNULL(LPAD(SWAP_GB,        7), 'n/a') SWAP_GB,
+  IFNULL(OP_SYS,                  'n/a') OP_SYS,
+  IFNULL(KERNEL_VERSION,          'n/a') KERNEL_VERSION,
+  IFNULL(CPU_MODEL,               'n/a') CPU_MODEL,
+  IFNULL(HARDWARE_MODEL,          'n/a') HARDWARE_MODEL,
+  IFNULL(SID,          'n/a') SID,
+    IFNULL(BUILD_VERSION,          'n/a') BUILD_VERSION,
+      IFNULL(START_TIME,          'n/a') START_TIME,
+        IFNULL(BUILD_TIME,          'n/a') BUILD_TIME,
+          IFNULL(TIMEZONE_OFFSET,          'n/a') TIMEZONE_OFFSETL,
+            IFNULL(SAP_PATH,          'n/a') SAP_PATH,
+IFNULL(LPAD(NOFILE_LIMIT, 12),  'n/a') NOFILE_LIMIT
+FROM
+( SELECT
+    H.HOST,
+    MAX(CASE WHEN KEY = 'hw_manufacturer' THEN VALUE                                                    END) BUILT_BY,
+    MAX(CASE WHEN KEY = 'cpu_summary'     THEN REPLACE(VALUE, CHAR(32), '')                             END) CPU_DETAILS,
+    MAX(CASE WHEN KEY = 'cpu_clock'       THEN VALUE                                                    END) CPU_CLOCK_MHZ,
+    MAX(CASE WHEN KEY = 'mem_phys'        THEN TO_DECIMAL(TO_NUMBER(VALUE) / 1024 / 1024 / 1024, 10, 2) END) PHYS_MEM_GB,
+    MAX(CASE WHEN KEY = 'mem_swap'        THEN TO_DECIMAL(TO_NUMBER(VALUE) / 1024 / 1024 / 1024, 10, 2) END) SWAP_GB,
+    REPLACE(REPLACE(MAX(CASE WHEN KEY = 'os_name'   THEN VALUE END), 'SUSE Linux Enterprise Server', 'SLES'), 'Red Hat Enterprise Linux Server release', 'RHEL') OP_SYS,
+    MAX(CASE WHEN KEY = 'os_kernel_version' THEN VALUE END) KERNEL_VERSION,
+    REPLACE(MAX(CASE WHEN KEY = 'cpu_model' THEN VALUE END), '(R)', '') CPU_MODEL,
+    MAX(CASE WHEN KEY = 'hw_model' THEN VALUE END) HARDWARE_MODEL,
+    MAX(CASE WHEN KEY = 'sid' THEN VALUE END) SID,
+    MAX(CASE WHEN KEY = 'build_version' THEN VALUE END) BUILD_VERSION,
+    MAX(CASE WHEN KEY = 'start_time' THEN VALUE END) START_TIME,
+    MAX(CASE WHEN KEY = 'build_time' THEN VALUE END) BUILD_TIME,
+    MAX(CASE WHEN KEY = 'timezone_offset' THEN VALUE END) TIMEZONE_OFFSET,
+    MAX(CASE WHEN KEY = 'sap_retrieval_path' THEN VALUE END) SAP_PATH,
+    MAX(CASE WHEN KEY = 'os_rlimit_nofile'  THEN VALUE END) NOFILE_LIMIT,
+    BI.MAX_NOFILE_LIMIT
+  FROM
+  ( SELECT                  /* Modification section */
+      '%' HOST,
+      -1 MAX_NOFILE_LIMIT
+    FROM
+      DUMMY
+  ) BI,
+    M_HOST_INFORMATION H
+  WHERE
+    H.HOST LIKE BI.HOST
+  GROUP BY
+    H.HOST,
+    BI.MAX_NOFILE_LIMIT
+)
+WHERE
+  ( MAX_NOFILE_LIMIT = -1 OR NOFILE_LIMIT <= MAX_NOFILE_LIMIT )
+ORDER BY
+  HOST"
+					$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds=New-Object system.Data.DataSet ;
+			$ex=$null
+            Try{
+				$cmd.fill($ds)
+			}
+			Catch
+			{
+				$Ex=$_.Exception.MEssage;write-warning "Failed to run Query2"
+			}
+			      
+
+			
+			$Results=$null
+			$Results=@(); 
+
+			#Host Inventory 
+
+            foreach ($row in $ds.Tables[0].rows)
+			{
+				$resultsinv.add([PSCustomObject]@{
+					HOST=$row.HOST 
+					Instance=$sapinstance
+				    CollectorType="Inventory"
+				    Category="HostInfo"
+                    BUILT_BY=$row.BUILT_BY 
+                    CPU_DETAILS=$row.CPU_DETAILS
+                    CPU_MHZ=$row.CPU_MHZ
+                    PHYS_MEM_GB=$row.PHYS_MEM_GB
+                    SWAP_GB=$row.SWAP_GB
+                    OP_SYS=$row.OP_SYS
+                    KERNEL_VERSION=$row.KERNEL_VERSION
+                    CPU_MODEL=$row.CPU_MODEL
+                    HARDWARE_MODEL=$row.HARDWARE_MODEL
+                    SID=$row.SID
+                    BUILD_VERSION=$row.BUILD_VERSION
+                    START_TIME=$row.START_TIME
+                    BUILD_TIME=$row.BUILD_TIME 
+                    TIMEZONE_OFFSET=$row.TIMEZONE_OFFSET
+                    SAP_PATH=$row.SAP_PATH 
+                    NOFILE_LIMIT=$row.NOFILE_LIMIT			
+				})|Out-Null
+
+			}
+
+			$Omsinvupload.Add($Resultsinv)|Out-Null
+
 
 			$sapinstance=$cu.sid+'-'+$cu.sapsystem
-			$sapversion=$cu.build_version  #use build versionto decide which query to run
+			$sapversion=$ds.Tables[0].rows[0].BUILD_VERSION  #use build versionto decide which query to run
 
 			$cu=$null
 
