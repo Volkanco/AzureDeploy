@@ -352,28 +352,7 @@ $ex=$null
 			$Ex=$_.Exception.MEssage;write-warning $query
 		}
 		
-		IF($ex)
-		{
-			Write-Warning  "Failed to conect to  $hanadb on  $($ins.HanaServer):$($ins.Port)"
-			write-warning $ex
-			
-               $cu=$null
-               $cu=[PSCustomObject]@{
-				HOST=$saphost
-				PORT=$sapport
-				Database=$hanadb
-				CollectorType="State"
-				Category="Connectivity"
-				SubCategory="Host"
-				Connection="Failed"
-				ErrorMessage=$ex
-				PingResult=$pingresult
-				Latency=$ping
-                
-			}
-            $omsStateupload.Add($cu)|Out-Null
-			
-		}
+		
 		
         #end region
 		IF ($conn.State -eq 'open')
@@ -498,71 +477,6 @@ $ex=$null
         {
 	
 
-            <#
-			$query='/* OMS -Query2*/ Select * FROM SYS.M_HOST_INFORMATION'
-					$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-			$ds=New-Object system.Data.DataSet ;
-			$ex=$null
-            Try{
-				$cmd.fill($ds)
-			}
-			Catch
-			{
-				$Ex=$_.Exception.MEssage;write-warning "Failed to run Query2"
-			}
-			      
-
-			
-			$Results=$null
-			$Results=@(); 
-
-			#Host Inventory 
-
-
-			$cu=[PSCustomObject]@{
-				HOST=$saphost
-				CollectorType="Inventory"
-				Category="HostInfo"
-			}
-
-			$rowcount=1
-			foreach($row in $ds.Tables[0].rows)
-			{
-				if ($row.key -notin ('net_nameserver_bindings','build_githash','ssfs_masterkey_changed','crypto_fips_version','crypto_provider','ssfs_masterkey_systempki_changed','crypto_provider_version'))
-				{
-					IF ($row.VALUE -match "^\d+$") # is number 
-					{
-						$cu|Add-Member -MemberType NoteProperty -Name $row.key  -Value $row.value.ToInt64($null)
-					}Else
-					{
-						$cu|Add-Member -MemberType NoteProperty -Name $row.key  -Value $row.VALUE
-					}
-					$Rowcount++
-					If ($rowcount -gt 48  ){Break}
-
-				}
-
-			}
-
-
-New Host collection
-
-
-HOST           : sapprddb01
-BUILT_BY       : HPE
-CPU_DETAILS    : 288(576)*3400MHz
-CPU_MHZ        :    3400
-PHYS_MEM_GB    :    11716.35
-SWAP_GB        :    7.99
-OP_SYS         : SLES 12.2
-KERNEL_VERSION : 4.4.121-92.92-default
-CPU_MODEL      : Intel Xeon CPU E7-8890 v4 @ 2.20GHz
-HARDWARE_MODEL : HPE Integrity MC990 X Server
-NOFILE_LIMIT   :      1048576
-
-#>
-
-
             $query="/* OMS -Query2*/ SELECT   HOST,
   IFNULL(BUILT_BY,                'n/a') BUILT_BY,
   IFNULL(CPU_DETAILS,             'n/a') CPU_DETAILS,
@@ -633,6 +547,7 @@ ORDER BY
 			
 			$Results=$null
 			$Results=@(); 
+			[System.Collections.ArrayList]$Resultsinv=@(); 
 
 			#Host Inventory 
 
@@ -646,7 +561,7 @@ ORDER BY
                     BUILT_BY=$row.BUILT_BY 
                     CPU_DETAILS=$row.CPU_DETAILS
                     CPU_MHZ=$row.CPU_MHZ
-                    PHYS_MEM_GB=$row.PHYS_MEM_GB
+                    PHYS_MEM_GB=[double]$row.PHYS_MEM_GB
                     SWAP_GB=$row.SWAP_GB
                     OP_SYS=$row.OP_SYS
                     KERNEL_VERSION=$row.KERNEL_VERSION
@@ -787,6 +702,63 @@ ORDER BY
             }
             }
 
+
+            
+            $query="/* OMS -Query45*/ SELECT L.HOST,
+  L.HOST_ACTIVE ACTIVE,
+  L.HOST_STATUS STATUS,
+  L.NAMESERVER_CONFIG_ROLE NAME_CFG_ROLE,
+  L.NAMESERVER_ACTUAL_ROLE NAME_ACT_ROLE,
+  L.INDEXSERVER_CONFIG_ROLE INDEX_CFG_ROLE,
+  L.INDEXSERVER_ACTUAL_ROLE INDEX_ACT_ROLE
+FROM
+( SELECT            /* Modification section */
+    '%' HOST
+  FROM
+    DUMMY
+) BI,
+  M_LANDSCAPE_HOST_CONFIGURATION L
+WHERE
+  L.HOST LIKE BI.HOST
+ORDER BY
+  L.HOST"
+					$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
+			$ds=New-Object system.Data.DataSet ;
+			$ex=$null
+            Try{
+				$cmd.fill($ds)
+			}
+			Catch
+			{
+				$Ex=$_.Exception.MEssage;write-warning "Failed to run Query45"
+			}
+			      
+
+			
+			$Results=$null
+			$Results=@(); 
+			[System.Collections.ArrayList]$Resultsinv=@(); 
+
+			#Host Inventory 
+
+            foreach ($row in $ds.Tables[0].rows)
+			{
+				$resultsinv.add([PSCustomObject]@{
+					HOST=$row.HOST 
+					Instance=$sapinstance
+				    CollectorType="Inventory"
+				    Category="Landscape"
+                    ACTIVE=$row.ACTIVE
+                    STATUS=$row.STATUS
+                    NAME_CFG_ROLE=$row.NAME_CFG_ROLE
+                    NAME_ACT_ROLE =$row.NAME_ACT_ROLE 
+                    INDEX_CFG_ROLE=$row.INDEX_CFG_ROLE
+                    INDEX_ACT_ROLE=$row.INDEX_ACT_ROLE	
+				})|Out-Null
+
+			}
+
+			$Omsinvupload.Add($Resultsinv)|Out-Null
 
 
 
@@ -10417,7 +10389,7 @@ ROW_NUM
 
 ### New table query 
 
- Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query4 CollectorType=Inventory - Category=Tables - Largest"	
+ Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query44 CollectorType=Inventory - Category=Tables - Largest"	
 
 	  $query="/* OMS -Query44*/SELECT * FROM M_CS_TABLES 
 WHERE TABLE_NAME IN
@@ -10597,7 +10569,8 @@ WHERE TABLE_NAME IN
 					SubCategory="Host"
 					Connection="Failed"
 					ErrorMessage=$ex
-					PingResult=$pingresult					
+					PingResult=$pingresult	
+                    Latency=$ping				
 				})
 				$jsonlogs=$null
 				
