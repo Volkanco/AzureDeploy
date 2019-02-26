@@ -1877,8 +1877,8 @@
                         "[Concat('Microsoft.OperationalInsights/workspaces/', parameters('logAnalyticsWorkspaceName'))]"
                     ],
                     "properties": {
-                        "Id": "SAP HANA Configuration Checks",
-                        "Name": "SAP HANA Configuration Checks",
+                        "Id": "Azure  HANA Configuration Checks",
+                        "Name": "Azure  HANA Configuration Checks",
                         "Author": "[variables('omsSolutions').customSolution.author]",
                         "Source": "Local",
                         "Version": 2,
