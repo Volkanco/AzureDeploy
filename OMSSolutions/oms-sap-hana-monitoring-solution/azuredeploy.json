@@ -1872,7 +1872,7 @@
                     "apiVersion": "2015-11-01-preview",
                     "name": "Azure  HANA Configuration Checks",
                     "type": "views",
-                    "id": "[resourceId('Microsoft.OperationalInsights/workspaces/views/', parameters('logAnalyticsWorkspaceName'), 'SAP HANA Configuration Checks')]",
+                    "id": "[resourceId('Microsoft.OperationalInsights/workspaces/views/', parameters('logAnalyticsWorkspaceName'), 'Azure  HANA Configuration Checks')]",
                     "dependson": [
                         "[Concat('Microsoft.OperationalInsights/workspaces/', parameters('logAnalyticsWorkspaceName'))]"
                     ],
@@ -4014,7 +4014,7 @@
                     "apiVersion": "2015-11-01-preview",
                     "name": "Azure HANA Landscape",
                     "type": "views",
-                    "id": "[resourceId('Microsoft.OperationalInsights/workspaces/views/', parameters('logAnalyticsWorkspaceName'), 'SAP HANA Configuration Checks')]",
+                    "id": "[resourceId('Microsoft.OperationalInsights/workspaces/views/', parameters('logAnalyticsWorkspaceName'), 'Azure HANA  Landscape')]",
                     "dependson": [
                         "[Concat('Microsoft.OperationalInsights/workspaces/', parameters('logAnalyticsWorkspaceName'))]"
                     ],
@@ -4307,9 +4307,9 @@
                 }
                 ,{
                     "apiVersion": "2015-11-01-preview",
-                    "name": "Azure  HANA Databases",
+                    "name": "Azure HANA Databases",
                     "type": "views",
-                    "id": "[resourceId('Microsoft.OperationalInsights/workspaces/views/', parameters('logAnalyticsWorkspaceName'), 'SAP HANA Configuration Checks')]",
+                    "id": "[resourceId('Microsoft.OperationalInsights/workspaces/views/', parameters('logAnalyticsWorkspaceName'), 'Azure HANA Databases')]",
                     "dependson": [
                         "[Concat('Microsoft.OperationalInsights/workspaces/', parameters('logAnalyticsWorkspaceName'))]"
                     ],
