@@ -5380,7 +5380,7 @@
                         "[concat('Microsoft.OperationalInsights/workspaces/', parameters('logAnalyticsWorkspaceName'))]",
                         "[concat('Microsoft.Automation/automationAccounts/', parameters('automationAccountName'))]",
                         "[concat('Microsoft.OperationalInsights/workspaces/', parameters('logAnalyticsWorkspaceName'), '/views/', variables('omsSolutions').customSolution.name)]",
-                        "[concat('Microsoft.OperationalInsights/workspaces/', parameters('logAnalyticsWorkspaceName'), '/views/SAP HANA Configuration Checks')]",                     
+                        "[concat('Microsoft.OperationalInsights/workspaces/', parameters('logAnalyticsWorkspaceName'), '/views/Azure  HANA Configuration Checks')]",                     
                         "[concat('Microsoft.Automation/automationAccounts/', parameters('automationAccountName'), '/runbooks/', variables('runbooks').ingestSchedulerRunbook.name)]",
                         "[concat('Microsoft.Automation/automationAccounts/', parameters('automationAccountName'), '/runbooks/', variables('runbooks').ingestMainRunbook.name)]"
                     ],
@@ -5395,7 +5395,7 @@
                         "referencedResources": [],
                         "containedResources": [
                             "[resourceId('Microsoft.OperationalInsights/workspaces/views/', parameters('logAnalyticsWorkspaceName'), variables('omsSolutions').customSolution.name)]",
-                            "[resourceId('Microsoft.OperationalInsights/workspaces/views/', parameters('logAnalyticsWorkspaceName'), 'SAP HANA Configuration Checks')]",
+                            "[resourceId('Microsoft.OperationalInsights/workspaces/views/', parameters('logAnalyticsWorkspaceName'), 'Azure  HANA Configuration Checks')]",
                             "[resourceId('Microsoft.Automation/automationAccounts/runbooks/', parameters('automationAccountName'), variables('runbooks').ingestSchedulerRunbook.name)]",
                             "[resourceId('Microsoft.Automation/automationAccounts/runbooks/', parameters('automationAccountName'), variables('runbooks').ingestMainRunbook.name)]",
                             "[resourceId('Microsoft.Automation/automationAccounts/variables/', parameters('automationAccountName'), variables('opsInsightWorkspaceID'))]",
