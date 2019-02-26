@@ -374,6 +374,7 @@ function Cleanup-Variables {
 
 #region Login to Azure Using both ARM , ASM and REST
 #Authenticate to Azure with SPN section
+Enable-AzureRmAlias
 "Logging in to Azure..."
 $ArmConn = Get-AutomationConnection -Name AzureRunAsConnection 
 

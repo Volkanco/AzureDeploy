@@ -1,0 +1,333 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "location": {
+            "type": "string",
+            "defaultValue": ""
+        },
+        "resourcegroup": {
+            "type": "string",
+            "defaultValue": ""
+        },
+        "subscriptionId": {
+            "type": "string",
+            "defaultValue": ""
+        },
+        "workspace": {
+            "type": "string",
+            "defaultValue": ""
+        },
+        "workspaceapiversion": {
+            "type": "string",
+            "defaultValue": ""
+        }
+    },
+    "resources": [
+        {
+            "apiVersion": "[parameters('workspaceapiversion')]",
+            "name": "[parameters('workspace')]",
+            "type": "Microsoft.OperationalInsights/workspaces",
+            "location": "[parameters('location')]",
+            "id": "[Concat('/subscriptions/', parameters('subscriptionId'), '/resourceGroups/', parameters('resourcegroup'), '/providers/Microsoft.OperationalInsights/workspaces/', parameters('workspace'))]",
+            "resources": [
+                {
+                    "apiVersion": "2015-11-01-preview",
+                    "name": "Azure HANA Landscape",
+                    "type": "views",
+                    "location": "[parameters('location')]",
+                    "id": "[Concat('/subscriptions/', parameters('subscriptionId'), '/resourceGroups/', parameters('resourcegroup'), '/providers/Microsoft.OperationalInsights/workspaces/', parameters('workspace'),'/views/Azure HANA Landscape')]",
+                    "dependson": [
+                        "[Concat('/subscriptions/', parameters('subscriptionId'), '/resourceGroups/', parameters('resourcegroup'), '/providers/Microsoft.OperationalInsights/workspaces/', parameters('workspace'))]"
+                    ],
+                    "properties": {
+                        "Id": "Azure HANA Landscape",
+                        "Name": "Azure HANA Landscape",
+                        "Author": null,
+                        "Source": "Local",
+                        "Version": 2,
+                        "Dashboard": [
+                            {
+                                "Id": "NumberTileListBuilderBlade",
+                                "Type": "Blade",
+                                "Version": 0,
+                                "Configuration": {
+                                    "General": {
+                                        "title": "Landscape",
+                                        "newGroup": false,
+                                        "icon": "",
+                                        "useIcon": false
+                                    },
+                                    "Tile": {
+                                        "Legend": "Monitored Instances",
+                                        "Query": "SAPHana_CL | where CollectorType_s ==\"Inventory\" and Category ==\"HostInfo\" |summarize arg_max(TimeGenerated, *) by HOST_s  | count",
+                                        "NavigationSelect": {}
+                                    },
+                                    "List": {
+                                        "Query": "SAPHana_CL | where CollectorType_s ==\"Inventory\" and Category ==\"HostInfo\" |where  TimeGenerated > ago(30d) |summarize arg_max(TimeGenerated, *) by HOST_s  | project HOST_s , BUILD_VERSION_s , \t OP_SYS_s , MEM_GB= round(PHYS_MEM_GB_d,0) ",
+                                        "HideGraph": false,
+                                        "enableSparklines": false,
+                                        "ColumnsTitle": {
+                                            "Name": "HOST  |  VERSION | OS ",
+                                            "Value": "MEM TiB"
+                                        },
+                                        "Color": "#0072c6",
+                                        "thresholds": {
+                                            "isEnabled": false,
+                                            "values": [
+                                                {
+                                                    "name": "Normal",
+                                                    "threshold": "Default",
+                                                    "color": "#009e49",
+                                                    "isDefault": true
+                                                },
+                                                {
+                                                    "name": "Warning",
+                                                    "threshold": "60",
+                                                    "color": "#fcd116",
+                                                    "isDefault": false
+                                                },
+                                                {
+                                                    "name": "Error",
+                                                    "threshold": "90",
+                                                    "color": "#ba141a",
+                                                    "isDefault": false
+                                                }
+                                            ]
+                                        },
+                                        "NameDSVSeparator": "",
+                                        "NavigationQuery": "search {selected item} | sort by TimeGenerated desc",
+                                        "NavigationSelect": {
+                                            "NavigationQuery": "search {selected item} | sort by TimeGenerated desc"
+                                        }
+                                    }
+                                }
+                            },
+                            {
+                                "Id": "NumberTileListBuilderBlade",
+                                "Type": "Blade",
+                                "Version": 0,
+                                "Configuration": {
+                                    "General": {
+                                        "title": "LANDSCAPE DISTRIBUTION",
+                                        "newGroup": false,
+                                        "icon": "",
+                                        "useIcon": false
+                                    },
+                                    "Tile": {
+                                        "Query": "SAPHana_CL | where CollectorType_s ==\"Inventory\" and Category ==\"Landscape\" |summarize arg_max(TimeGenerated, *) by HOST_s  | project strcat(HOST_s ,\" | \", INDEX_ACT_ROLE_s ,\" | \", NAME_ACT_ROLE_s,\" | \",INDEX_CFG_ROLE_s,\" | \", NAME_CFG_ROLE_s)|count",
+                                        "Legend": "Servers",
+                                        "NavigationSelect": {}
+                                    },
+                                    "List": {
+                                        "Query": "SAPHana_CL | where CollectorType_s ==\"Inventory\" and Category ==\"Landscape\" |summarize arg_max(TimeGenerated, *) by HOST_s  | project strcat(HOST_s ,\" | \", INDEX_ACT_ROLE_s ,\" | \", NAME_ACT_ROLE_s,\" | \",INDEX_CFG_ROLE_s,\" | \", NAME_CFG_ROLE_s)",
+                                        "HideGraph": true,
+                                        "enableSparklines": false,
+                                        "operation": "Summary",
+                                        "ColumnsTitle": {
+                                            "Name": "HOST | INDEXACT | NAMEACT| INDEXCFG | NAMECFG",
+                                            "Value": ""
+                                        },
+                                        "Color": "#0072c6",
+                                        "thresholds": {
+                                            "isEnabled": false,
+                                            "values": [
+                                                {
+                                                    "name": "Normal",
+                                                    "threshold": "Default",
+                                                    "color": "#009e49",
+                                                    "isDefault": true
+                                                },
+                                                {
+                                                    "name": "Warning",
+                                                    "threshold": "60",
+                                                    "color": "#fcd116",
+                                                    "isDefault": false
+                                                },
+                                                {
+                                                    "name": "Error",
+                                                    "threshold": "90",
+                                                    "color": "#ba141a",
+                                                    "isDefault": false
+                                                }
+                                            ]
+                                        },
+                                        "NameDSVSeparator": "",
+                                        "NavigationQuery": "SAPHana_CL | where CollectorType_s ==\"Inventory\" and Category ==\"Landscape\" |summarize arg_max(TimeGenerated, *) by HOST_s  | project strcat(HOST_s ,\" | \", INDEX_ACT_ROLE_s ,\" | \", NAME_ACT_ROLE_s,\" | \",INDEX_CFG_ROLE_s,\" | \", NAME_CFG_ROLE_s)",
+                                        "NavigationSelect": {
+                                            "NavigationQuery": "SAPHana_CL | where CollectorType_s ==\"Inventory\" and Category ==\"Landscape\" |summarize arg_max(TimeGenerated, *) by HOST_s  | project strcat(HOST_s ,\" | \", INDEX_ACT_ROLE_s ,\" | \", NAME_ACT_ROLE_s,\" | \",INDEX_CFG_ROLE_s,\" | \", NAME_CFG_ROLE_s)"
+                                        }
+                                    }
+                                }
+                            },
+                            {
+                                "Id": "LineChartCalloutBuilderBlade",
+                                "Type": "Blade",
+                                "Version": 0,
+                                "Configuration": {
+                                    "General": {
+                                        "title": "Monitoring Enabled Servers",
+                                        "newGroup": false,
+                                        "icon": "",
+                                        "useIcon": false
+                                    },
+                                    "Header": {
+                                        "Title": "Avg Ping Time ms",
+                                        "Subtitle": ""
+                                    },
+                                    "LineChart": {
+                                        "Query": "SAPHana_CL | where CollectorType_s==\"State\" and Category==\"Connectivity\" |extend Hostname=HOST_s | summarize AggregatedValue=avg(Latency_d) by Hostname ,bin(TimeGenerated, 15m)",
+                                        "Callout": {
+                                            "Title": "Avg Ping Time ",
+                                            "Series": "",
+                                            "Operation": "Last Sample"
+                                        },
+                                        "yAxis": {
+                                            "isLogarithmic": false,
+                                            "units": {
+                                                "baseUnitType": "",
+                                                "baseUnit": "",
+                                                "displayUnit": ""
+                                            },
+                                            "customLabel": ""
+                                        },
+                                        "NavigationSelect": {}
+                                    },
+                                    "List": {
+                                        "Query": "SAPHana_CL | where CollectorType_s==\"State\" and Category==\"Connectivity\" |summarize arg_max(TimeGenerated, *) by HOST_s  |extend Hostname=HOST_s |project Hostname,Connection_s, PingResult_s , PingLatency_ms=Latency_d",
+                                        "HideGraph": false,
+                                        "enableSparklines": false,
+                                        "ColumnsTitle": {
+                                            "Name": "Type",
+                                            "Value": "Count"
+                                        },
+                                        "Color": "#0072c6",
+                                        "thresholds": {
+                                            "isEnabled": false,
+                                            "values": [
+                                                {
+                                                    "name": "Normal",
+                                                    "threshold": "Default",
+                                                    "color": "#009e49",
+                                                    "isDefault": true
+                                                },
+                                                {
+                                                    "name": "Warning",
+                                                    "threshold": "10",
+                                                    "color": "#fcd116",
+                                                    "isDefault": false
+                                                },
+                                                {
+                                                    "name": "Error",
+                                                    "threshold": "50",
+                                                    "color": "#ba141a",
+                                                    "isDefault": false
+                                                }
+                                            ]
+                                        },
+                                        "NameDSVSeparator": "",
+                                        "NavigationQuery": "SAPHana_CL | where CollectorType_s==\"State\" and Category==\"Connectivity\" |summarize arg_max(TimeGenerated, *) by HOST_s  |extend Hostname=HOST_s |project Hostname,Connection_s, PingResult_s , PingLatency_ms=Latency_d",
+                                        "NavigationSelect": {
+                                            "NavigationQuery": "SAPHana_CL | where CollectorType_s==\"State\" and Category==\"Connectivity\" |summarize arg_max(TimeGenerated, *) by HOST_s  |extend Hostname=HOST_s |project Hostname,Connection_s, PingResult_s , PingLatency_ms=Latency_d"
+                                        }
+                                    }
+                                }
+                            },
+                            {
+                                "Id": "LineChartBuilderBlade",
+                                "Type": "Blade",
+                                "Version": 0,
+                                "Configuration": {
+                                    "General": {
+                                        "title": "LICENSE Usage",
+                                        "newGroup": false,
+                                        "icon": "",
+                                        "useIcon": false
+                                    },
+                                    "Header": {
+                                        "Title": "Used",
+                                        "Subtitle": ""
+                                    },
+                                    "LineChart": {
+                                        "Query": "SAPHana_CL | where CollectorType_s ==\"Inventory\" | where Category == \"License\" |summarize Limit=max(PRODUCT_LIMIT_d), Usage=max(PRODUCT_USAGE_d) by SYSTEMID=SYSTEM_ID_s ,bin(TimeGenerated, 1h)",
+                                        "yAxis": {
+                                            "isLogarithmic": false,
+                                            "units": {
+                                                "baseUnitType": "",
+                                                "baseUnit": "",
+                                                "displayUnit": ""
+                                            },
+                                            "customLabel": ""
+                                        },
+                                        "NavigationSelect": {}
+                                    },
+                                    "List": {
+                                        "Query": "SAPHana_CL | where CollectorType_s ==\"Inventory\" | where Category == \"License\" |summarize arg_max(TimeGenerated, *) by SYSTEM_ID_s,HOST_s |project SYSTEMID=SYSTEM_ID_s ,Valid=VALID_s,LimitandUsage=strcat(tostring(PRODUCT_LIMIT_d),'/',tostring(PRODUCT_USAGE_d)),UsagePCT=round(PRODUCT_USAGE_d*100/PRODUCT_LIMIT_d,0) | project SYSTEMID, Valid, LimitandUsage ,UsagePCT",
+                                        "HideGraph": false,
+                                        "enableSparklines": false,
+                                        "ColumnsTitle": {
+                                            "Name": "SYSTEM | LICENSE",
+                                            "Value": "Count"
+                                        },
+                                        "Color": "#0072c6",
+                                        "thresholds": {
+                                            "isEnabled": false,
+                                            "values": [
+                                                {
+                                                    "name": "Normal",
+                                                    "threshold": "Default",
+                                                    "color": "#009e49",
+                                                    "isDefault": true
+                                                },
+                                                {
+                                                    "name": "Warning",
+                                                    "threshold": "60",
+                                                    "color": "#fcd116",
+                                                    "isDefault": false
+                                                },
+                                                {
+                                                    "name": "Error",
+                                                    "threshold": "90",
+                                                    "color": "#ba141a",
+                                                    "isDefault": false
+                                                }
+                                            ]
+                                        },
+                                        "NameDSVSeparator": "",
+                                        "NavigationQuery": "SAPHana_CL | where CollectorType_s ==\"Inventory\" | where Category == \"License\" |summarize arg_max(TimeGenerated, *) by SYSTEM_ID_s,HOST_s |project SYSTEMID=SYSTEM_ID_s ,Valid=VALID_s,LimitandUsage=strcat(tostring(PRODUCT_LIMIT_d),'/',tostring(PRODUCT_USAGE_d)),UsagePCT=round(PRODUCT_USAGE_d*100/PRODUCT_LIMIT_d,0) | project SYSTEMID, Valid, LimitandUsage ,UsagePCT",
+                                        "NavigationSelect": {
+                                            "NavigationQuery": "SAPHana_CL | where CollectorType_s ==\"Inventory\" | where Category == \"License\" |summarize arg_max(TimeGenerated, *) by SYSTEM_ID_s,HOST_s |project SYSTEMID=SYSTEM_ID_s ,Valid=VALID_s,LimitandUsage=strcat(tostring(PRODUCT_LIMIT_d),'/',tostring(PRODUCT_USAGE_d)),UsagePCT=round(PRODUCT_USAGE_d*100/PRODUCT_LIMIT_d,0) | project SYSTEMID, Valid, LimitandUsage ,UsagePCT"
+                                        }
+                                    }
+                                }
+                            }
+                        ],
+                        "Filters": [],
+                        "OverviewTile": {
+                            "Id": "DoubleNumberBuilderTile",
+                            "Type": "OverviewTile",
+                            "Version": 2,
+                            "Configuration": {
+                                "TileOne": {
+                                    "Legend": "INSTANCE",
+                                    "Query": "SAPHana_CL | where CollectorType_s ==\"Inventory\" and Category ==\"HostInfo\" |summarize arg_max(TimeGenerated, *) by HOST_s  | where HOST_s <> \"10.80.4.30\"   | count"
+                                },
+                                "TileTwo": {
+                                    "Legend": "DATABASE",
+                                    "Query": "SAPHana_CL | where CollectorType_s ==\"Inventory\" and Category ==\"Database\" |summarize arg_max(TimeGenerated, *) by Database_s |count"
+                                },
+                                "Advanced": {
+                                    "DataFlowVerification": {
+                                        "Enabled": false,
+                                        "Query": "search * | limit 1 | project TimeGenerated",
+                                        "Message": ""
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            ]
+        }
+    ]
+}

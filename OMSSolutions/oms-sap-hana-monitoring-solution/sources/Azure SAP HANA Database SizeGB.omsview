@@ -1,0 +1,1103 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "location": {
+            "type": "string",
+            "defaultValue": ""
+        },
+        "resourcegroup": {
+            "type": "string",
+            "defaultValue": ""
+        },
+        "subscriptionId": {
+            "type": "string",
+            "defaultValue": ""
+        },
+        "workspace": {
+            "type": "string",
+            "defaultValue": ""
+        },
+        "workspaceapiversion": {
+            "type": "string",
+            "defaultValue": ""
+        }
+    },
+    "resources": [
+        {
+            "apiVersion": "[parameters('workspaceapiversion')]",
+            "name": "[parameters('workspace')]",
+            "type": "Microsoft.OperationalInsights/workspaces",
+            "location": "[parameters('location')]",
+            "id": "[Concat('/subscriptions/', parameters('subscriptionId'), '/resourceGroups/', parameters('resourcegroup'), '/providers/Microsoft.OperationalInsights/workspaces/', parameters('workspace'))]",
+            "resources": [
+                {
+                    "apiVersion": "2015-11-01-preview",
+                    "name": "Azure SAP HANA Database SizeGB",
+                    "type": "views",
+                    "location": "[parameters('location')]",
+                    "id": "[Concat('/subscriptions/', parameters('subscriptionId'), '/resourceGroups/', parameters('resourcegroup'), '/providers/Microsoft.OperationalInsights/workspaces/', parameters('workspace'),'/views/Azure SAP HANA Database SizeGB')]",
+                    "dependson": [
+                        "[Concat('/subscriptions/', parameters('subscriptionId'), '/resourceGroups/', parameters('resourcegroup'), '/providers/Microsoft.OperationalInsights/workspaces/', parameters('workspace'))]"
+                    ],
+                    "properties": {
+                        "Id": "Azure SAP HANA Database SizeGB",
+                        "Name": "Azure SAP HANA Database SizeGB",
+                        "Author": null,
+                        "Source": "Local",
+                        "Version": 2,
+                        "Dashboard": [
+                            {
+                                "Id": "SingleQueryDonutBuilderBladeV1",
+                                "Type": "Blade",
+                                "Version": 0,
+                                "Configuration": {
+                                    "General": {
+                                        "title": "HANA Data Collector Status",
+                                        "newGroup": false,
+                                        "icon": "",
+                                        "useIcon": false
+                                    },
+                                    "Header": {
+                                        "Title": "HANA Node Connectivity",
+                                        "Subtitle": ""
+                                    },
+                                    "Donut": {
+                                        "Query": "SAPHana_CL | where CollectorType_s == \"State\" and Category== \"Connectivity\" and SubCategory_s ==\"Host\" |where TimeGenerated > ago(30d) | summarize LastCall=arg_max(TimeGenerated,*) by HOST_s | project Host=HOST_s,MinSinceLastData=datetime_diff('Minute',now(),LastCall),IsCollectorOnline=iff(LastCall< ago(1h),\"Offline\",\"Online\"),LastStatus=Connection_s |summarize count(Host) by IsCollectorOnline",
+                                        "CenterLegend": {
+                                            "Text": "Total",
+                                            "Operation": "Sum",
+                                            "ArcsToSelect": []
+                                        },
+                                        "Options": {
+                                            "colors": [
+                                                "#00188f",
+                                                "#0072c6",
+                                                "#00bcf2"
+                                            ],
+                                            "valueColorMapping": [
+                                                {
+                                                    "value": "Offline",
+                                                    "color": "#e81123"
+                                                },
+                                                {
+                                                    "value": "Online",
+                                                    "color": "#55d455"
+                                                }
+                                            ]
+                                        },
+                                        "NavigationSelect": {}
+                                    },
+                                    "List": {
+                                        "Query": "let HanaNodes=SAPHana_CL | where CollectorType_s == \"Inventory\" | where Category==\"ReplicationStatus\" | where SERVICE_s == \"indexserver\" |summarize arg_max(TimeGenerated, *) by HOST_s, SERVICE_s, Instance_s |project Primary=HOST_s, Secondary=SECONDARY_HOST_s; let connectivitytable=SAPHana_CL | where CollectorType_s == \"State\" and Category== \"Connectivity\" and SubCategory_s ==\"Host\" |where TimeGenerated > ago(30d) | summarize LastCall=arg_max(TimeGenerated,*) by HOST_s,Database_s | project Host=case(HOST_s==\"10.80.4.31\",\"sapprddb02\",HOST_s==\"10.80.4.30\",\"sapprddb01\",HOST_s),DB=Database_s ,LastStatus=strcat(Connection_s,\":\",ErrorMessage_s), StatusNumeric=case(PingResult_s == \"Fail\",4,  LastCall< ago(30m),2,  Connection_s==\"Failed\",3,1) | extend isHA=case(Host == toscalar(HanaNodes |project Primary) , \"PrimaryNode\" ,Host == toscalar(HanaNodes |project Secondary) , \"SecondaryNode\",\"not_HA_Node\"); connectivitytable| where isHA==\"not_HA_Node\" |project  DB=strcat(DB,\"|\",Host),LastStatus ,StatusNumeric |union(connectivitytable | where isHA == \"PrimaryNode\" | join kind= leftouter (     connectivitytable     | where isHA == \"SecondaryNode\" ) on DB | extend LastStatus=iff( LastStatus contains \"Successful\" or LastStatus1 contains \"Successful\",\"Successful\" , strcat(LastStatus ,\" | \" ,LastStatus1 )) |project  DB=strcat(DB,\"|\",Host),LastStatus ,StatusNumeric)",
+                                        "HideGraph": true,
+                                        "enableSparklines": false,
+                                        "ColumnsTitle": {
+                                            "Name": "Host",
+                                            "Value": "Status Numeric"
+                                        },
+                                        "Color": "#0072c6",
+                                        "thresholds": {
+                                            "isEnabled": true,
+                                            "values": [
+                                                {
+                                                    "name": "Normal",
+                                                    "threshold": "Default",
+                                                    "color": "#009e49",
+                                                    "isDefault": true
+                                                },
+                                                {
+                                                    "name": "Warning",
+                                                    "threshold": "1",
+                                                    "color": "#ff8c00",
+                                                    "isDefault": false
+                                                },
+                                                {
+                                                    "name": "Error",
+                                                    "threshold": "2",
+                                                    "color": "#eb3c00",
+                                                    "isDefault": false
+                                                },
+                                                {
+                                                    "name": "Offline",
+                                                    "threshold": "3",
+                                                    "color": "#ba141a",
+                                                    "isDefault": false
+                                                }
+                                            ]
+                                        },
+                                        "NameDSVSeparator": "",
+                                        "NavigationQuery": "SAPHana_CL | where CollectorType_s == \"State\" and Category== \"Connectivity\" and SubCategory_s ==\"Host\" |where TimeGenerated > ago(30d) | summarize LastCall=arg_max(TimeGenerated,*) by HOST_s,Database_s | project Host=strcat(Database_s,\"|\",HOST_s),IsCollectorOnline=iff(LastCall< ago(1h),\"Offline\",\"Online\") ,LastStatus=strcat(Connection_s,\":\",ErrorMessage_s),MinSinceLastData=datetime_diff('Minute',now(),LastCall)",
+                                        "NavigationSelect": {
+                                            "NavigationQuery": "SAPHana_CL | where CollectorType_s == \"State\" and Category== \"Connectivity\" and SubCategory_s ==\"Host\" |where TimeGenerated > ago(30d) | summarize LastCall=arg_max(TimeGenerated,*) by HOST_s,Database_s | project Host=strcat(Database_s,\"|\",HOST_s),IsCollectorOnline=iff(LastCall< ago(1h),\"Offline\",\"Online\") ,LastStatus=strcat(Connection_s,\":\",ErrorMessage_s),MinSinceLastData=datetime_diff('Minute',now(),LastCall)"
+                                        }
+                                    }
+                                }
+                            },
+                            {
+                                "Id": "SingleQueryDonutBuilderBladeV1",
+                                "Type": "Blade",
+                                "Version": 0,
+                                "Configuration": {
+                                    "General": {
+                                        "title": "DATABASES",
+                                        "newGroup": false,
+                                        "icon": "",
+                                        "useIcon": false
+                                    },
+                                    "Header": {
+                                        "Title": "Service Status",
+                                        "Subtitle": ""
+                                    },
+                                    "Donut": {
+                                        "Query": "let HanaConnectionTable= SAPHana_CL | where CollectorType_s == \"State\" | where Category == \"Connectivity\" |summarize arg_max(TimeGenerated,* ) by HOST_s |project Host=case(HOST_s==\"10.80.4.31\",\"sapprddb02\",HOST_s==\"10.80.4.30\",\"sapprddb01\",HOST_s),ConnectionStatus=Connection_s ; HanaConnectionTable |join kind= fullouter (     SAPHana_CL     | where CollectorType_s ==\"Inventory\" and Category== \"Services\"     | summarize arg_max(TimeGenerated, *) by HOST_s,SERVICE_NAME_s     |project Instance=Instance_s,Host=HOST_s, Status=ACTIVE_STATUS_s , Service=SERVICE_NAME_s ,Port=SQL_PORT_d     | where Service == \"indexserver\" ) on Host | project Host=strcat(Instance,\"; \",iff(isempty(Host),Host1 ,Host)) , Status=case(ConnectionStatus==\"Failed\", \"Unkown\", Status==\"YES\", \"Active\", Status) |summarize count() by Status  ",
+                                        "CenterLegend": {
+                                            "Text": "Total",
+                                            "Operation": "Sum",
+                                            "ArcsToSelect": []
+                                        },
+                                        "Options": {
+                                            "colors": [
+                                                "#fcd116",
+                                                "#dd5900",
+                                                "#e81123"
+                                            ],
+                                            "valueColorMapping": [
+                                                {
+                                                    "value": "Active",
+                                                    "color": "#55d455"
+                                                }
+                                            ]
+                                        },
+                                        "NavigationSelect": {}
+                                    },
+                                    "List": {
+                                        "Query": "let HanaConnectionTable= SAPHana_CL | where CollectorType_s == \"State\" | where Category == \"Connectivity\" |summarize arg_max(TimeGenerated,* ) by HOST_s |project Host=case(HOST_s==\"10.80.4.31\",\"sapprddb02\",HOST_s==\"10.80.4.30\",\"sapprddb01\",HOST_s),ConnectionStatus=Connection_s ; HanaConnectionTable |join kind= fullouter (     SAPHana_CL     | where CollectorType_s ==\"Inventory\" and Category== \"Services\"     | summarize arg_max(TimeGenerated, *) by HOST_s,SERVICE_NAME_s     |project Instance=Instance_s,Host=HOST_s, Status=ACTIVE_STATUS_s , Service=SERVICE_NAME_s ,Port=SQL_PORT_d     | where Service == \"indexserver\" ) on Host | project Host=strcat(Instance,\"; \",iff(isempty(Host),Host1 ,Host)) , Status=case(ConnectionStatus==\"Failed\", \"Unkown\", Status==\"YES\", \"Active\", Status), Service=iff(isempty(Service),\"Unkown\",Service)",
+                                        "HideGraph": true,
+                                        "enableSparklines": false,
+                                        "operation": "Summary",
+                                        "ColumnsTitle": {
+                                            "Name": "Instance",
+                                            "Value": ""
+                                        },
+                                        "Color": "#0072c6",
+                                        "thresholds": {
+                                            "isEnabled": false,
+                                            "values": [
+                                                {
+                                                    "name": "Normal",
+                                                    "threshold": "Default",
+                                                    "color": "#009e49",
+                                                    "isDefault": true
+                                                },
+                                                {
+                                                    "name": "Warning",
+                                                    "threshold": "60",
+                                                    "color": "#fcd116",
+                                                    "isDefault": false
+                                                },
+                                                {
+                                                    "name": "Error",
+                                                    "threshold": "90",
+                                                    "color": "#ba141a",
+                                                    "isDefault": false
+                                                }
+                                            ]
+                                        },
+                                        "NameDSVSeparator": "",
+                                        "NavigationQuery": "SAPHana_CL | where CollectorType_s == \"State\" | where Category == \"Connectivity\" |summarize arg_max(TimeGenerated,* ) by HOST_s |project Host=HOST_s ,ConnectionStatus=Connection_s |union (     SAPHana_CL     | where CollectorType_s ==\"Inventory\" and Category== \"Services\"     | summarize arg_max(TimeGenerated, *) by HOST_s,SERVICE_NAME_s     |project Instance=Instance_s,Host=HOST_s, Status=ACTIVE_STATUS_s , Service=SERVICE_NAME_s ,Port=SQL_PORT_d )",
+                                        "NavigationSelect": {
+                                            "NavigationQuery": "SAPHana_CL | where CollectorType_s == \"State\" | where Category == \"Connectivity\" |summarize arg_max(TimeGenerated,* ) by HOST_s |project Host=HOST_s ,ConnectionStatus=Connection_s |union (     SAPHana_CL     | where CollectorType_s ==\"Inventory\" and Category== \"Services\"     | summarize arg_max(TimeGenerated, *) by HOST_s,SERVICE_NAME_s     |project Instance=Instance_s,Host=HOST_s, Status=ACTIVE_STATUS_s , Service=SERVICE_NAME_s ,Port=SQL_PORT_d )"
+                                        }
+                                    }
+                                }
+                            },
+                            {
+                                "Id": "SingleQueryDonutBuilderBladeV1",
+                                "Type": "Blade",
+                                "Version": 0,
+                                "Configuration": {
+                                    "General": {
+                                        "title": "Alerts",
+                                        "newGroup": false,
+                                        "icon": "",
+                                        "useIcon": false
+                                    },
+                                    "Header": {
+                                        "Title": "Open Alerts",
+                                        "Subtitle": ""
+                                    },
+                                    "Donut": {
+                                        "Query": "let lastdatapoint = SAPHana_CL | where CollectorType_s ==\"Inventory\" | where Category == \"Alerts\" |summarize arg_max(TimeGenerated, *) by ALERT_HOST_s ,Database_s;  SAPHana_CL  | where CollectorType_s ==\"Inventory\"  | where Category == \"Alerts\"  |join kind= inner (     lastdatapoint  ) on $left.ALERT_HOST_s==$right.ALERT_HOST_s and   $left.Database_s==$right.Database_s and $left.TimeGenerated==$right.TimeGenerated | project DB=Database_s,Alert=strcat(ALERT_NAME_s,\" ; \",ALERT_DETAILS_s),ALERT_HOST_s,ALERT_RATING_d |extend Priority=case(ALERT_RATING_d==1,\"Information\" ,ALERT_RATING_d==3,\"Medium\",ALERT_RATING_d==4,\"High\",ALERT_RATING_d==5,\"Error\",\"NotDefined\")  |summarize AlertCount=count() by Priority",
+                                        "CenterLegend": {
+                                            "Text": "Total",
+                                            "Operation": "Sum",
+                                            "ArcsToSelect": []
+                                        },
+                                        "Options": {
+                                            "colors": [
+                                                "#eb3c00",
+                                                "#ff8c00",
+                                                "#fff100"
+                                            ],
+                                            "valueColorMapping": [
+                                                {
+                                                    "value": "High",
+                                                    "color": "#e81123"
+                                                },
+                                                {
+                                                    "value": "Medium",
+                                                    "color": "#ff8c00"
+                                                },
+                                                {
+                                                    "value": "Information",
+                                                    "color": "#00bcf2"
+                                                }
+                                            ]
+                                        },
+                                        "NavigationSelect": {}
+                                    },
+                                    "List": {
+                                        "Query": "let lastdatapoint = SAPHana_CL | where CollectorType_s ==\"Inventory\" | where Category == \"Alerts\" |summarize arg_max(TimeGenerated, *) by ALERT_HOST_s ,Database_s;  SAPHana_CL  | where CollectorType_s ==\"Inventory\"  | where Category == \"Alerts\"  |join kind= inner (     lastdatapoint  ) on $left.ALERT_HOST_s==$right.ALERT_HOST_s and   $left.Database_s==$right.Database_s and $left.TimeGenerated==$right.TimeGenerated | project Alert=strcat(Database_s,\"|\",ALERT_NAME_s,\" ; \",ALERT_DETAILS_s),ALERT_RATING_d | sort by ALERT_RATING_d desc nulls last ",
+                                        "HideGraph": true,
+                                        "enableSparklines": false,
+                                        "operation": "Summary",
+                                        "ColumnsTitle": {
+                                            "Name": "DB-Alert",
+                                            "Value": "Priority Numeric"
+                                        },
+                                        "Color": "#0072c6",
+                                        "thresholds": {
+                                            "isEnabled": true,
+                                            "values": [
+                                                {
+                                                    "name": "Normal",
+                                                    "threshold": "Default",
+                                                    "color": "#00bcf2",
+                                                    "isDefault": true
+                                                },
+                                                {
+                                                    "name": "Warning",
+                                                    "threshold": "2",
+                                                    "color": "#fcd116",
+                                                    "isDefault": false
+                                                },
+                                                {
+                                                    "name": "Error",
+                                                    "threshold": "3",
+                                                    "color": "#ba141a",
+                                                    "isDefault": false
+                                                }
+                                            ]
+                                        },
+                                        "NameDSVSeparator": "",
+                                        "NavigationQuery": "SAPHana_CL | where CollectorType_s ==\"Inventory\" | where Category == \"Alerts\" |summarize arg_max(TimeGenerated, *) by HOST_s ,Database_s,ALERT_ID_d | project DB=Database_s,Alert=strcat(ALERT_NAME_s,\" ; \",ALERT_DETAILS_s),Rating=ALERT_RATING_d | project DB, Alert, Rating",
+                                        "NavigationSelect": {
+                                            "NavigationQuery": "SAPHana_CL | where CollectorType_s ==\"Inventory\" | where Category == \"Alerts\" |summarize arg_max(TimeGenerated, *) by HOST_s ,Database_s,ALERT_ID_d | project DB=Database_s,Alert=strcat(ALERT_NAME_s,\" ; \",ALERT_DETAILS_s),Rating=ALERT_RATING_d | project DB, Alert, Rating"
+                                        }
+                                    }
+                                }
+                            },
+                            {
+                                "Id": "SingleQueryDonutBuilderBladeV1",
+                                "Type": "Blade",
+                                "Version": 0,
+                                "Configuration": {
+                                    "General": {
+                                        "title": "Tables / Partitions",
+                                        "newGroup": false,
+                                        "icon": "",
+                                        "useIcon": false
+                                    },
+                                    "Header": {
+                                        "Title": "Largest Tables",
+                                        "Subtitle": ""
+                                    },
+                                    "Donut": {
+                                        "Query": "SAPHana_CL | where CollectorType_s==\"Inventory\" and Category==\"Tables\" and Subcategory_s==\"Largest\" |summarize arg_max(TimeGenerated, *) by HOST_s,TableName_s ,PART_ID_d |summarize TotalCount=sum(RECORD_COUNT_d) by HOST_s,TableName_s  |top 10 by TotalCount desc nulls last |project TableName_s  , TotalCount",
+                                        "CenterLegend": {
+                                            "Text": "Total",
+                                            "Operation": "Sum",
+                                            "ArcsToSelect": []
+                                        },
+                                        "Options": {
+                                            "colors": [
+                                                "#00188f",
+                                                "#0072c6",
+                                                "#00bcf2"
+                                            ],
+                                            "valueColorMapping": []
+                                        },
+                                        "NavigationSelect": {}
+                                    },
+                                    "List": {
+                                        "Query": "SAPHana_CL | where CollectorType_s==\"Inventory\" and Category==\"Tables\" and Subcategory_s==\"Largest\" |summarize arg_max(TimeGenerated, *) by HOST_s,TableName_s ,PART_ID_d |summarize TotalCount=sum(RECORD_COUNT_d) by Database_s,TableName_s  |top 10 by TotalCount desc nulls last |project Table=strcat(Database_s,\" | \",TableName_s)  , TotalCount",
+                                        "HideGraph": false,
+                                        "enableSparklines": false,
+                                        "operation": "Summary",
+                                        "ColumnsTitle": {
+                                            "Name": "Table",
+                                            "Value": "Total Records"
+                                        },
+                                        "Color": "#0072c6",
+                                        "thresholds": {
+                                            "isEnabled": false,
+                                            "values": [
+                                                {
+                                                    "name": "Normal",
+                                                    "threshold": "Default",
+                                                    "color": "#009e49",
+                                                    "isDefault": true
+                                                },
+                                                {
+                                                    "name": "Warning",
+                                                    "threshold": "60",
+                                                    "color": "#fcd116",
+                                                    "isDefault": false
+                                                },
+                                                {
+                                                    "name": "Error",
+                                                    "threshold": "90",
+                                                    "color": "#ba141a",
+                                                    "isDefault": false
+                                                }
+                                            ]
+                                        },
+                                        "NameDSVSeparator": "",
+                                        "NavigationQuery": "search {selected item} | sort by TimeGenerated desc",
+                                        "NavigationSelect": {
+                                            "NavigationQuery": "search {selected item} | sort by TimeGenerated desc"
+                                        }
+                                    }
+                                }
+                            },
+                            {
+                                "Id": "SingleQueryDonutBuilderBladeV1",
+                                "Type": "Blade",
+                                "Version": 0,
+                                "Configuration": {
+                                    "General": {
+                                        "title": "Partititons",
+                                        "newGroup": false,
+                                        "icon": "",
+                                        "useIcon": false
+                                    },
+                                    "Header": {
+                                        "Title": "Largest Partitions",
+                                        "Subtitle": "Top 10"
+                                    },
+                                    "Donut": {
+                                        "Query": "SAPHana_CL | where CollectorType_s==\"Inventory\" and Category==\"Tables\" and Subcategory_s==\"Largest\" |summarize arg_max(TimeGenerated, *) by HOST_s,TableName_s |top 10 by RECORD_COUNT_d desc nulls last  |project TableName_s  , RECORD_COUNT_d",
+                                        "CenterLegend": {
+                                            "Text": "Total",
+                                            "Operation": "Sum",
+                                            "ArcsToSelect": []
+                                        },
+                                        "Options": {
+                                            "colors": [
+                                                "#00188f",
+                                                "#0072c6",
+                                                "#00bcf2"
+                                            ],
+                                            "valueColorMapping": []
+                                        },
+                                        "NavigationSelect": {}
+                                    },
+                                    "List": {
+                                        "Query": "SAPHana_CL | where CollectorType_s==\"Inventory\" and Category==\"Tables\" and Subcategory_s==\"Largest\" |summarize arg_max(TimeGenerated, *) by HOST_s,TableName_s |top 10 by RECORD_COUNT_d desc  nulls last  |project TABLE_PART_LOADED=strcat(TableName_s ,\" | \",tostring(PART_ID_d),\" | \",LOADED_s) , RECORD_COUNT_d",
+                                        "HideGraph": false,
+                                        "enableSparklines": false,
+                                        "operation": "Summary",
+                                        "ColumnsTitle": {
+                                            "Name": "Table-Partition-isLoaded",
+                                            "Value": "RecordCount"
+                                        },
+                                        "Color": "#0072c6",
+                                        "thresholds": {
+                                            "isEnabled": true,
+                                            "values": [
+                                                {
+                                                    "name": "Normal",
+                                                    "threshold": "Default",
+                                                    "color": "#009e49",
+                                                    "isDefault": true
+                                                },
+                                                {
+                                                    "name": "Warning",
+                                                    "threshold": "1500000000",
+                                                    "color": "#fcd116",
+                                                    "isDefault": false
+                                                },
+                                                {
+                                                    "name": "Error",
+                                                    "threshold": "1800000000",
+                                                    "color": "#ba141a",
+                                                    "isDefault": false
+                                                }
+                                            ]
+                                        },
+                                        "NameDSVSeparator": "",
+                                        "NavigationQuery": "SAPHana_CL | where CollectorType_s==\"Inventory\" and Category==\"Tables\" and Subcategory_s==\"Largest\" |summarize arg_max(TimeGenerated, *) by HOST_s,TableName_s |top 10 by RECORD_COUNT_d //remove project line to get all columns and export  |project TableName_s  , RECORD_COUNT_d",
+                                        "NavigationSelect": {
+                                            "NavigationQuery": "SAPHana_CL | where CollectorType_s==\"Inventory\" and Category==\"Tables\" and Subcategory_s==\"Largest\" |summarize arg_max(TimeGenerated, *) by HOST_s,TableName_s |top 10 by RECORD_COUNT_d //remove project line to get all columns and export  |project TableName_s  , RECORD_COUNT_d"
+                                        }
+                                    }
+                                }
+                            },
+                            {
+                                "Id": "LineChartCalloutBuilderBlade",
+                                "Type": "Blade",
+                                "Version": 0,
+                                "Configuration": {
+                                    "General": {
+                                        "title": "Active Sessions",
+                                        "newGroup": false,
+                                        "icon": "",
+                                        "useIcon": false
+                                    },
+                                    "Header": {
+                                        "Title": "Connection Status",
+                                        "Subtitle": ""
+                                    },
+                                    "LineChart": {
+                                        "Query": "SAPHana_CL | where CollectorType_s==\"Inventory\" and Category==\"Connections\"  |summarize TotalConnections=sum(CUR_CONNS_d) by \t Database_s,CONNECTION_STATUS_s ,bin(TimeGenerated, 15m)",
+                                        "Callout": {
+                                            "Title": "Avg per hour",
+                                            "Series": "",
+                                            "Operation": "Average"
+                                        },
+                                        "yAxis": {
+                                            "isLogarithmic": false,
+                                            "units": {
+                                                "baseUnitType": "",
+                                                "baseUnit": "",
+                                                "displayUnit": ""
+                                            },
+                                            "customLabel": ""
+                                        },
+                                        "NavigationSelect": {}
+                                    },
+                                    "List": {
+                                        "Query": "SAPHana_CL | where CollectorType_s==\"Inventory\" and Category==\"Connections\" |where TimeGenerated > ago(15m) |summarize TotalConnections=sum(CUR_CONNS_d) by \t DB=Database_s,UserApp=strcat(APP_USER_s,\"\\\\\",APP_NAME_s),Status=CONNECTION_STATUS_s |sort by TotalConnections desc",
+                                        "HideGraph": false,
+                                        "enableSparklines": false,
+                                        "operation": "Summary",
+                                        "ColumnsTitle": {
+                                            "Name": "DB",
+                                            "Value": "TotalConnections Last 15min"
+                                        },
+                                        "Color": "#0072c6",
+                                        "thresholds": {
+                                            "isEnabled": false,
+                                            "values": [
+                                                {
+                                                    "name": "Normal",
+                                                    "threshold": "Default",
+                                                    "color": "#009e49",
+                                                    "isDefault": true
+                                                },
+                                                {
+                                                    "name": "Warning",
+                                                    "threshold": "60",
+                                                    "color": "#fcd116",
+                                                    "isDefault": false
+                                                },
+                                                {
+                                                    "name": "Error",
+                                                    "threshold": "90",
+                                                    "color": "#ba141a",
+                                                    "isDefault": false
+                                                }
+                                            ]
+                                        },
+                                        "NameDSVSeparator": "",
+                                        "NavigationQuery": "SAPHana_CL | where CollectorType_s==\"Inventory\" and Category==\"Connections\" |summarize TotalConnections=sum(CUR_CONNS_d) by \t DB=Database_s,UserApp=strcat(APP_USER_s,\"\\\\\",APP_NAME_s),Status=CONNECTION_STATUS_s, bin(TimeGenerated, 15m)|where  {selected item} ",
+                                        "NavigationSelect": {
+                                            "NavigationQuery": "SAPHana_CL | where CollectorType_s==\"Inventory\" and Category==\"Connections\" |summarize TotalConnections=sum(CUR_CONNS_d) by \t DB=Database_s,UserApp=strcat(APP_USER_s,\"\\\\\",APP_NAME_s),Status=CONNECTION_STATUS_s, bin(TimeGenerated, 15m)|where  {selected item} "
+                                        }
+                                    }
+                                }
+                            },
+                            {
+                                "Id": "SingleQueryDonutBuilderBladeV1",
+                                "Type": "Blade",
+                                "Version": 0,
+                                "Configuration": {
+                                    "General": {
+                                        "title": "Lock Waits",
+                                        "newGroup": false,
+                                        "icon": "",
+                                        "useIcon": false
+                                    },
+                                    "Header": {
+                                        "Title": "Top Waits",
+                                        "Subtitle": ""
+                                    },
+                                    "Donut": {
+                                        "Query": " SAPHana_CL | where CollectorType_s==\"Inventory\" | where Category ==\"Locks\"|summarize arg_max(TimeGenerated, *) by Database_s, TABLE_NAME_s, LOCK_TYPE_s , LOCK_MODE_s , WAIT_STATEMENT_HASH_g , BLK_STATEMENT_HASH_g , BLK_CLIENT_HOST_PID_s , BLK_APP_SOURCE_s  | project \tLockid=strcat(TABLE_NAME_s,\"|\", LOCK_TYPE_s ,\"|\", LOCK_MODE_s ), WAITS_d | summarize arg_max(WAITS_d, *)  by Lockid",
+                                        "CenterLegend": {
+                                            "Text": "Total",
+                                            "Operation": "Sum",
+                                            "ArcsToSelect": []
+                                        },
+                                        "Options": {
+                                            "colors": [
+                                                "#00188f",
+                                                "#0072c6",
+                                                "#00bcf2"
+                                            ],
+                                            "valueColorMapping": []
+                                        },
+                                        "NavigationSelect": {}
+                                    },
+                                    "List": {
+                                        "Query": "SAPHana_CL | where CollectorType_s==\"Inventory\" | where Category ==\"Locks\"|summarize arg_max(TimeGenerated, *) by Database_s, TABLE_NAME_s, LOCK_TYPE_s , LOCK_MODE_s , WAIT_STATEMENT_HASH_g , BLK_STATEMENT_HASH_g , BLK_CLIENT_HOST_PID_s , BLK_APP_SOURCE_s  | top 10 by  WAITS_d desc nulls last   | project \t SYS_TIMESTAMP_s , Lock=strcat(TABLE_NAME_s,\"|\", LOCK_TYPE_s ,\"|\", LOCK_MODE_s ,\"|\", BLK_APP_SOURCE_s ), WAITS_d ",
+                                        "HideGraph": false,
+                                        "enableSparklines": false,
+                                        "operation": "Summary",
+                                        "ColumnsTitle": {
+                                            "Name": "TimeStamp",
+                                            "Value": "WAIT SECONDS"
+                                        },
+                                        "Color": "#0072c6",
+                                        "thresholds": {
+                                            "isEnabled": false,
+                                            "values": [
+                                                {
+                                                    "name": "Normal",
+                                                    "threshold": "Default",
+                                                    "color": "#009e49",
+                                                    "isDefault": true
+                                                },
+                                                {
+                                                    "name": "Warning",
+                                                    "threshold": "60",
+                                                    "color": "#fcd116",
+                                                    "isDefault": false
+                                                },
+                                                {
+                                                    "name": "Error",
+                                                    "threshold": "90",
+                                                    "color": "#ba141a",
+                                                    "isDefault": false
+                                                }
+                                            ]
+                                        },
+                                        "NameDSVSeparator": "",
+                                        "NavigationQuery": "SAPHana_CL | where CollectorType_s==\"Inventory\" | where Category ==\"Locks\" |summarize arg_max(TimeGenerated, *) by DB=Database_s, TABLE_NAME_s, LOCK_TYPE_s , LOCK_MODE_s , WAIT_STATEMENT_HASH_g , BLK_STATEMENT_HASH_g , BLK_CLIENT_HOST_PID_s , BLK_APP_SOURCE_s | project \t SYS_TIMESTAMP_s , DB, Lock=strcat(TABLE_NAME_s,\"|\", LOCK_TYPE_s ,\"|\", LOCK_MODE_s ,\"|\", BLK_APP_SOURCE_s ), WAITS_d |sort by  WAITS_d desc nulls last ",
+                                        "NavigationSelect": {
+                                            "NavigationQuery": "SAPHana_CL | where CollectorType_s==\"Inventory\" | where Category ==\"Locks\" |summarize arg_max(TimeGenerated, *) by DB=Database_s, TABLE_NAME_s, LOCK_TYPE_s , LOCK_MODE_s , WAIT_STATEMENT_HASH_g , BLK_STATEMENT_HASH_g , BLK_CLIENT_HOST_PID_s , BLK_APP_SOURCE_s | project \t SYS_TIMESTAMP_s , DB, Lock=strcat(TABLE_NAME_s,\"|\", LOCK_TYPE_s ,\"|\", LOCK_MODE_s ,\"|\", BLK_APP_SOURCE_s ), WAITS_d |sort by  WAITS_d desc nulls last "
+                                        }
+                                    }
+                                }
+                            },
+                            {
+                                "Id": "LineChartCalloutStackedBuilderBlade",
+                                "Type": "Blade",
+                                "Version": 0,
+                                "Configuration": {
+                                    "General": {
+                                        "title": "Database Activity",
+                                        "newGroup": false
+                                    },
+                                    "charts": [
+                                        {
+                                            "Header": {
+                                                "Title": "Execution Statistics",
+                                                "Subtitle": "SELECT/INSERT/UPDATE/DELETE"
+                                            },
+                                            "LineChart": {
+                                                "Query": "SAPHana_CL | where PerfObject_s==\"ConnectionStatistics\" and PerfInstance_s==\"EXECUTIONS\" |extend Counter=strcat(PerfCounter_s,\":\",HOST_s) |summarize AggregatedValue=avg(PerfValue_d) by Counter,bin(TimeGenerated, 15m)",
+                                                "yAxis": {
+                                                    "isLogarithmic": false,
+                                                    "units": {
+                                                        "baseUnitType": "",
+                                                        "baseUnit": "",
+                                                        "displayUnit": ""
+                                                    },
+                                                    "customLabel": ""
+                                                },
+                                                "NavigationSelect": {}
+                                            }
+                                        },
+                                        {
+                                            "Header": {
+                                                "Title": "Connections ",
+                                                "Subtitle": "Running vs Idle"
+                                            },
+                                            "LineChart": {
+                                                "Query": "SAPHana_CL | where CollectorType_s==\"Inventory\" and Category==\"Connections\" |summarize TotalConnections=sum(CUR_CONNS_d) by \tbin(TimeGenerated,15m)",
+                                                "yAxis": {
+                                                    "isLogarithmic": false,
+                                                    "units": {
+                                                        "baseUnitType": "",
+                                                        "baseUnit": "",
+                                                        "displayUnit": ""
+                                                    },
+                                                    "customLabel": ""
+                                                },
+                                                "NavigationSelect": {}
+                                            }
+                                        },
+                                        {
+                                            "Header": {
+                                                "Title": "Sessions by AppUser",
+                                                "Subtitle": ""
+                                            },
+                                            "LineChart": {
+                                                "Query": "SAPHana_CL | where CollectorType_s==\"Inventory\" and Category==\"Connections\" | extend APP_USER=strcat(Database_s,'| ',APP_USER_s) |summarize AggregatedValue=sum(CUR_CONNS_d) by APP_USER,bin(TimeGenerated, 15m)",
+                                                "yAxis": {
+                                                    "isLogarithmic": false,
+                                                    "units": {
+                                                        "baseUnitType": "",
+                                                        "baseUnit": "",
+                                                        "displayUnit": ""
+                                                    },
+                                                    "customLabel": ""
+                                                },
+                                                "NavigationSelect": {}
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            {
+                                "Id": "LineChartCalloutStackedBuilderBlade",
+                                "Type": "Blade",
+                                "Version": 0,
+                                "Configuration": {
+                                    "General": {
+                                        "title": "Service Performance - I",
+                                        "newGroup": true
+                                    },
+                                    "charts": [
+                                        {
+                                            "Header": {
+                                                "Title": "Requests Per Second",
+                                                "Subtitle": ""
+                                            },
+                                            "LineChart": {
+                                                "Query": "SAPHana_CL |where CollectorType_s ==\"Performance\" and PerfObject_s ==\"Service\" |where PerfInstance_s != \"daemon\" | where PerfCounter_s == \"REQUESTS_PER_SEC\" |summarize avg(PerfValue_d) by strcat(PerfCounter_s,\":\",HOST_s),PerfInstance_s,bin(TimeGenerated, 15m)",
+                                                "yAxis": {
+                                                    "isLogarithmic": false,
+                                                    "units": {
+                                                        "baseUnitType": "",
+                                                        "baseUnit": "",
+                                                        "displayUnit": ""
+                                                    },
+                                                    "customLabel": ""
+                                                },
+                                                "NavigationSelect": {}
+                                            }
+                                        },
+                                        {
+                                            "Header": {
+                                                "Title": "Transaction Count",
+                                                "Subtitle": ""
+                                            },
+                                            "LineChart": {
+                                                "Query": "SAPHana_CL |where CollectorType_s ==\"Performance\" and PerfObject_s ==\"Service\" |where PerfInstance_s != \"daemon\" | where PerfCounter_s == \"TRANSACTION_COUNT\" |summarize avg(PerfValue_d) by strcat(PerfCounter_s,\":\",HOST_s),PerfInstance_s,bin(TimeGenerated, 15m)",
+                                                "yAxis": {
+                                                    "isLogarithmic": false,
+                                                    "units": {
+                                                        "baseUnitType": "",
+                                                        "baseUnit": "",
+                                                        "displayUnit": ""
+                                                    },
+                                                    "customLabel": ""
+                                                },
+                                                "NavigationSelect": {}
+                                            }
+                                        },
+                                        {
+                                            "Header": {
+                                                "Title": "Handle Count",
+                                                "Subtitle": ""
+                                            },
+                                            "LineChart": {
+                                                "Query": "SAPHana_CL |where CollectorType_s ==\"Performance\" and PerfObject_s ==\"Service\" |where PerfInstance_s != \"daemon\" | where PerfCounter_s == \"HANDLE_COUNT\" |join kind= inner ( SAPHana_CL |where CollectorType_s ==\"Inventory\" and Category ==\"Services\" |summarize arg_max(TimeGenerated, *)by HOST_s,PORT_d |project HOST_s ,Port=PORT_d,Service=SERVICE_NAME_s ) on $left.PerfInstance_d==$right.Port and $left.HOST_s==$right.HOST_s |summarize avg(PerfValue_d) by PerfCounter_s,Service,bin(TimeGenerated, 15m)",
+                                                "yAxis": {
+                                                    "isLogarithmic": false,
+                                                    "units": {
+                                                        "baseUnitType": "",
+                                                        "baseUnit": "",
+                                                        "displayUnit": ""
+                                                    },
+                                                    "customLabel": ""
+                                                },
+                                                "NavigationSelect": {}
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            {
+                                "Id": "LineChartCalloutStackedBuilderBlade",
+                                "Type": "Blade",
+                                "Version": 0,
+                                "Configuration": {
+                                    "General": {
+                                        "title": "Service Performance - II",
+                                        "newGroup": false
+                                    },
+                                    "charts": [
+                                        {
+                                            "Header": {
+                                                "Title": "Connection Count",
+                                                "Subtitle": ""
+                                            },
+                                            "LineChart": {
+                                                "Query": "SAPHana_CL |where CollectorType_s ==\"Performance\" and PerfObject_s ==\"Service\" |where PerfInstance_s != \"daemon\" | where PerfCounter_s == \"CONNECTION_COUNT\" |join kind= inner ( SAPHana_CL |where CollectorType_s ==\"Inventory\" and Category ==\"Services\" |summarize arg_max(TimeGenerated, *)by HOST_s,PORT_d |project HOST_s ,Port=PORT_d,Service=SERVICE_NAME_s ) on $left.PerfInstance_d==$right.Port and $left.HOST_s==$right.HOST_s |summarize AVG=avg(PerfValue_d) by strcat(PerfCounter_s,\":\",HOST_s),Service,bin(TimeGenerated, 15m)",
+                                                "yAxis": {
+                                                    "isLogarithmic": false,
+                                                    "units": {
+                                                        "baseUnitType": "",
+                                                        "baseUnit": "",
+                                                        "displayUnit": ""
+                                                    },
+                                                    "customLabel": ""
+                                                },
+                                                "NavigationSelect": {}
+                                            }
+                                        },
+                                        {
+                                            "Header": {
+                                                "Title": "Response Time",
+                                                "Subtitle": ""
+                                            },
+                                            "LineChart": {
+                                                "Query": "SAPHana_CL |where CollectorType_s ==\"Performance\" and PerfObject_s ==\"Service\" |where PerfInstance_s != \"daemon\" | where PerfCounter_s == \"RESPONSE_TIME\" |summarize Avg=avg(PerfValue_d) by strcat(PerfCounter_s,\":\",HOST_s),PerfInstance_s,bin(TimeGenerated, 15m)",
+                                                "yAxis": {
+                                                    "isLogarithmic": false,
+                                                    "units": {
+                                                        "baseUnitType": "",
+                                                        "baseUnit": "",
+                                                        "displayUnit": ""
+                                                    },
+                                                    "customLabel": ""
+                                                },
+                                                "NavigationSelect": {}
+                                            }
+                                        },
+                                        {
+                                            "Header": {
+                                                "Title": "Statement Count",
+                                                "Subtitle": ""
+                                            },
+                                            "LineChart": {
+                                                "Query": "SAPHana_CL |where CollectorType_s ==\"Performance\" and PerfObject_s ==\"Service\" |where PerfInstance_s != \"daemon\" | where PerfCounter_s == \"STATEMENT_COUNT\" |join kind= inner ( SAPHana_CL |where CollectorType_s ==\"Inventory\" and Category ==\"Services\" |summarize arg_max(TimeGenerated, *)by HOST_s,PORT_d |project HOST_s ,Port=PORT_d,Service=SERVICE_NAME_s ) on $left.PerfInstance_d==$right.Port and $left.HOST_s==$right.HOST_s |summarize AVG=avg(PerfValue_d) by strcat(PerfCounter_s,\":\",HOST_s),Service,bin(TimeGenerated, 15m)",
+                                                "yAxis": {
+                                                    "isLogarithmic": false,
+                                                    "units": {
+                                                        "baseUnitType": "",
+                                                        "baseUnit": "",
+                                                        "displayUnit": ""
+                                                    },
+                                                    "customLabel": ""
+                                                },
+                                                "NavigationSelect": {}
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            {
+                                "Id": "SingleQueryDonutBuilderBladeV1",
+                                "Type": "Blade",
+                                "Version": 0,
+                                "Configuration": {
+                                    "General": {
+                                        "title": "Inventory",
+                                        "newGroup": false,
+                                        "icon": "",
+                                        "useIcon": false
+                                    },
+                                    "Header": {
+                                        "Title": "Backup Size Estimations",
+                                        "Subtitle": ""
+                                    },
+                                    "Donut": {
+                                        "Query": "SAPHana_CL | where CollectorType_s ==\"Inventory\" and Category== \"Backup\" | summarize arg_max(TimeGenerated, *) by Database_s,SERVICE_NAME_s,ENTRY_TYPE_NAME_s |project DB=strcat(Instance_s,\" : \",Database_s,\" : \",SERVICE_NAME_s),SizeinGB= round(ESTIMATED_SIZE_d/1024,2)",
+                                        "CenterLegend": {
+                                            "Text": "Total_GB",
+                                            "Operation": "Sum",
+                                            "ArcsToSelect": []
+                                        },
+                                        "Options": {
+                                            "colors": [
+                                                "#00188f",
+                                                "#0072c6",
+                                                "#00bcf2"
+                                            ],
+                                            "valueColorMapping": []
+                                        },
+                                        "NavigationSelect": {}
+                                    },
+                                    "List": {
+                                        "Query": "SAPHana_CL | where CollectorType_s ==\"Inventory\" and Category== \"Backup\" | summarize arg_max(TimeGenerated, *) by Database_s,SERVICE_NAME_s,ENTRY_TYPE_NAME_s |project DB=strcat(Instance_s,\" : \",Database_s,\" : \",SERVICE_NAME_s),BackupType=ENTRY_TYPE_NAME_s,SizeinGB= round(ESTIMATED_SIZE_d/1024,2)",
+                                        "HideGraph": false,
+                                        "enableSparklines": false,
+                                        "operation": "Summary",
+                                        "ColumnsTitle": {
+                                            "Name": "DB",
+                                            "Value": "SizeinGB"
+                                        },
+                                        "Color": "#0072c6",
+                                        "thresholds": {
+                                            "isEnabled": false,
+                                            "values": [
+                                                {
+                                                    "name": "Normal",
+                                                    "threshold": "Default",
+                                                    "color": "#009e49",
+                                                    "isDefault": true
+                                                },
+                                                {
+                                                    "name": "Warning",
+                                                    "threshold": "60",
+                                                    "color": "#fcd116",
+                                                    "isDefault": false
+                                                },
+                                                {
+                                                    "name": "Error",
+                                                    "threshold": "90",
+                                                    "color": "#ba141a",
+                                                    "isDefault": false
+                                                }
+                                            ]
+                                        },
+                                        "NameDSVSeparator": "",
+                                        "NavigationQuery": "search {selected item} | sort by TimeGenerated desc",
+                                        "NavigationSelect": {
+                                            "NavigationQuery": "search {selected item} | sort by TimeGenerated desc"
+                                        }
+                                    }
+                                }
+                            },
+                            {
+                                "Id": "LineChartBuilderBlade",
+                                "Type": "Blade",
+                                "Version": 0,
+                                "Configuration": {
+                                    "General": {
+                                        "title": "SMART ANALYTICS",
+                                        "newGroup": false,
+                                        "icon": "",
+                                        "useIcon": false
+                                    },
+                                    "Header": {
+                                        "Title": "Trending Queires",
+                                        "Subtitle": "Top 10"
+                                    },
+                                    "LineChart": {
+                                        "Query": " SAPHana_CL   |where  \tCollectorType_s==\"Inventory\" and \tCategory==\"Statement\"     |where STATEMENT_STRING_s  !startswith \"\" \"/* OMS */\"    | extend path=strcat(STATEMENT_HASH_g,\"|\",Instance_s, \"|\", HOST_s, \"|\", Database_s)   | make-series avg_duration=max(AVG_EXECUTION_TIME_d/1000) default=double(null)  on TimeGenerated in range(ago(1d),now(), 1h) by path | extend avgInterpolated = series_fill_linear(avg_duration)  |extend outliers=series_outliers(avgInterpolated) | extend series_fit_line(avgInterpolated) |extend trend=series_fit_line_avgInterpolated_rsquare*series_fit_line_avgInterpolated_slope |top 10 by trend desc nulls last  | mvexpand outliers to typeof(double), avgInterpolated to typeof(double), TimeGenerated to typeof(datetime),series_fit_line_avgInterpolated_line_fit  to typeof(double) |summarize AggregatedValue=avg(avgInterpolated)  by path ,bin(TimeGenerated,1h)",
+                                        "yAxis": {
+                                            "isLogarithmic": false,
+                                            "units": {
+                                                "baseUnitType": "",
+                                                "baseUnit": "",
+                                                "displayUnit": ""
+                                            },
+                                            "customLabel": ""
+                                        },
+                                        "NavigationSelect": {}
+                                    },
+                                    "List": {
+                                        "Query": " SAPHana_CL   |where  \tCollectorType_s==\"Inventory\" and \tCategory==\"Statement\"  |where STATEMENT_STRING_s  !startswith \"\" \"/* OMS */\"   | extend path=strcat(STATEMENT_HASH_g,\"|\",Instance_s, \"|\", HOST_s, \"|\", Database_s)   | make-series avg_duration=max(AVG_EXECUTION_TIME_d/1000) default=double(null)  on TimeGenerated in range(ago(1d),now(), 1h) by path | extend avgInterpolated = series_fill_linear(avg_duration) |extend outliers=series_outliers(avgInterpolated) | extend series_fit_line(avgInterpolated) |extend trend=series_fit_line_avgInterpolated_rsquare*series_fit_line_avgInterpolated_slope |top 10 by trend desc nulls last  | mvexpand  avgInterpolated to typeof(double) |project-away avg_duration,outliers,series_fit_line_avgInterpolated_rsquare,series_fit_line_avgInterpolated_slope,\t series_fit_line_avgInterpolated_variance,series_fit_line_avgInterpolated_rvariance,series_fit_line_avgInterpolated_interception,series_fit_line_avgInterpolated_line_fit |summarize AggregatedValue=avg(avgInterpolated)  by path  |join kind= inner (      SAPHana_CL   |where  \tCollectorType_s==\"Inventory\" and \tCategory==\"Statement\"  | extend path=strcat(STATEMENT_HASH_g,\"|\",Instance_s, \"|\", HOST_s, \"|\", Database_s)   |summarize arg_max(TimeGenerated, *) by path  |project path,STATEMENT_STRING_s ) on path |project path,Statement=STATEMENT_STRING_s,AggregatedValue |sort by AggregatedValue desc ",
+                                        "HideGraph": false,
+                                        "enableSparklines": false,
+                                        "operation": "Summary",
+                                        "ColumnsTitle": {
+                                            "Name": "QueryHash",
+                                            "Value": "AvgDuration ms"
+                                        },
+                                        "Color": "#0072c6",
+                                        "thresholds": {
+                                            "isEnabled": false,
+                                            "values": [
+                                                {
+                                                    "name": "Normal",
+                                                    "threshold": "Default",
+                                                    "color": "#009e49",
+                                                    "isDefault": true
+                                                },
+                                                {
+                                                    "name": "Warning",
+                                                    "threshold": "60",
+                                                    "color": "#fcd116",
+                                                    "isDefault": false
+                                                },
+                                                {
+                                                    "name": "Error",
+                                                    "threshold": "90",
+                                                    "color": "#ba141a",
+                                                    "isDefault": false
+                                                }
+                                            ]
+                                        },
+                                        "NameDSVSeparator": "",
+                                        "NavigationQuery": " SAPHana_CL   |where  \tCollectorType_s==\"Inventory\" and \tCategory==\"Statement\"  |where STATEMENT_STRING_s  !startswith \"\" \"/* OMS */\"   | extend path=strcat(STATEMENT_HASH_g,\"|\",Instance_s, \"|\", HOST_s, \"|\", Database_s)   | make-series avg_duration=max(AVG_EXECUTION_TIME_d/1000) default=double(null)  on TimeGenerated in range(ago(1d),now(), 1h) by path | extend avgInterpolated = series_fill_linear(avg_duration) |extend outliers=series_outliers(avgInterpolated) | extend series_fit_line(avgInterpolated) |extend trend=series_fit_line_avgInterpolated_rsquare*series_fit_line_avgInterpolated_slope |top 10 by trend desc nulls last  | mvexpand  avgInterpolated to typeof(double) |project-away avg_duration,outliers,series_fit_line_avgInterpolated_rsquare,series_fit_line_avgInterpolated_slope,\t series_fit_line_avgInterpolated_variance,series_fit_line_avgInterpolated_rvariance,series_fit_line_avgInterpolated_interception,series_fit_line_avgInterpolated_line_fit |summarize AggregatedValue=avg(avgInterpolated)  by path  |join kind= inner (      SAPHana_CL   |where  \tCollectorType_s==\"Inventory\" and \tCategory==\"Statement\"  | extend path=strcat(STATEMENT_HASH_g,\"|\",Instance_s, \"|\", HOST_s, \"|\", Database_s)   |summarize arg_max(TimeGenerated, *) by path  |project path,STATEMENT_STRING_s ) on path |project path,Statement=STATEMENT_STRING_s,AggregatedValue |sort by AggregatedValue desc ",
+                                        "NavigationSelect": {
+                                            "NavigationQuery": " SAPHana_CL   |where  \tCollectorType_s==\"Inventory\" and \tCategory==\"Statement\"  |where STATEMENT_STRING_s  !startswith \"\" \"/* OMS */\"   | extend path=strcat(STATEMENT_HASH_g,\"|\",Instance_s, \"|\", HOST_s, \"|\", Database_s)   | make-series avg_duration=max(AVG_EXECUTION_TIME_d/1000) default=double(null)  on TimeGenerated in range(ago(1d),now(), 1h) by path | extend avgInterpolated = series_fill_linear(avg_duration) |extend outliers=series_outliers(avgInterpolated) | extend series_fit_line(avgInterpolated) |extend trend=series_fit_line_avgInterpolated_rsquare*series_fit_line_avgInterpolated_slope |top 10 by trend desc nulls last  | mvexpand  avgInterpolated to typeof(double) |project-away avg_duration,outliers,series_fit_line_avgInterpolated_rsquare,series_fit_line_avgInterpolated_slope,\t series_fit_line_avgInterpolated_variance,series_fit_line_avgInterpolated_rvariance,series_fit_line_avgInterpolated_interception,series_fit_line_avgInterpolated_line_fit |summarize AggregatedValue=avg(avgInterpolated)  by path  |join kind= inner (      SAPHana_CL   |where  \tCollectorType_s==\"Inventory\" and \tCategory==\"Statement\"  | extend path=strcat(STATEMENT_HASH_g,\"|\",Instance_s, \"|\", HOST_s, \"|\", Database_s)   |summarize arg_max(TimeGenerated, *) by path  |project path,STATEMENT_STRING_s ) on path |project path,Statement=STATEMENT_STRING_s,AggregatedValue |sort by AggregatedValue desc "
+                                        }
+                                    }
+                                }
+                            },
+                            {
+                                "Id": "LineChartBuilderBlade",
+                                "Type": "Blade",
+                                "Version": 0,
+                                "Configuration": {
+                                    "General": {
+                                        "title": "Top 10 Queries",
+                                        "newGroup": false,
+                                        "icon": "",
+                                        "useIcon": false
+                                    },
+                                    "Header": {
+                                        "Title": "Top 10 Queries by  Execution Count",
+                                        "Subtitle": ""
+                                    },
+                                    "LineChart": {
+                                        "Query": "let top10=SAPHana_CL |where  \tCollectorType_s==\"Inventory\" and \tCategory==\"Statement\" |where STATEMENT_STRING_s  !startswith \"\" \"/* OMS */\" | extend path=strcat(STATEMENT_HASH_g,\"|\",Instance_s, \"|\", HOST_s, \"|\", Database_s) |summarize executioncount=max(EXECUTION_COUNT_d) by path |top 10 by executioncount desc nulls last |project path; SAPHana_CL |where  \tCollectorType_s==\"Inventory\" and \tCategory==\"Statement\" | extend path=strcat(STATEMENT_HASH_g,\"|\",Instance_s, \"|\", HOST_s, \"|\", Database_s) |where path in (top10) |summarize AggregatedValue=max(EXECUTION_COUNT_d) by path ,bin(TimeGenerated ,15m)",
+                                        "yAxis": {
+                                            "isLogarithmic": false,
+                                            "units": {
+                                                "baseUnitType": "",
+                                                "baseUnit": "",
+                                                "displayUnit": ""
+                                            },
+                                            "customLabel": ""
+                                        },
+                                        "NavigationSelect": {}
+                                    },
+                                    "List": {
+                                        "Query": " SAPHana_CL |where  \tCollectorType_s==\"Inventory\" and \tCategory==\"Statement\" |where STATEMENT_STRING_s  !startswith \"\" \"/* OMS */\" | extend path=strcat(STATEMENT_HASH_g,\"|\",Instance_s, \"|\", HOST_s, \"|\", Database_s) |summarize executioncount=max(EXECUTION_COUNT_d) by path |top 10 by executioncount desc nulls last |project path,executioncount",
+                                        "HideGraph": false,
+                                        "enableSparklines": false,
+                                        "operation": "Summary",
+                                        "ColumnsTitle": {
+                                            "Name": "Statement Hash",
+                                            "Value": "Execution Count"
+                                        },
+                                        "Color": "#0072c6",
+                                        "thresholds": {
+                                            "isEnabled": false,
+                                            "values": [
+                                                {
+                                                    "name": "Normal",
+                                                    "threshold": "Default",
+                                                    "color": "#009e49",
+                                                    "isDefault": true
+                                                },
+                                                {
+                                                    "name": "Warning",
+                                                    "threshold": "60",
+                                                    "color": "#fcd116",
+                                                    "isDefault": false
+                                                },
+                                                {
+                                                    "name": "Error",
+                                                    "threshold": "90",
+                                                    "color": "#ba141a",
+                                                    "isDefault": false
+                                                }
+                                            ]
+                                        },
+                                        "NameDSVSeparator": "",
+                                        "NavigationQuery": "SAPHana_CL |where  \tCollectorType_s==\"Inventory\" and \tCategory==\"Statement\" |where STATEMENT_STRING_s  !startswith \"\" \"/* OMS */\" | extend path=strcat(STATEMENT_HASH_g,\"|\",Instance_s, \"|\", HOST_s, \"|\", Database_s) |summarize duration_ms=round(max(AVG_EXECUTION_TIME_d/1000),0) by path |join kind= inner (     SAPHana_CL     |where  \tCollectorType_s==\"Inventory\" and \tCategory==\"Statement\"     | extend path=strcat(STATEMENT_HASH_g,\"|\",Instance_s, \"|\", HOST_s, \"|\", Database_s)     |summarize arg_max(TimeGenerated, *) by path     |project path,STATEMENT_STRING_s ) on path |project path,Statement=STATEMENT_STRING_s,duration_ms |sort by duration_ms  desc",
+                                        "NavigationSelect": {
+                                            "NavigationQuery": "SAPHana_CL |where  \tCollectorType_s==\"Inventory\" and \tCategory==\"Statement\" |where STATEMENT_STRING_s  !startswith \"\" \"/* OMS */\" | extend path=strcat(STATEMENT_HASH_g,\"|\",Instance_s, \"|\", HOST_s, \"|\", Database_s) |summarize duration_ms=round(max(AVG_EXECUTION_TIME_d/1000),0) by path |join kind= inner (     SAPHana_CL     |where  \tCollectorType_s==\"Inventory\" and \tCategory==\"Statement\"     | extend path=strcat(STATEMENT_HASH_g,\"|\",Instance_s, \"|\", HOST_s, \"|\", Database_s)     |summarize arg_max(TimeGenerated, *) by path     |project path,STATEMENT_STRING_s ) on path |project path,Statement=STATEMENT_STRING_s,duration_ms |sort by duration_ms  desc"
+                                        }
+                                    }
+                                }
+                            },
+                            {
+                                "Id": "NotableQueriesBuilderBlade",
+                                "Type": "Blade",
+                                "Version": 0,
+                                "Configuration": {
+                                    "General": {
+                                        "title": "List of queries",
+                                        "newGroup": false,
+                                        "preselectedFilters": "Type, Computer",
+                                        "renderMode": "grid"
+                                    },
+                                    "queries": [
+                                        {
+                                            "query": "let query=\"e7492f87-6680-7a18-9614-b8467932922c|S4X-30|azesapsbxs4db1|S4X\";  SAPHana_CL  |where    CollectorType_s==\"Inventory\" and    Category==\"Statement\" | extend path=strcat(STATEMENT_HASH_g,\"|\",Instance_s, \"|\", HOST_s, \"|\", Database_s)  |where path==query |summarize arg_max(TimeGenerated, *) by path |project path,STATEMENT_STRING_s  //edit query to analyze",
+                                            "displayName": "Get Query Details"
+                                        },
+                                        {
+                                            "query": "let query=\"e7492f87-6680-7a18-9614-b8467932922c|S4X-30|azesapsbxs4db1|S4X\";  let trendthreshold=0.1;  let daystocheck=ago(2d);  let bininterval=15m; SAPHana_CL |where  \tCollectorType_s==\"Inventory\" and \tCategory==\"Statement\" |where STATEMENT_STRING_s  !startswith \"\" \"/* OMS */\" | extend path=strcat(STATEMENT_HASH_g,\"|\",Instance_s, \"|\", HOST_s, \"|\", Database_s) |where path==query |summarize avg(AVG_EXECUTION_TIME_d/1000) by path,bin(TimeGenerated, bininterval) |render timechart ",
+                                            "displayName": "Query Execution Time History"
+                                        },
+                                        {
+                                            "query": "let trendthreshold=0.2; let daystocheck=ago(2d); SAPHana_CL |where  \tCollectorType_s==\"Inventory\" and \tCategory==\"Statement\" |where STATEMENT_STRING_s  !startswith \"\" \"/* OMS */\" | extend path=strcat(STATEMENT_HASH_g,\"|\",Instance_s, \"|\", HOST_s, \"|\", Database_s) | make-series avg_duration=max(AVG_EXECUTION_TIME_d/1000) default=double(null)  on TimeGenerated in range(daystocheck,now(), 1h) by path | extend avgInterpolated = series_fill_linear(avg_duration) |extend outliers=series_outliers(avgInterpolated) | extend series_fit_line(avgInterpolated) |extend trend=series_fit_line_avgInterpolated_rsquare*series_fit_line_avgInterpolated_slope |where trend >= trendthreshold |top 10 by trend desc nulls last | mvexpand outliers to typeof(double), avgInterpolated to typeof(double), TimeGenerated to typeof(datetime),series_fit_line_avgInterpolated_line_fit  to typeof(double) limit  256 |render timechart",
+                                            "displayName": "Get Top 10 Trending Queries"
+                                        },
+                                        {
+                                            "query": "let trend7days=SAPHana_CL | where CollectorType_s has \"Performance\" | where PerfObject_s ==\"Host\" and PerfCounter_s ==\"CPU_PCT\" |where TimeGenerated >= ago(7d) | make-series avgCPU=avg(PerfValue_d) default=double(null)  on TimeGenerated in range(ago(7d),now(), 1h) by HOST_s | extend avgInterpolated = series_fill_linear(avgCPU) |extend outliers=series_outliers(avgInterpolated) | extend series_fit_line(avgInterpolated) |extend trend=series_fit_line_avgInterpolated_rsquare*series_fit_line_avgInterpolated_slope |mvexpand outliers to typeof(double), avgInterpolated to typeof(double), TimeGenerated to typeof(datetime),series_fit_line_avgInterpolated_line_fit  to typeof(double) limit  256; let trend30days=SAPHana_CL | where CollectorType_s has \"Performance\" | where PerfObject_s ==\"Host\" and PerfCounter_s ==\"CPU_PCT\" |where TimeGenerated >= ago(30d) | make-series avgCPU=avg(PerfValue_d) default=double(null)  on TimeGenerated in range(ago(30d),now(), 2h) by HOST_s | extend avgInterpolated = series_fill_linear(avgCPU) |extend outliers=series_outliers(avgInterpolated) | extend series_fit_line(avgInterpolated) |extend trend=series_fit_line_avgInterpolated_rsquare*series_fit_line_avgInterpolated_slope | mvexpand  TimeGenerated to typeof(datetime),series_fit_line_avgInterpolated_line_fit  to typeof(double) limit  360; trend7days |summarize AvgValue=avg(series_fit_line_avgInterpolated_line_fit) by Host=strcat(\"Trend7Day|\",HOST_s) , bin(TimeGenerated, 1h) |union (trend30days |summarize AvgValue=avg(series_fit_line_avgInterpolated_line_fit) by Host=strcat(\"Trend30Day|\",HOST_s) , bin(TimeGenerated, 1h)), (  trend7days |summarize AvgValue=avg(avgInterpolated) by Host=strcat(\"ActualCPU|\",HOST_s) , bin(TimeGenerated, 1h)  ) |summarize AvgCPU=avg(AvgValue) by Host, bin(TimeGenerated, 1h) |render timechart ",
+                                            "displayName": "CPU Actual vs Trends 7Days / 30Days"
+                                        },
+                                        {
+                                            "query": "let trending=SAPHana_CL | where CollectorType_s == \"Performance\" | where  PerfCounter_s in(\"UsedMemoryGB\") |extend Path=strcat(HOST_s,':',PerfCounter_s) |where TimeGenerated >= ago(7d) | make-series avgValue=avg(PerfValue_d) default=double(null)  on TimeGenerated in range(ago(7d),now(), 1h) by Path | extend avgInterpolated = series_fill_linear(avgValue) |extend outliers=series_outliers(avgInterpolated) | extend series_fit_line(avgInterpolated) |extend trend=series_fit_line_avgInterpolated_rsquare*series_fit_line_avgInterpolated_slope | mvexpand outliers to typeof(double), avgInterpolated to typeof(double), TimeGenerated to typeof(datetime),series_fit_line_avgInterpolated_line_fit  to typeof(double) limit  256 ; trending |summarize AvgValue=avg(series_fit_line_avgInterpolated_line_fit) by Host=strcat(\"Trend|\",Path) , bin(TimeGenerated, 1h) |union (  trending |summarize AvgValue=avg(avgInterpolated) by Host=strcat(\"Actual|\",Path) , bin(TimeGenerated, 1h)  ) |summarize UsedMemGB=avg(AvgValue) by Host, bin(TimeGenerated, 1h) |render timechart ",
+                                            "displayName": "Used Memory Actual vs Trend 7 Days"
+                                        },
+                                        {
+                                            "query": "let searchlastndays=ago(7d); let forecastndays=30; let bin_size=1d; let pasttrend=SAPHana_CL | where CollectorType_s has \"Performance\" | where PerfObject_s ==\"Host\" and PerfCounter_s ==\"CPU_PCT\" |where TimeGenerated >= searchlastndays | make-series avgCPU=avg(PerfValue_d) default=double(null)  on TimeGenerated in range(searchlastndays,now(), 1d) by HOST_s | extend avgInterpolated = series_fill_linear(avgCPU) |extend outliers=series_outliers(avgInterpolated) | extend series_fit_line(avgInterpolated) | extend rp=series_fit_line_avgInterpolated_line_fit[(arraylength(avgInterpolated)-1)] | extend days_to_zero = rp/-series_fit_line_avgInterpolated_slope/(1d/1d) |extend trend=series_fit_line_avgInterpolated_rsquare*series_fit_line_avgInterpolated_slope |mvexpand outliers to typeof(double), avgInterpolated to typeof(double), TimeGenerated to typeof(datetime),series_fit_line_avgInterpolated_line_fit  to typeof(double) limit  256; pasttrend |project Host=HOST_s,avgCPU=avgInterpolated,TimeGenerated |union ( range i from 0 to forecastndays  step 1 | project TimeGenerated =datetime_add('day',i,now()), y=toscalar(pasttrend|summarize arg_max(TimeGenerated,*) by HOST_s  |project series_fit_line_avgInterpolated_slope)*i ,  cpu=toscalar(pasttrend|summarize arg_max(TimeGenerated,*) by HOST_s|project avgInterpolated) ,Host=strcat(toscalar(pasttrend|summarize arg_max(TimeGenerated,*) by HOST_s|project HOST_s),'-Forecast') |extend avgCPU=cpu+y |project TimeGenerated,avgCPU,Host) |render timechart ",
+                                            "displayName": "CPU Forecast for n days based on past n days"
+                                        },
+                                        {
+                                            "query": "let prev7days=SAPHana_CL | where CollectorType_s has \"Performance\" | where PerfCounter_s ==\"UsedMemoryGB\" |where TimeGenerated >= ago(7d) | make-series avgCPU=avg(PerfValue_d) default=double(null)  on TimeGenerated in range(ago(7d),now(), 1d) by HOST_s | extend avgInterpolated = series_fill_linear(avgCPU) |extend outliers=series_outliers(avgInterpolated) | extend series_fit_line(avgInterpolated) | extend rp=series_fit_line_avgInterpolated_line_fit[(arraylength(avgInterpolated)-1)] | extend days_to_zero = rp/-series_fit_line_avgInterpolated_slope/(1d/1d) |extend trend=series_fit_line_avgInterpolated_rsquare*series_fit_line_avgInterpolated_slope |mvexpand outliers to typeof(double), avgInterpolated to typeof(double), TimeGenerated to typeof(datetime),series_fit_line_avgInterpolated_line_fit  to typeof(double) limit  256 |summarize arg_max(TimeGenerated,*) by HOST_s; let bin_size=1d; range i from 0 to 30d/bin_size step 5 |extend Day=strcat('day',tostring(toint(i))) | project t=i*1d, y=toscalar(prev7days |project series_fit_line_avgInterpolated_slope)*i , cpu=toscalar(prev7days |project avgInterpolated),Day |extend forecastMeM=cpu+y |project t,Day,forecastMeM =iff(forecastMeM<0,toreal(0),forecastMeM) |render barchart ",
+                                            "displayName": "Memory Forecast based on last 7days"
+                                        },
+                                        {
+                                            "query": "SAPHana_CL |where  \tCollectorType_s==\"Inventory\" and \tCategory==\"Statement\" |where STATEMENT_STRING_s  !startswith \"\" \"/* OMS */\" | extend path=strcat(STATEMENT_HASH_g,\"|\",Instance_s, \"|\", HOST_s, \"|\", Database_s) | make-series avg_duration=max(AVG_EXECUTION_TIME_d/1000) default=double(null)  on TimeGenerated in range(ago(7d),now(), 1h) by path | extend avgInterpolated = series_fill_linear(avg_duration) |extend outliers=series_outliers(avgInterpolated) | extend series_fit_line(avgInterpolated) |extend trend=series_fit_line_avgInterpolated_rsquare*series_fit_line_avgInterpolated_slope |top 10 by trend desc nulls last |project path |join kind= inner (     SAPHana_CL |where  \tCollectorType_s==\"Inventory\" and \tCategory==\"Statement\" |where STATEMENT_STRING_s  !startswith \"\" \"/* OMS */\" |where TimeGenerated > ago(7d) | extend path=strcat(STATEMENT_HASH_g,\"|\",Instance_s, \"|\", HOST_s, \"|\", Database_s) |project path,ACCESSED_TABLE_NAMES_s ) on path |extend Tables=split(ACCESSED_TABLE_NAMES_s,',') |mvexpand Tables to typeof(string) |summarize count() by Tables",
+                                            "displayName": "Tables Accessed by Trending Queries"
+                                        },
+                                        {
+                                            "query": "let tabletosearch=\"LIVECACHE\";  SAPHana_CL |where  \tCollectorType_s==\"Inventory\" and \tCategory==\"Statement\" |where STATEMENT_STRING_s  !startswith \"\" \"/* OMS */\" | extend path=strcat(STATEMENT_HASH_g,\"|\",Instance_s, \"|\", HOST_s, \"|\", Database_s) |extend Tables=split(ACCESSED_TABLE_NAMES_s,',') |mvexpand Tables to typeof(string) |where Tables contains tabletosearch |project path, ACCESSED_TABLE_NAMES_s  |distinct path",
+                                            "displayName": "Find queries accessing specific table"
+                                        }
+                                    ]
+                                }
+                            }
+                        ],
+                        "Filters": [],
+                        "OverviewTile": {
+                            "Id": "SingleQueryDonutBuilderTileV1",
+                            "Type": "OverviewTile",
+                            "Version": 2,
+                            "Configuration": {
+                                "Donut": {
+                                    "Query": "SAPHana_CL |where  \tCollectorType_s==\"Inventory\" and \tCategory==\"Backup\" |summarize arg_max(TimeGenerated, *) by Database_s,SERVICE_NAME_s, Instance_s , ENTRY_TYPE_NAME_s | where SERVICE_NAME_s == \"indexserver\"  | where ENTRY_TYPE_NAME_s == \"complete data backup\"  |project DB=Database_s,\tSizeGB=round(ESTIMATED_SIZE_d/1024,0)",
+                                    "CenterLegend": {
+                                        "Text": "Total",
+                                        "Operation": "Sum",
+                                        "ArcsToSelect": []
+                                    },
+                                    "Options": {
+                                        "colors": [
+                                            "#7fba00",
+                                            "#6dc2e9",
+                                            "#fcd116"
+                                        ],
+                                        "valueColorMapping": []
+                                    }
+                                },
+                                "Advanced": {
+                                    "DataFlowVerification": {
+                                        "Enabled": false,
+                                        "Query": "search * | limit 1 | project TimeGenerated",
+                                        "Message": ""
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            ]
+        }
+    ]
+}

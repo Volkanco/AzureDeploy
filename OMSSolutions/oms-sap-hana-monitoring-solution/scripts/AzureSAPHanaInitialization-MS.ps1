@@ -43,8 +43,11 @@ catch {
 $AAResourceGroup = Get-AutomationVariable -Name 'AzureSAPHanaMonitoring-AzureAutomationResourceGroup-MS-Mgmt'
 $AAAccount = Get-AutomationVariable -Name 'AzureSAPHanaMonitoring-AzureAutomationAccount-MS-Mgmt'
 $collectorRunbookName = "AzureSAPHanaCollector-MS"
+$configCheckRunbookName = "AzureSAPHanaConfigChecks-MS"
 $collectorScheduleName = "AzureSAPHanaCollector-Schedule"
 $mainSchedulerName="AzureSAPHanaMonitoring-Scheduler-Hourly"
+$configSchedulerName="AzureSAPHanaMonitoring-Scheduler-Daily"
+
 
 $varText= "AAResourceGroup = $AAResourceGroup , AAAccount = $AAAccount"
 
@@ -64,15 +67,6 @@ IF([string]::IsNullOrEmpty($AAAccount) -or [string]::IsNullOrEmpty($AAResourceGr
 
 
 
-# if not works 
-<#
-New-AzureRmAutomationVariable -Name AzureHanaMonitorUser -Description "Hana Monitoring User for Default Profile" -Value $defaultProfileUser -Encrypted 0 -ResourceGroupName $AAResourceGroup -AutomationAccountName $AAAccount  -ea 0
-New-AzureRmAutomationVariable -Name AzureHanaMonitorPwd -Description "Hana Monitoring User Password for Default Profile." -Value $defaultProfilePassword -Encrypted 1 -ResourceGroupName $AAResourceGroup -AutomationAccountName $AAAccount  -ea 0
-$PlainTextPassword= [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR( (ConvertTo-SecureString $defaultProfilePassword )))
-Write-Output $PlainTextPassword
-$PlainTextPassword= [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR( (ConvertTo-SecureString $defaultProfilePassword ))
-
-#>
 
 $min=(get-date).Minute 
 if($min -in 0..10) 
@@ -106,7 +100,7 @@ $allSchedules=Get-AzureRmAutomationSchedule `
 -AutomationAccountName $AAAccount `
 -ResourceGroupName $AAResourceGroup
 
-foreach ($sch in  $allSchedules|where{$_.Name -match $collectorScheduleName})
+foreach ($sch in  $allSchedules|where{$_.Name -match $collectorScheduleName -or $_.Name -match $configSchedulerName})
 {
 
 	Write-output "Removing Schedule $($sch.Name)    "
@@ -143,19 +137,19 @@ Do {
 While ($i -le $schcount)
 
 #finally create a daily schedule for Configuration Checks
-if($(get-date).Hour -lt 4 )
+if($(get-date).Hour -lt 23 )
 {
-    $dailyschedule=Get-Date -Hour 4 -Minute 0 -Second 0
+    $dailyschedule=Get-Date -Hour 23 -Minute 0 -Second 0
 }Else
 {
-    $dailyschedule=(Get-Date -Hour 4 -Minute 0 -Second 0).adddays(1)
+    $dailyschedule=(Get-Date -Hour 23 -Minute 0 -Second 0).adddays(1)
 }
 
 
 New-AzureRmAutomationSchedule  `
 	-AutomationAccountName $AAAccount `
 	-DayInterval 1  `
-	-Name "$collectorScheduleName-Daily"
+	-Name $configSchedulerName
 	-ResourceGroupName $AAResourceGroup `
 	-StartTime $dailyschedule
 
@@ -163,8 +157,8 @@ New-AzureRmAutomationSchedule  `
 		Register-AzureRmAutomationScheduledRunbook `
 		-AutomationAccountName $AAAccount `
 		-ResourceGroupName  $AAResourceGroup `
-		-RunbookName $collectorRunbookName  `
-		-ScheduleName "$collectorScheduleName-Daily"  -Parameters $Params -RunOn $hybridworkergroup
+		-RunbookName $configCheckRunbookName  `
+		-ScheduleName $configSchedulerName  -Parameters $Params -RunOn $hybridworkergroup
 
 
 
