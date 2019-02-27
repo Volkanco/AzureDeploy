@@ -144,7 +144,8 @@
                 "Id": ""
             }
         },
-        "parentRunbookUri": "[concat(parameters('_artifactsLocation'),'/scripts/AzureSAPHanaCollector-MS.ps1', parameters('_artifactsLocationSasToken'))]",
+        "mainRunbookUri": "[concat(parameters('_artifactsLocation'),'/scripts/AzureSAPHanaCollector-MS.ps1', parameters('_artifactsLocationSasToken'))]",
+        "configRunbookUri": "[concat(parameters('_artifactsLocation'),'/scripts/AzureSAPHanaConfigChecks-MS.ps1', parameters('_artifactsLocationSasToken'))]",
         "schedulerRunbookUri": "[concat(parameters('_artifactsLocation'),'/scripts/AzureSAPHanaInitialization-MS.ps1', parameters('_artifactsLocationSasToken'))]",
         "omsSolutions": {
             "customSolution": {
@@ -5571,7 +5572,7 @@
                         "logVerbose": "false",
                         "description": "[variables('runbooks').ingestMainRunbook.description]",
                         "publishContentLink": {
-                            "uri": "[variables('parentRunbookUri')]",
+                            "uri": "[variables('mainRunbookUri')]",
                             "version": "[variables('runbooks').ingestMainRunbook.version]"
                         }
                     }
@@ -5592,7 +5593,7 @@
                         "logVerbose": "false",
                         "description": "[variables('runbooks').ingestConfigRunbook.description]",
                         "publishContentLink": {
-                            "uri": "[variables('parentRunbookUri')]",
+                            "uri": "[variables('configRunbookUri')]",
                             "version": "[variables('runbooks').ingestConfigRunbook.version]"
                         }
                     }

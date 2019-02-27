@@ -121,7 +121,7 @@ Do {
 	-HourInterval 1 `
 	-Name $($collectorScheduleName+"-$i") `
 	-ResourceGroupName $AAResourceGroup `
-	-StartTime (Get-Variable -Name RBStart"$i").Value
+	-StartTime (Get-Variable -Name RBStart"$i").Value 
 
 
 		$params = @{"collecttableinv" = $collecttableinv;"configfolder" = $configfolder;"debuglog"=$false;"useManagedIdentity"=$false;"runmode"="default"}
@@ -146,20 +146,20 @@ if($(get-date).Hour -lt 23 )
 }
 
 
-New-AzureRmAutomationSchedule  `
-	-AutomationAccountName $AAAccount `
-	-DayInterval 1  `
-	-Name $configSchedulerName
-	-ResourceGroupName $AAResourceGroup `
-	-StartTime $dailyschedule
+New-AzureRmAutomationSchedule `
+		-AutomationAccountName $AAAccount `
+		-StartTime  $dailyschedule `
+		-DayInterval 1  `
+		-Name $configSchedulerName `
+		-ResourceGroupName $AAResourceGroup 
 
-		$params = @{"configfolder" = $configfolder;"debuglog"=$false;"useManagedIdentity"=$false;"runconfigchecks"=$true;"runtoptables"=$true;"configchecktype"="All"}
+
+		$params = @{"configfolder" = $configfolder;"useManagedIdentity"=$false;"runconfigchecks"=$true;"runtoptables"=$true;"configchecktype"="All"}
 		Register-AzureRmAutomationScheduledRunbook `
 		-AutomationAccountName $AAAccount `
 		-ResourceGroupName  $AAResourceGroup `
 		-RunbookName $configCheckRunbookName  `
 		-ScheduleName $configSchedulerName  -Parameters $Params -RunOn $hybridworkergroup
-
 
 
 #finally remove the schedule for the createschedules runbook as not needed if all schedules are in place
