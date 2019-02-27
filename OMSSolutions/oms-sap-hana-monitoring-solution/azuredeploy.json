@@ -4178,7 +4178,7 @@
                                         "enableSparklines": false,
                                         "ColumnsTitle": {
                                             "Name": "Type",
-                                            "Value": "Count"
+                                            "Value": "Ping_ms"
                                         },
                                         "Color": "#0072c6",
                                         "thresholds": {
@@ -4246,7 +4246,7 @@
                                         "enableSparklines": false,
                                         "ColumnsTitle": {
                                             "Name": "SYSTEM | LICENSE",
-                                            "Value": "Count"
+                                            "Value": "Used_Pct"
                                         },
                                         "Color": "#0072c6",
                                         "thresholds": {
