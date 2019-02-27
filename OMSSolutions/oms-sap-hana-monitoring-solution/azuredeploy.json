@@ -5380,9 +5380,12 @@
                         "[concat('Microsoft.OperationalInsights/workspaces/', parameters('logAnalyticsWorkspaceName'))]",
                         "[concat('Microsoft.Automation/automationAccounts/', parameters('automationAccountName'))]",
                         "[concat('Microsoft.OperationalInsights/workspaces/', parameters('logAnalyticsWorkspaceName'), '/views/', variables('omsSolutions').customSolution.name)]",
-                        "[concat('Microsoft.OperationalInsights/workspaces/', parameters('logAnalyticsWorkspaceName'), '/views/Azure  HANA Configuration Checks')]",                     
+                        "[concat('Microsoft.OperationalInsights/workspaces/', parameters('logAnalyticsWorkspaceName'), '/views/Azure  HANA Configuration Checks')]",  
+                        "[resourceId('Microsoft.OperationalInsights/workspaces/views/', parameters('logAnalyticsWorkspaceName'), 'Azure HANA Databases')]",
+                        "[resourceId('Microsoft.OperationalInsights/workspaces/views/', parameters('logAnalyticsWorkspaceName'), 'Azure HANA Landscape')]",                   
                         "[concat('Microsoft.Automation/automationAccounts/', parameters('automationAccountName'), '/runbooks/', variables('runbooks').ingestSchedulerRunbook.name)]",
-                        "[concat('Microsoft.Automation/automationAccounts/', parameters('automationAccountName'), '/runbooks/', variables('runbooks').ingestMainRunbook.name)]"
+                        "[concat('Microsoft.Automation/automationAccounts/', parameters('automationAccountName'), '/runbooks/', variables('runbooks').ingestMainRunbook.name)]",
+                        "[concat('Microsoft.Automation/automationAccounts/', parameters('automationAccountName'), '/runbooks/', variables('runbooks').ingestConfigRunbook.name)]"
                     ],
                     "plan": {
                         "name": "[variables('omsSolutions').customSolution.solutionName]",
@@ -5396,8 +5399,11 @@
                         "containedResources": [
                             "[resourceId('Microsoft.OperationalInsights/workspaces/views/', parameters('logAnalyticsWorkspaceName'), variables('omsSolutions').customSolution.name)]",
                             "[resourceId('Microsoft.OperationalInsights/workspaces/views/', parameters('logAnalyticsWorkspaceName'), 'Azure  HANA Configuration Checks')]",
+                            "[resourceId('Microsoft.OperationalInsights/workspaces/views/', parameters('logAnalyticsWorkspaceName'), 'Azure HANA Databases')]",
+                            "[resourceId('Microsoft.OperationalInsights/workspaces/views/', parameters('logAnalyticsWorkspaceName'), 'Azure HANA Landscape')]",
                             "[resourceId('Microsoft.Automation/automationAccounts/runbooks/', parameters('automationAccountName'), variables('runbooks').ingestSchedulerRunbook.name)]",
                             "[resourceId('Microsoft.Automation/automationAccounts/runbooks/', parameters('automationAccountName'), variables('runbooks').ingestMainRunbook.name)]",
+                            "[resourceId('Microsoft.Automation/automationAccounts/runbooks/', parameters('automationAccountName'), variables('runbooks').ingestConfigRunbook.name)]",                            
                             "[resourceId('Microsoft.Automation/automationAccounts/variables/', parameters('automationAccountName'), variables('opsInsightWorkspaceID'))]",
                             "[resourceId('Microsoft.Automation/automationAccounts/variables/', parameters('automationAccountName'), variables('opsInsightWorkspaceKey'))]",
                             "[resourceId('Microsoft.Automation/automationAccounts/variables/', parameters('automationAccountName'), variables('createScheduleAutomationAccountName'))]",

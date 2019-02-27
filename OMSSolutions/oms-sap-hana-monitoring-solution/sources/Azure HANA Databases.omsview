@@ -33,16 +33,16 @@
             "resources": [
                 {
                     "apiVersion": "2015-11-01-preview",
-                    "name": "Azure SAP HANA Database SizeGB",
+                    "name": "Azure  HANA Databases",
                     "type": "views",
                     "location": "[parameters('location')]",
-                    "id": "[Concat('/subscriptions/', parameters('subscriptionId'), '/resourceGroups/', parameters('resourcegroup'), '/providers/Microsoft.OperationalInsights/workspaces/', parameters('workspace'),'/views/Azure SAP HANA Database SizeGB')]",
+                    "id": "[Concat('/subscriptions/', parameters('subscriptionId'), '/resourceGroups/', parameters('resourcegroup'), '/providers/Microsoft.OperationalInsights/workspaces/', parameters('workspace'),'/views/Azure  HANA Databases')]",
                     "dependson": [
                         "[Concat('/subscriptions/', parameters('subscriptionId'), '/resourceGroups/', parameters('resourcegroup'), '/providers/Microsoft.OperationalInsights/workspaces/', parameters('workspace'))]"
                     ],
                     "properties": {
-                        "Id": "Azure SAP HANA Database SizeGB",
-                        "Name": "Azure SAP HANA Database SizeGB",
+                        "Id": "Azure  HANA Databases",
+                        "Name": "Azure  HANA Databases",
                         "Author": null,
                         "Source": "Local",
                         "Version": 2,
@@ -89,7 +89,7 @@
                                         "NavigationSelect": {}
                                     },
                                     "List": {
-                                        "Query": "let HanaNodes=SAPHana_CL | where CollectorType_s == \"Inventory\" | where Category==\"ReplicationStatus\" | where SERVICE_s == \"indexserver\" |summarize arg_max(TimeGenerated, *) by HOST_s, SERVICE_s, Instance_s |project Primary=HOST_s, Secondary=SECONDARY_HOST_s; let connectivitytable=SAPHana_CL | where CollectorType_s == \"State\" and Category== \"Connectivity\" and SubCategory_s ==\"Host\" |where TimeGenerated > ago(30d) | summarize LastCall=arg_max(TimeGenerated,*) by HOST_s,Database_s | project Host=case(HOST_s==\"10.80.4.31\",\"sapprddb02\",HOST_s==\"10.80.4.30\",\"sapprddb01\",HOST_s),DB=Database_s ,LastStatus=strcat(Connection_s,\":\",ErrorMessage_s), StatusNumeric=case(PingResult_s == \"Fail\",4,  LastCall< ago(30m),2,  Connection_s==\"Failed\",3,1) | extend isHA=case(Host == toscalar(HanaNodes |project Primary) , \"PrimaryNode\" ,Host == toscalar(HanaNodes |project Secondary) , \"SecondaryNode\",\"not_HA_Node\"); connectivitytable| where isHA==\"not_HA_Node\" |project  DB=strcat(DB,\"|\",Host),LastStatus ,StatusNumeric |union(connectivitytable | where isHA == \"PrimaryNode\" | join kind= leftouter (     connectivitytable     | where isHA == \"SecondaryNode\" ) on DB | extend LastStatus=iff( LastStatus contains \"Successful\" or LastStatus1 contains \"Successful\",\"Successful\" , strcat(LastStatus ,\" | \" ,LastStatus1 )) |project  DB=strcat(DB,\"|\",Host),LastStatus ,StatusNumeric)",
+                                        "Query": "let HanaNodes=SAPHana_CL | where CollectorType_s == \"Inventory\" | where Category==\"ReplicationStatus\" | where SERVICE_s == \"indexserver\" |summarize arg_max(TimeGenerated, *) by HOST_s, SERVICE_s, Instance_s |project Primary=HOST_s, Secondary=SECONDARY_HOST_s; let connectivitytable=SAPHana_CL | where CollectorType_s == \"State\" and Category== \"Connectivity\" and SubCategory_s ==\"Host\" |where TimeGenerated > ago(30d) | summarize LastCall=arg_max(TimeGenerated,*) by HOST_s,Database_s | project Host=HOST_s,DB=Database_s ,LastStatus=strcat(Connection_s,\":\",ErrorMessage_s), StatusNumeric=case(PingResult_s == \"Fail\",4,  LastCall< ago(30m),2,  Connection_s==\"Failed\",3,1) | extend isHA=case(Host == toscalar(HanaNodes |project Primary) , \"PrimaryNode\" ,Host == toscalar(HanaNodes |project Secondary) , \"SecondaryNode\",\"not_HA_Node\"); connectivitytable| where isHA==\"not_HA_Node\" |project  DB=strcat(DB,\"|\",Host),LastStatus ,StatusNumeric |union(connectivitytable | where isHA == \"PrimaryNode\" | join kind= leftouter (     connectivitytable     | where isHA == \"SecondaryNode\" ) on DB | extend LastStatus=iff( LastStatus contains \"Successful\" or LastStatus1 contains \"Successful\",\"Successful\" , strcat(LastStatus ,\" | \" ,LastStatus1 )) |project  DB=strcat(DB,\"|\",Host),LastStatus ,StatusNumeric)",
                                         "HideGraph": true,
                                         "enableSparklines": false,
                                         "ColumnsTitle": {
@@ -150,7 +150,7 @@
                                         "Subtitle": ""
                                     },
                                     "Donut": {
-                                        "Query": "let HanaConnectionTable= SAPHana_CL | where CollectorType_s == \"State\" | where Category == \"Connectivity\" |summarize arg_max(TimeGenerated,* ) by HOST_s |project Host=case(HOST_s==\"10.80.4.31\",\"sapprddb02\",HOST_s==\"10.80.4.30\",\"sapprddb01\",HOST_s),ConnectionStatus=Connection_s ; HanaConnectionTable |join kind= fullouter (     SAPHana_CL     | where CollectorType_s ==\"Inventory\" and Category== \"Services\"     | summarize arg_max(TimeGenerated, *) by HOST_s,SERVICE_NAME_s     |project Instance=Instance_s,Host=HOST_s, Status=ACTIVE_STATUS_s , Service=SERVICE_NAME_s ,Port=SQL_PORT_d     | where Service == \"indexserver\" ) on Host | project Host=strcat(Instance,\"; \",iff(isempty(Host),Host1 ,Host)) , Status=case(ConnectionStatus==\"Failed\", \"Unkown\", Status==\"YES\", \"Active\", Status) |summarize count() by Status  ",
+                                        "Query": "let HanaConnectionTable= SAPHana_CL | where CollectorType_s == \"State\" | where Category == \"Connectivity\" |summarize arg_max(TimeGenerated,* ) by HOST_s |project Host=HOST_s,ConnectionStatus=Connection_s ; HanaConnectionTable |join kind= fullouter (     SAPHana_CL     | where CollectorType_s ==\"Inventory\" and Category== \"Services\"     | summarize arg_max(TimeGenerated, *) by HOST_s,SERVICE_NAME_s     |project Instance=Instance_s,Host=HOST_s, Status=ACTIVE_STATUS_s , Service=SERVICE_NAME_s ,Port=SQL_PORT_d     | where Service == \"indexserver\" ) on Host | project Host=strcat(Instance,\"; \",iff(isempty(Host),Host1 ,Host)) , Status=case(ConnectionStatus==\"Failed\", \"Unkown\", Status==\"YES\", \"Active\", Status) |summarize count() by Status  ",
                                         "CenterLegend": {
                                             "Text": "Total",
                                             "Operation": "Sum",
@@ -172,7 +172,7 @@
                                         "NavigationSelect": {}
                                     },
                                     "List": {
-                                        "Query": "let HanaConnectionTable= SAPHana_CL | where CollectorType_s == \"State\" | where Category == \"Connectivity\" |summarize arg_max(TimeGenerated,* ) by HOST_s |project Host=case(HOST_s==\"10.80.4.31\",\"sapprddb02\",HOST_s==\"10.80.4.30\",\"sapprddb01\",HOST_s),ConnectionStatus=Connection_s ; HanaConnectionTable |join kind= fullouter (     SAPHana_CL     | where CollectorType_s ==\"Inventory\" and Category== \"Services\"     | summarize arg_max(TimeGenerated, *) by HOST_s,SERVICE_NAME_s     |project Instance=Instance_s,Host=HOST_s, Status=ACTIVE_STATUS_s , Service=SERVICE_NAME_s ,Port=SQL_PORT_d     | where Service == \"indexserver\" ) on Host | project Host=strcat(Instance,\"; \",iff(isempty(Host),Host1 ,Host)) , Status=case(ConnectionStatus==\"Failed\", \"Unkown\", Status==\"YES\", \"Active\", Status), Service=iff(isempty(Service),\"Unkown\",Service)",
+                                        "Query": "let HanaConnectionTable= SAPHana_CL | where CollectorType_s == \"State\" | where Category == \"Connectivity\" |summarize arg_max(TimeGenerated,* ) by HOST_s |project Host=HOST_s,ConnectionStatus=Connection_s ; HanaConnectionTable |join kind= fullouter (     SAPHana_CL     | where CollectorType_s ==\"Inventory\" and Category== \"Services\"     | summarize arg_max(TimeGenerated, *) by HOST_s,SERVICE_NAME_s     |project Instance=Instance_s,Host=HOST_s, Status=ACTIVE_STATUS_s , Service=SERVICE_NAME_s ,Port=SQL_PORT_d     | where Service == \"indexserver\" ) on Host | project Host=strcat(Instance,\"; \",iff(isempty(Host),Host1 ,Host)) , Status=case(ConnectionStatus==\"Failed\", \"Unkown\", Status==\"YES\", \"Active\", Status), Service=iff(isempty(Service),\"Unkown\",Service)",
                                         "HideGraph": true,
                                         "enableSparklines": false,
                                         "operation": "Summary",
