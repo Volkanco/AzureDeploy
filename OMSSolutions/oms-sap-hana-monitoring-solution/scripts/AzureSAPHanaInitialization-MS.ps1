@@ -153,15 +153,12 @@ New-AzureRmAutomationSchedule  `
 	-ResourceGroupName $AAResourceGroup `
 	-StartTime $dailyschedule
 
-		$params = @{"collecttableinv" = $collecttableinv;"configfolder" = $configfolder;"debuglog"=$false;"useManagedIdentity"=$false;"runmode"="daily"}
+		$params = @{"configfolder" = $configfolder;"debuglog"=$false;"useManagedIdentity"=$false;"runconfigchecks"=$true;"runtoptables"=$true;"configchecktype"="All"}
 		Register-AzureRmAutomationScheduledRunbook `
 		-AutomationAccountName $AAAccount `
 		-ResourceGroupName  $AAResourceGroup `
 		-RunbookName $configCheckRunbookName  `
 		-ScheduleName $configSchedulerName  -Parameters $Params -RunOn $hybridworkergroup
-
-
-
 
 
 
