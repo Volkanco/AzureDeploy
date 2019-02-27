@@ -4014,7 +4014,7 @@
                     "apiVersion": "2015-11-01-preview",
                     "name": "Azure HANA Landscape",
                     "type": "views",
-                    "id": "[resourceId('Microsoft.OperationalInsights/workspaces/views/', parameters('logAnalyticsWorkspaceName'), 'Azure HANA  Landscape')]",
+                    "id": "[resourceId('Microsoft.OperationalInsights/workspaces/views/', parameters('logAnalyticsWorkspaceName'), 'Azure HANA Landscape')]",
                     "dependson": [
                         "[Concat('Microsoft.OperationalInsights/workspaces/', parameters('logAnalyticsWorkspaceName'))]"
                     ],
@@ -4314,8 +4314,8 @@
                         "[Concat('Microsoft.OperationalInsights/workspaces/', parameters('logAnalyticsWorkspaceName'))]"
                     ],
                     "properties": {
-                        "Id": "Azure  HANA Databases",
-                        "Name": "Azure  HANA Databases",
+                        "Id": "Azure HANA Databases",
+                        "Name": "Azure HANA Databases",
                         "Author": "[variables('omsSolutions').customSolution.author]",
                         "Source": "Local",
                         "Version": 2,
