@@ -808,7 +808,7 @@ ORDER BY
 					HOST=$row.HOST
 					Instance=$sapinstance
 					CollectorType="Inventory"
-					Category="Database"
+					Category="DatabaseInfo"
 					SYSTEM_ID=$row.SYSTEM_ID
 					Database=$row.DATABASE_NAME
 					START_TIME=$row.START_TIME
