@@ -275,15 +275,6 @@ $ex=$null
     $trackhost=@()  
     $colstart=get-date  
 
-     #Enable collection of config minicheck and table inventory at 4 AM 
-    IF((get-date).Minute -in (0..14) -and (get-date).Hour -eq 4)
-    {
-        $runconfigchecks=$true
-    }Else{
-
-        $runconfigchecks=$false    
-    }
-
 	Foreach($ins in $hanaconfig.HanaConnections.Rule)
 	{
 	   IF($ins.Enabled -eq'true')

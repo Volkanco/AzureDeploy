@@ -324,6 +324,7 @@ $ex=$null
                 }Else
                 {
                     $pingresult="Fail"
+                    Write-warning "Failed to connect $($ins.HanaServer) on port 22"
                 }
             }Else
             {
@@ -344,7 +345,7 @@ $ex=$null
 		}
 		Catch
 		{
-			$Ex=$_.Exception.MEssage;write-warning $query
+			$Ex=$_.Exception.MEssage;write-warning $ex
 		}
 		
         #end region
