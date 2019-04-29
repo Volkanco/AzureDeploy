@@ -11,11 +11,27 @@
         "logAnalyticsRegion": { 
             "type": "string",
             "allowedValues": [
-                "westeurope",
-                "eastus",
-                "southeastasia",
-                "australiasoutheast",
-                "wescentralus"
+                "East US",
+                "West Europe",
+                "Southeast Asia",
+                "Australia Southeast",
+                "West Central US",
+                "Japan East",
+                "UK South",
+                "Central India",
+                "Canada Central",
+                "East US 2 EUAP",
+                "West US 2",
+                "Australia Central",
+                "Australia East",
+                "France Central",
+                "Korea Central",
+                "North Europe",
+                "Central US",
+                "East Asia",
+                "East US 2",
+                "South Central US",
+                "West US"
             ],
             "metadata": {
                 "description": "Specify the Azure Region for your new or existing OMS workspace"
