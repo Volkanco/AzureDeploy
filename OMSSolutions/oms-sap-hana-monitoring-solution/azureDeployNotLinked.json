@@ -31,7 +31,8 @@
                 "East Asia",
                 "East US 2",
                 "South Central US",
-                "West US"
+                "West US",
+                "Central US"
             ],
             "metadata": {
                 "description": "Specify the Azure Region for your new or existing OMS workspace"
