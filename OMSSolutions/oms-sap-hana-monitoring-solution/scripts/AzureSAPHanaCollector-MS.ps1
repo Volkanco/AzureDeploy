@@ -3522,173 +3522,38 @@ $ex=$null
 
 
 
-	Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query33 CollectorType=Inventory - Category=Statement"
-				
-
-			$query="/* OMS -Query33 */SELECT 
-			HOST,
-			PORT,
-			SCHEMA_NAME,
-			STATEMENT_HASH,
-			STATEMENT_STRING,
-			USER_NAME,
-			ACCESSED_TABLE_NAMES,
-			TABLE_TYPES STORE,
-			PLAN_SHARING_TYPE SHARING_TYPE,
-			LAST_EXECUTION_TIMESTAMP,
-			IS_DISTRIBUTED_EXECUTION,
-			IS_INTERNAL,PLAN_ID,
-			TABLE_LOCATIONS TABLE_LOCATION,
-			EXECUTION_COUNT,TOTAL_EXECUTION_TIME,AVG_EXECUTION_TIME,
-			TOTAL_RESULT_RECORD_COUNT,
-			TOTAL_EXECUTION_TIME + TOTAL_PREPARATION_TIME TOTAL_ELAPSED_TIME,
-			TOTAL_PREPARATION_TIME,
-			TOTAL_LOCK_WAIT_DURATION,
-			TOTAL_LOCK_WAIT_COUNT,
-			TOTAL_SERVICE_NETWORK_REQUEST_DURATION,
-			TOTAL_CALLED_THREAD_COUNT, 
-			TOTAL_EXECUTION_MEMORY_SIZE
-
-			FROM
-			M_SQL_PLAN_CACHE where LAST_EXECUTION_TIMESTAMP >  add_seconds('"+$currentruntime+"',-$timespan) and AVG_EXECUTION_TIME > $querythreshold"
-
-			$cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
-					$ds=New-Object system.Data.DataSet ;
-			$ex=$null
-		  Try{
-			  $cmd.fill($ds)
-		  }
-		  Catch
-		  {
-			  $Ex=$_.Exception.MEssage;write-warning "Failed to run Query33"
-			  write-warning  $ex 
-		  }
-		   
-
-		  $Resultsinv=$null
-		  [System.Collections.ArrayList]$Resultsinv=@(); 
-
-		  foreach ($row in $ds.Tables[0].rows)
-		  {
-
-				  $resultsinv.Add([PSCustomObject]@{
-
-				  HOST=$row.HOST
-				  Instance=$sapinstance
-				  Database=$Hanadb
-				  PORT=$row.PORT
-				  Schema_Name=$row.SCHEMA_NAME
-				  SYS_TIMESTAMP=([datetime]$row.LAST_EXECUTION_TIMESTAMP).addseconds([int]$utcdiff*(-1))
-				  CollectorType="Inventory"
-				  Category="Statement"
-				  STATEMENT_HASH=$row.STATEMENT_HASH
-				  STATEMENT_STRING=$row.STATEMENT_STRING
-				  USER_NAME=$row.USER_NAME
-				  ACCESSED_TABLE_NAMES=$row.ACCESSED_TABLE_NAMES 
-				  STORE=$row.STORE
-				  SHARING_TYPE=$row.SHARING_TYPE
-				  LAST_EXECUTION_TIMESTAMP=$row.LAST_EXECUTION_TIMESTAMP
-				  IS_DISTRIBUTED_EXECUTION=$row.IS_DISTRIBUTED_EXECUTION 
-				  IS_INTERNAL =$row.IS_INTERNAL
-				  IS_PINNED_PLAN=$row.IS_PINNED_PLAN
-				  PLAN_ID=$row.PLAN_ID
-				  TABLE_LOCATION=$row.TABLE_LOCATION
-				  EXECUTION_COUNT=$row.EXECUTION_COUNT  
-				  TOTAL_EXECUTION_TIME=$row.TOTAL_EXECUTION_TIME
-				  AVG_EXECUTION_TIME=$row.AVG_EXECUTION_TIME
-				  TOTAL_RESULT_RECORD_COUNT=$row.TOTAL_RESULT_RECORD_COUNT
-				  TOTAL_ELAPSED_TIME=$row.TOTAL_ELAPSED_TIME
-				  TOTAL_PREPARATION_TIME =$row.TOTAL_PREPARATION_TIME
-				  TOTAL_LOCK_WAIT_DURATION=$row.TOTAL_LOCK_WAIT_DURATION
-				  TOTAL_LOCK_WAIT_COUNT=$row.TOTAL_LOCK_WAIT_COUNT
-				  TOTAL_SERVICE_NETWORK_REQUEST_DURATION =$row.TOTAL_SERVICE_NETWORK_REQUEST_DURATION
-				  TOTAL_CALLED_THREAD_COUNT=$row.TOTAL_CALLED_THREAD_COUNT
-				  TOTAL_EXECUTION_MEMORY_SIZE=$row.TOTAL_EXECUTION_MEMORY_SIZE                                   
-			   })|Out-Null
-		  }
-		  $Omsinvupload.Add($Resultsinv)|Out-Null
-
-
-Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query34 CollectorType=Inventory - Category=Threads"				
-
-
-$query="/* OMS -Query34*/SELECT HOST,
-LPAD(PORT, 5) PORT,
-SERVICE_NAME SERVICE,
-LPAD(NUM, 5) NUM,
-CONN_ID,
-LPAD(THREAD_ID, 9) THREAD_ID,
-THREAD_TYPE,
-THREAD_STATE,
-ACTIVE,
-APP_USER,
-DURATION_S,
-CPU_TIME_S
-FROM
-( SELECT
-  CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'HOST')         != 0 THEN T.HOST               ELSE MAP(BI.HOST, '%', 'any', BI.HOST)                 END HOST,
-  CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'PORT')         != 0 THEN TO_VARCHAR(T.PORT)      ELSE MAP(BI.PORT, '%', 'any', BI.PORT)                 END PORT,
-  CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'SERVICE')      != 0 THEN S.SERVICE_NAME       ELSE MAP(BI.SERVICE_NAME, '%', 'any', BI.SERVICE_NAME) END SERVICE_NAME,
-  CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'APP_USER')     != 0 THEN T.APP_USER           ELSE 'any'                                             END APP_USER,
-  CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'THREAD_TYPE')  != 0 THEN T.THREAD_TYPE        ELSE 'any'                                             END THREAD_TYPE,
-  CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'THREAD_STATE') != 0 THEN T.THREAD_STATE       ELSE 'any'                                             END THREAD_STATE,
-  CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'THREAD_ID')    != 0 THEN TO_VARCHAR(T.THREAD_ID) ELSE 'any'                                             END THREAD_ID,
-  COUNT(*) NUM,
-  MAP(MIN(T.CONN_ID), MAX(T.CONN_ID), LPAD(MAX(T.CONN_ID), 10), 'various') CONN_ID,
-  MAP(MIN(T.ACTIVE), MAX(T.ACTIVE), MAX(T.ACTIVE), 'various') ACTIVE,
-  LPAD(TO_DECIMAL(MAP(BI.AGGREGATION_TYPE, 'AVG', AVG(T.DURATION_MS), 'MAX', MAX(T.DURATION_MS), 'SUM', SUM(T.DURATION_MS)) / 1000, 10, 2), 10) DURATION_S,
-  LPAD(TO_DECIMAL(MAP(BI.AGGREGATION_TYPE, 'AVG', AVG(T.CPU_TIME_US), 'MAX', MAX(T.CPU_TIME_US), 'SUM', SUM(T.CPU_TIME_US)) / 1000 / 1000, 10, 2), 10) CPU_TIME_S,
-  BI.ORDER_BY
-FROM
-( SELECT                                      /* Modification section */
-	'%' HOST,
-	'%' PORT,
-	'%' SERVICE_NAME,
-	'X' ONLY_ACTIVE_THREADS,
-	-1 CONN_ID,
-	'SUM' AGGREGATION_TYPE,       /* MAX, AVG, SUM */
-	'NONE' AGGREGATE_BY,          /* HOST, PORT, SERVICE, APP_USER, THREAD_TYPE, THREAD_STATE, THREAD_ID and comma separated combinations, NONE for no aggregation */
-	'THREADS' ORDER_BY             /* THREAD_ID, CONNECTION, THREADS */
-  FROM
-	DUMMY
-) BI,
-  M_SERVICES S,
-( SELECT
-	HOST,
-	PORT,
-	CONNECTION_ID CONN_ID,
-	THREAD_ID,
-	THREAD_TYPE,
-	THREAD_STATE,
-	IS_ACTIVE ACTIVE,
-	APPLICATION_USER_NAME APP_USER,
-	DURATION DURATION_MS,
-	CPU_TIME_SELF CPU_TIME_US
-  FROM
-	M_SERVICE_THREADS
-) T
-WHERE
-  S.HOST LIKE BI.HOST AND
-  TO_VARCHAR(S.PORT) LIKE BI.PORT AND
-  S.SERVICE_NAME LIKE BI.SERVICE_NAME AND
-  T.HOST = S.HOST AND
-  T.PORT = S.PORT AND
-  ( BI.ONLY_ACTIVE_THREADS = ' ' OR T.ACTIVE = 'TRUE' ) AND
-  ( BI.CONN_ID = -1 OR T.CONN_ID = BI.CONN_ID )
-GROUP BY
-  CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'HOST')         != 0 THEN T.HOST               ELSE MAP(BI.HOST, '%', 'any', BI.HOST)                 END,
-  CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'PORT')         != 0 THEN TO_VARCHAR(T.PORT)      ELSE MAP(BI.PORT, '%', 'any', BI.PORT)                 END,
-  CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'SERVICE')      != 0 THEN S.SERVICE_NAME       ELSE MAP(BI.SERVICE_NAME, '%', 'any', BI.SERVICE_NAME) END,
-  CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'APP_USER')     != 0 THEN T.APP_USER           ELSE 'any'                                             END,
-  CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'THREAD_TYPE')  != 0 THEN T.THREAD_TYPE        ELSE 'any'                                             END,
-  CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'THREAD_STATE') != 0 THEN T.THREAD_STATE       ELSE 'any'                                             END,
-  CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'THREAD_ID')    != 0 THEN TO_VARCHAR(T.THREAD_ID) ELSE 'any'                                             END,
-  BI.ORDER_BY,
-  BI.AGGREGATION_TYPE
-)
-ORDER BY
-MAP(ORDER_BY, 'THREAD_ID',   THREAD_ID, 'any', 'CONNECTION', CONN_ID, 'any'),
-MAP(ORDER_BY, 'THREADS', NUM) DESC"
+$query="/* OMS -Query33*/SELECT
+	 HOST,
+	 PORT,
+	 SERVICE_NAME,
+	 HIERARCHY,
+	 CONNECTION_ID,
+	 THREAD_ID,
+	 THREAD_TYPE,
+	 THREAD_METHOD,
+	 THREAD_DETAIL,
+	 THREAD_STATE,
+	 IS_ACTIVE,
+	 DURATION,
+	 CALLER,
+	 CALLING,
+	 STATEMENT_ID,
+	 STATEMENT_HASH,
+	 USER_NAME,
+	 APPLICATION_NAME,
+	 APPLICATION_USER_NAME,
+	 APPLICATION_SOURCE,
+	 CPU_TIME_SELF,
+	 CPU_TIME_CUMULATIVE,
+	 CLIENT_IP,
+	 CLIENT_PID,
+	 STATEMENT_EXECUTION_ID,
+	 TRANSACTION_ID,
+	 LOCK_WAIT_COMPONENT,
+	 LOCK_WAIT_NAME,
+	 LOCK_OWNER_THREAD_ID,
+	 LOCKS_OWNED
+ FROM SYS.M_SERVICE_THREADS  WHERE IS_ACTIVE='TRUE' OR STATEMENT_HASH <>''"
 $cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
 		  $ds=New-Object system.Data.DataSet ;
 $ex=$null
@@ -3697,7 +3562,7 @@ $ex=$null
 		  }
 		  Catch
 		  {
-			  $Ex=$_.Exception.MEssage;write-warning "Failed to run Query34"
+			  $Ex=$_.Exception.MEssage;write-warning "Failed to run Query33"
 			  write-warning  $ex 
 		  }
 		   
@@ -3713,186 +3578,79 @@ $ex=$null
 					  HOST=$row.HOST.ToLower()
 					  Instance=$sapinstance
 					  CollectorType="Inventory"
-					  Category="Thread"
-					  Subcategory="Current"
+					  Category="Threads"
 					  Database=$Hanadb
-					  PORT=$row.PORT
-					  SERVICE=$row.SERVICE
-					  NUM=$row.Num
-					  CONN_ID=$row.CONN_ID
-					  THREAD_ID=$row.THREAD_ID
-					  THREAD_TYPE=$row.THREAD_TYPE
-					   THREAD_STATE=$row.THREAD_STATE    
-					   ACTIVE=$row.ACTIVE
-					  APP_USER=$row.APP_USER 
-					  DURATION_S=[double]$row.DURATION_S 
-					  CPU_TIME_S=[double]$row.CPU_TIME_S
+                        PORT=[int]$row.PORT
+                        SERVICE_NAME=$row.SERVICE_NAME
+                        HIERARCHY=[string]$row.HIERARCHY
+                        CONNECTION_ID=$row.CONNECTION_ID
+                        THREAD_ID=[long]$row.THREAD_ID
+                        THREAD_TYPE=[string]$row.THREAD_TYPE
+                        THREAD_METHOD=[string]$row.THREAD_METHOD
+                        THREAD_DETAIL=[string]$row.THREAD_DETAIL
+                        THREAD_STATE=[string]$row.THREAD_STATE
+                        IS_ACTIVE=[string]$row.IS_ACTIVE
+                        DURATION_S=[double]$row.DURATION/1000
+                        CALLER=$row.CALLER
+                        CALLING=$row.CALLING
+                        STATEMENT_ID=[long]$row.STATEMENT_ID
+                        STATEMENT_HASH=$row.STATEMENT_HASH
+                        USER_NAME=[string]$row.USER_NAME
+                        APP_NAME=[string]$row.APPLICATION_NAME
+                        APP_USER=[string]$row.APPLICATION_USER_NAME
+                        APP_SOURCE=[string]$row.APPLICATION_SOURCE
+                        CPU_TIME_SELF_S=[double]$row.CPU_TIME_SELF/1000000
+                        CPU_TIME_CUMULATIVE_S=[double]$row.CPU_TIME_CUMULATIVE/1000000
+                        CLIENT_IP=[string]$row.CLIENT_IP
+                        CLIENT_PID=[int]$row.CLIENT_PID
+                        STATEMENT_EXECUTION_ID=[long]$row.STATEMENT_EXECUTION_ID
+                        TRANSACTION_ID=[long]$row.TRANSACTION_ID
+                        LOCK_WAIT_COMPONENT=$row.LOCK_WAIT_COMPONENT
+                        LOCK_WAIT_NAME=$row.LOCK_WAIT_NAME
+                        LOCK_OWNER_THREAD_ID=[long]$row.LOCK_OWNER_THREAD_ID
+                        LOCKS_OWNED=$row.LOCKS_OWNED
 				  })|Out-Null
 			  }
 			  $Omsinvupload.Add($Resultsinv)|Out-Null
 		  }
 
 
+
+
+
 #inventory Sessions    
 
 
-Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query35 CollectorType=Inventory - Category=Sessions"		
+Write-Output "$((get-date).ToString('dd-MM-yyyy hh:mm:ss')) Query34 CollectorType=Inventory - Category=Sessions"		
 
 
-$query="/* OMS -Query35*/SELECT  C.HOST,
-LPAD(C.PORT, 5) PORT,
-S.SERVICE_NAME SERVICE,
-IFNULL(LPAD(C.CONN_ID, 7), '') CONN_ID,
-IFNULL(LPAD(C.THREAD_ID, 9), '') THREAD_ID,
-IFNULL(LPAD(C.TRANSACTION_ID, 8), '') TRANS_ID,
-IFNULL(LPAD(C.UPD_TRANS_ID, 9), '') UPD_TID,
-IFNULL(LPAD(C.CLIENT_PID, 10), '') CLIENT_PID,
-C.CLIENT_HOST,
-C.TRANSACTION_START,
-IFNULL(LPAD(TO_DECIMAL(C.TRANSACTION_ACTIVE_DAYS, 10, 2), 8), '') ACT_DAYS,
-C.THREAD_TYPE,
-C.THREAD_STATE,
-C.CALLER,
-C.WAITING_FOR,
-C.APPLICATION_SOURCE,
-C.STATEMENT_HASH,
-CASE
-  WHEN MAX_THREAD_DETAIL_LENGTH = -1 THEN THREAD_DETAIL
-  WHEN THREAD_DETAIL_FROM_POS <= 15 THEN
-	SUBSTR(THREAD_DETAIL, 1, MAX_THREAD_DETAIL_LENGTH)
-  ELSE
-	SUBSTR(SUBSTR(THREAD_DETAIL, 1, LOCATE(THREAD_DETAIL, CHAR(32))) || '...' || SUBSTR(THREAD_DETAIL, THREAD_DETAIL_FROM_POS - 1), 1, MAX_THREAD_DETAIL_LENGTH) 
-END THREAD_DETAIL,
-IFNULL(LPAD(TO_DECIMAL(C.USED_MEMORY_SIZE / 1024 / 1024, 10, 2), 9), '') MEMORY_MB,
-C.THREAD_METHOD,
-C.TRANSACTION_STATE TRANS_STATE,
-C.TRANSACTION_TYPE,
-C.TABLE_NAME MVCC_TABLE_NAME,
-C.APPLICATION_USER_NAME APP_USER
-FROM
-( SELECT                     /* Modification section */
-  '%' HOST,
-  '%' PORT,
-  '%' SERVICE_NAME,
-  -1 CONN_ID,
-  -1 THREAD_ID,
-  '%' THREAD_STATE,
-  -1 TRANSACTION_ID,
-  -1 UPDATE_TRANSACTION_ID,
-  -1 CLIENT_PID,
-  'X' ONLY_ACTIVE_THREADS,
-  'X' ONLY_ACTIVE_TRANSACTIONS,
-  ' ' ONLY_ACTIVE_UPDATE_TRANSACTIONS,
-  ' ' ONLY_ACTIVE_SQL_STATEMENTS,
-  ' ' ONLY_MVCC_BLOCKER,
-  80 MAX_THREAD_DETAIL_LENGTH,
-  'TRANSACTION_TIME' ORDER_BY           /* CONNECTION, THREAD, TRANSACTION, UPDATE_TRANSACTION, TRANSACTION_TIME */
-FROM
-  DUMMY
-) BI,
-M_SERVICES S,
-( SELECT
-  IFNULL(C.HOST, IFNULL(TH.HOST, T.HOST)) HOST,
-  IFNULL(C.PORT, IFNULL(TH.PORT, T.PORT)) PORT,
-  C.CONNECTION_ID CONN_ID,
-  TH.THREAD_ID,
-  IFNULL(TH.THREAD_STATE, '') THREAD_STATE,
-  IFNULL(TH.THREAD_METHOD, '') THREAD_METHOD,
-  IFNULL(TH.THREAD_TYPE, '') THREAD_TYPE,
-  REPLACE(LTRIM(IFNULL(TH.THREAD_DETAIL, IFNULL(S.STATEMENT_STRING, ''))), CHAR(9), CHAR(32)) THREAD_DETAIL,
-  LOCATE(LTRIM(UPPER(IFNULL(TH.THREAD_DETAIL, IFNULL(S.STATEMENT_STRING, '')))), 'FROM ') THREAD_DETAIL_FROM_POS,
-  T.TRANSACTION_ID,
-  IFNULL(T.TRANSACTION_STATUS, '') TRANSACTION_STATE,
-  IFNULL(T.TRANSACTION_TYPE, '') TRANSACTION_TYPE,
-  T.UPDATE_TRANSACTION_ID UPD_TRANS_ID,
-  IFNULL(TH.CALLER, '') CALLER,
-  CASE WHEN BT.LOCK_OWNER_UPDATE_TRANSACTION_ID IS NOT NULL THEN 'UPD_TID: ' || BT.LOCK_OWNER_UPDATE_TRANSACTION_ID || CHAR(32) ELSE '' END ||
-	CASE WHEN TH.CALLING IS NOT NULL AND TH.CALLING != '' THEN 'CALLING: ' || TH.CALLING || CHAR(32) ELSE '' END WAITING_FOR,
-  IFNULL(TO_VARCHAR(T.START_TIME, 'YYYY/MM/DD HH24:MI:SS'), '') TRANSACTION_START,
-  SECONDS_BETWEEN(T.START_TIME, CURRENT_TIMESTAMP) / 86400 TRANSACTION_ACTIVE_DAYS,
-  IFNULL(C.CLIENT_HOST, '') CLIENT_HOST,
-  C.CLIENT_PID,
-  MT.MIN_SNAPSHOT_TS,
-  TA.TABLE_NAME,
-  S.APPLICATION_SOURCE,
-  S.STATEMENT_STRING,
-  S.USED_MEMORY_SIZE,
-  SC.STATEMENT_HASH,
-  TH.APPLICATION_USER_NAME
-FROM  
-  M_CONNECTIONS C FULL OUTER JOIN
-  M_SERVICE_THREADS TH ON
-	TH.CONNECTION_ID = C.CONNECTION_ID AND
-	TH.HOST = C.HOST AND
-	TH.PORT = C.PORT FULL OUTER JOIN
-  M_TRANSACTIONS T ON
-	T.TRANSACTION_ID = C.TRANSACTION_ID LEFT OUTER JOIN
-  M_PREPARED_STATEMENTS S ON
-	C.CURRENT_STATEMENT_ID = S.STATEMENT_ID FULL OUTER JOIN
-  M_SQL_PLAN_CACHE SC ON
-	S.PLAN_ID = SC.PLAN_ID FULL OUTER JOIN
-  M_BLOCKED_TRANSACTIONS BT ON
-	T.UPDATE_TRANSACTION_ID = BT.BLOCKED_UPDATE_TRANSACTION_ID LEFT OUTER JOIN
-  ( SELECT
-	  HOST,
-	  PORT,
-	  NUM_VERSIONS,
-	  TABLE_ID,
-	  MIN_SNAPSHOT_TS,
-	  MIN_READ_TID,
-	  MIN_WRITE_TID
-	FROM
-	( SELECT
-		HOST,
-		PORT,
-		MAX(MAP(NAME, 'NUM_VERSIONS',                 VALUE, 0))            NUM_VERSIONS,
-		MAX(MAP(NAME, 'TABLE_ID_OF_MAX_NUM_VERSIONS', VALUE, 0))            TABLE_ID,
-		MAX(MAP(NAME, 'MIN_SNAPSHOT_TS',              TO_NUMBER(VALUE), 0)) MIN_SNAPSHOT_TS,
-		MAX(MAP(NAME, 'MIN_READ_TID',                 TO_NUMBER(VALUE), 0)) MIN_READ_TID,
-		MAX(MAP(NAME, 'MIN_WRITE_TID',                TO_NUMBER(VALUE), 0)) MIN_WRITE_TID
-	  FROM
-		M_MVCC_TABLES
-	  GROUP BY
-		HOST,
-		PORT
-	) 
-	WHERE
-	  TABLE_ID != 0
-  ) MT ON
-	  MT.MIN_SNAPSHOT_TS = T.MIN_MVCC_SNAPSHOT_TIMESTAMP LEFT OUTER JOIN
-	TABLES TA ON
-	  TA.TABLE_OID = MT.TABLE_ID 
-	  WHERE (C.START_TIME  > add_seconds('"+$currentruntime+"',-$timespan)) OR  (C.END_TIME  > add_seconds('"+$currentruntime+"',-$timespan))
-) C
-WHERE
-S.HOST LIKE BI.HOST AND
-TO_VARCHAR(S.PORT) LIKE BI.PORT AND
-S.SERVICE_NAME LIKE BI.SERVICE_NAME AND
-C.HOST = S.HOST AND
-C.PORT = S.PORT AND
- ( BI.CONN_ID = -1 OR BI.CONN_ID = C.CONN_ID ) AND
-( BI.THREAD_ID = -1 OR BI.THREAD_ID = C.THREAD_ID ) AND
-C.THREAD_STATE LIKE BI.THREAD_STATE AND
-( BI.ONLY_ACTIVE_THREADS = ' ' OR C.THREAD_STATE NOT IN ( 'Inactive', '') ) AND
-( BI.TRANSACTION_ID = -1 OR BI.TRANSACTION_ID = C.TRANSACTION_ID ) AND
-( BI.CLIENT_PID = -1 OR BI.CLIENT_PID = C.CLIENT_PID ) AND
-( BI.UPDATE_TRANSACTION_ID = -1 OR BI.UPDATE_TRANSACTION_ID = C.UPD_TRANS_ID ) AND
-( BI.ONLY_ACTIVE_UPDATE_TRANSACTIONS = ' ' OR C.UPD_TRANS_ID > 0 ) AND
-( BI.ONLY_ACTIVE_TRANSACTIONS = ' ' OR C.TRANSACTION_STATE = 'ACTIVE' ) AND
-( BI.ONLY_ACTIVE_SQL_STATEMENTS = ' ' OR C.STATEMENT_STRING IS NOT NULL ) AND
-( BI.ONLY_MVCC_BLOCKER = ' ' OR C.MIN_SNAPSHOT_TS IS NOT NULL )
-ORDER BY
-MAP(BI.ORDER_BY, 
-  'CONNECTION',         C.CONN_ID, 
-  'THREAD',             C.THREAD_ID, 
-  'TRANSACTION',        C.TRANSACTION_ID,
-  'UPDATE_TRANSACTION', C.UPD_TRANS_ID),
-MAP(BI.ORDER_BY,
-  'TRANSACTION_TIME',   C.TRANSACTION_START),
-C.CONN_ID,
-C.THREAD_ID,
-C.TRANSACTION_ID
-"
+$query="/* OMS -Query34*/SELECT  HOST,
+	 PORT,
+	 CONNECTION_ID,
+	 TRANSACTION_ID,
+	 START_TIME,
+	 IDLE_TIME,
+	 CONNECTION_STATUS,
+	 CLIENT_HOST,
+	 CLIENT_IP,
+	 CLIENT_PID,
+	 USER_NAME,
+	 CONNECTION_TYPE,
+	 OWN,
+	 IS_HISTORY_SAVED,
+	 LAST_ACTION,
+	 CURRENT_STATEMENT_ID,
+	 CURRENT_OPERATOR_NAME,
+	 FETCHED_RECORD_COUNT,
+	 AFFECTED_RECORD_COUNT,
+		 CREATOR_THREAD_ID,
+	 CREATED_BY,
+	 END_TIME,
+	 PARENT_CONNECTION_ID,
+	 CURRENT_THREAD_ID,
+	 PRIORITY,
+	 CLOSE_REASON   from sys.M_Connections 
+	where Connection_status ='RUNNING' or (Connection_status='IDLE' and idle_time < $timespan)  OR END_TIME >  add_seconds('"+$currentruntime+"',-$timespan)"
 		   $cmd=new-object Sap.Data.Hana.HanaDataAdapter($Query, $conn);
 		  $ds=New-Object system.Data.DataSet ;
 	  $ex=$null
@@ -3901,7 +3659,7 @@ C.TRANSACTION_ID
 		  }
 		  Catch
 		  {
-			  $Ex=$_.Exception.MEssage;write-warning "Failed to run Query35"
+			  $Ex=$_.Exception.MEssage;write-warning "Failed to run Query34"
 			  write-warning  $ex 
 		  }
 		   
@@ -3920,30 +3678,38 @@ C.TRANSACTION_ID
 					  CollectorType="Inventory"
 					  Category="Sessions"
 					  Database=$Hanadb
-					  PORT=$row.PORT
-					  SERVICE=$row.Service
-					  CONN_ID=$row.CONN_ID
-					  THREAD_ID=$row.THREAD_ID
-					  TRANS_ID=$row.TRANS_ID
-					  UPD_TID =$row.UPD_TID 
-					  CLIENT_HOST=$row.CLIENT_HOST
-					  TRANSACTION_START=$row.TRANSACTION_START
-					  ACT_DAYS=[double]$row.ACT_DAYS
-					  THREAD_TYPE=$row.THREAD_TYPE
-					  THREAD_STATE =$row.THREAD_STATE 
-					  THREAD_DETAIL=$row.THREAD_DETAIL
-					  CALLER=$row.CALLER
-					  STATEMENT_HASH =$row.STATEMENT_HASH 
-					  MEMORY_MB=[double]$row.MEMORY_MB
-					  THREAD_METHOD=$row.THREAD_METHOD
-					  TRANS_STATE=$row.TRANS_STATE
-					  TRANSACTION_TYPE =$row.TRANSACTION_TYPE 
-					  APP_USER =$row.APP_USER 
-
+					  PORT=[int]$row.PORT
+                    CONNECTION_ID=[int]$row.CONNECTION_ID
+                    TRANSACTION_ID=[long]$row.TRANSACTION_ID
+                    START_TIME=$row.START_TIME
+                    IDLE_TIME_S=[long]$row.IDLE_TIME/1000
+                    CONNECTION_STATUS=[string]$row.CONNECTION_STATUS
+                    CLIENT_HOST=[string]$row.CLIENT_HOST
+                    CLIENT_IP=[string]$row.CLIENT_IP
+                    CLIENT_PID=[int]$row.CLIENT_PID
+                    USER_NAME=[string]$row.USER_NAME
+                    CONNECTION_TYPE=[string]$row.CONNECTION_TYPE
+                    OWN=[string]$row.OWN
+                    IS_HISTORY_SAVED=[string]$row.IS_HISTORY_SAVED
+                    LAST_ACTION=[string]$row.LAST_ACTION
+                    CURRENT_STATEMENT_ID=[long]$row.CURRENT_STATEMENT_ID
+                    CURRENT_OPERATOR_NAME=[string]$row.CURRENT_OPERATOR_NAME
+                    FETCHED_RECORD_COUNT=[long]$row.FETCHED_RECORD_COUNT
+                    AFFECTED_RECORD_COUNT=[long]$row.AFFECTED_RECORD_COUNT
+                    CREATOR_THREAD_ID=[int]$row.CREATOR_THREAD_ID
+                    CREATED_BY=[string]$row.CREATED_BY
+                    END_TIME=$row.END_TIME
+                    PARENT_CONNECTION_ID=[int]$row.PARENT_CONNECTION_ID
+                    CURRENT_THREAD_ID=[int]$row.CURRENT_THREAD_ID
+                    CLOSE_REASON=[string]$row.CLOSE_REASON
 				  })|Out-Null
 			  }
 			  $Omsinvupload.Add($Resultsinv)|Out-Null
 		  }
+
+
+
+
 
   $checkfreq=$timespan 
 IF($firstrun){$checkfreq=3600}Else{$checkfreq=$timespan } # decide if you change 'HOUR' TIME_AGGREGATE_BY 
