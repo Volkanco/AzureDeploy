@@ -5422,7 +5422,6 @@
             "type": "microsoft.insights/scheduledqueryrules",
             "location": "[parameters('logAnalyticsRegion')]",
             "tags": {},
-            "etag": "*",
             "copy": {
                 "name": "actioncopy",
                 "count": "[length(variables('alertArray'))]"
