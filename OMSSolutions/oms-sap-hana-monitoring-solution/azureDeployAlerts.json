@@ -162,7 +162,9 @@
         "hybridWorkerGroup": "HANAMonitorGroup1",
         "hanaMonitorDefaultUser":"AzureHanaMonitorUser",
         "hanaMonitorDefaultPassword":"AzureHanaMonitorPassword",
-
+        "actionGroupShortName" : "HanaMail",
+        "actionGroupName":"HanaEmailNotification",
+        "alertArray": [
             {
                 "searchName": "SAP Hana Failed Config Checks Detected",
                 "description": "SAP Hana Failed Config Checks Detected. Azure SAp Hana Monitoring  perform Hana configuration checks every hour. ",
@@ -5416,6 +5418,48 @@
             } 
         },
       {
+             "name": "[concat(parameters('logAnalyticsWorkspaceName'), '|', tolower(variables('alertArray')[copyIndex()].searchCategory), '|', toLower(variables('alertArray')[copyIndex()].searchName), '|','schedule-',uniqueString(resourceGroup().id, deployment().name,parameters('logAnalyticsWorkspaceName')), '|',  'alert-',uniqueString(resourceGroup().id, deployment().name,parameters('logAnalyticsWorkspaceName')))]",
+             "type": "microsoft.insights/scheduledqueryrules",
+            "apiVersion": "2018-04-16",
+            "location": "[parameters('logAnalyticsRegion')]",
+            "copy": {
+                "name": "actioncopy",
+                "count": "[length(variables('alertArray'))]"
+            },
+            "tags": {},
+            "properties": {
+                "etag": "*",
+                "description": "[variables('alertArray')[copyIndex()].description]",
+                "displayName": "[variables('alertArray')[copyIndex()].alertName]",
+                "enabled": "false",   
+           "source": {
+                    "query": "[variables('alertArray')[copyIndex()].query]",
+                    "dataSourceId": "[resourceId('Microsoft.OperationalInsights/workspaces/', parameters('logAnalyticsWorkspaceName'))]",
+                    "queryType": "ResultCount"
+                },
+                "schedule": {
+                    "frequencyInMinutes": "[variables('alertArray')[copyIndex()].scheduleIntervalInMinutes]",
+                    "timeWindowInMinutes": "[variables('alertArray')[copyIndex()].scheduleQueryTimeSpan]"
+                },
+                "action": {
+                    "severity": "[variables('alertArray')[copyIndex()].severity]" ,
+                    "aznsAction": {
+                        "actionGroup": [
+                            "[resourceId('microsoft.insights/actiongroups/', variables('actionGroupName'))]"
+                        ],
+                        "emailSubject": null,
+                        "customWebhookPayload": null
+                    },
+                    "throttlingInMin": "[variables('alertArray')[copyIndex()].alertThrottleInMinutes]",
+                    "trigger": {
+                        "thresholdOperator": "[variables('alertArray')[copyIndex()].operator]",
+                        "threshold": "[variables('alertArray')[copyIndex()].alertTresholdValue]" 
+                    },
+                    "odata.type": "Microsoft.WindowsAzure.Management.Monitoring.Alerts.Models.Microsoft.AppInsights.Nexus.DataContracts.Resources.ScheduledQueryRules.AlertingAction"
+                }
+            }
+        },        
+        {
             "apiversion": "2015-10-31",
             "location": "[parameters('automationRegion')]",
             "name": "[parameters('automationAccountName')]",
@@ -5640,7 +5684,27 @@
                     ]
                 }
             ]
-        }
+        },
+        {
+            "type": "Microsoft.Insights/actionGroups",
+            "apiVersion": "2018-03-01",
+            "name": "[variables('actionGroupName')]",
+            "location": "Global",
+            "properties": {
+              "groupShortName": "[variables('actionGroupShortName')]",
+              "enabled": true,
+              "smsReceivers": [
+              ],
+              "emailReceivers": [
+                {
+                    "name": "SapHanaEmail",
+                    "emailAddress": "[parameters('notifyEmail')]"
+                  }
+              ],
+              "webhookReceivers": [
+             ]
+            }
+          }
     ],
     "outputs": {}
 }
