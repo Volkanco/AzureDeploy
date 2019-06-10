@@ -5431,8 +5431,8 @@
                 "etag": "*",
                 "description": "[variables('alertArray')[copyIndex()].description]",
                 "displayName": "[variables('alertArray')[copyIndex()].alertName]",
-                "enabled": "false",        
-        "source": {
+                "enabled": "false",   
+           "source": {
                     "query": "[variables('alertArray')[copyIndex()].query]",
                     "dataSourceId": "[resourceId('Microsoft.OperationalInsights/workspaces/', parameters('logAnalyticsWorkspaceName'))]",
                     "queryType": "ResultCount"
