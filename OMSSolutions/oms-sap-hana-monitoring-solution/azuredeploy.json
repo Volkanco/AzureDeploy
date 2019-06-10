@@ -137,6 +137,7 @@
                 "author": "volkanc@microsoft.com"
             }
         },
+        "solutionName" : "AzureAutomation",
         "dataCollectionFrequency": "15",
         "ingestSchedulerGuid": "[guid(uniqueString(deployment().name))]",
         "opsInsightWorkspaceID": "AzureHANAMonitor_WS_ID",
@@ -5395,6 +5396,24 @@
                     }
                 }
             ]
+        },
+        {
+            "type": "Microsoft.OperationsManagement/solutions",
+            "apiVersion": "2015-11-01-preview",
+            "name": "[Concat(variables('solutionName'), '(', parameters('logAnalyticsWorkspaceName'), ')')]",
+            "location": "[parameters('logAnalyticsRegion')]",
+            "dependsOn": [
+                "[concat('Microsoft.OperationalInsights/workspaces/', parameters('logAnalyticsWorkspaceName'))]"
+            ] ,
+            "plan": {
+                "name": "[Concat(variables('solutionName'), '(', parameters('logAnalyticsWorkspaceName'), ')')]",
+                "product": "[Concat('OMSGallery/', variables('solutionName'))]",
+                "promotionCode": "",
+                "publisher": "Microsoft"
+            },
+            "properties": {
+                "workspaceResourceId": "[resourceId('Microsoft.OperationalInsights/workspaces/', parameters('logAnalyticsWorkspaceName'))]"
+            } 
         },
         {
             "apiVersion": "2017-03-15-preview",
