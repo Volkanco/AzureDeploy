@@ -5445,7 +5445,7 @@
                     "severity": "[variables('alertArray')[copyIndex()].severity]" ,
                     "aznsAction": {
                         "actionGroup": [
-                            null
+                            "[resourceId('microsoft.insights/actiongroups/', variables('actionGroupName'))]"
                         ],
                         "emailSubject": null,
                         "customWebhookPayload": null
