@@ -79,12 +79,6 @@
                 "description": "Specify the Azure Region for your OMS Automation Account"
             }
         },
-        "notifyEmail":{
-            "type": "string",
-            "metadata": {
-                "description": "Specify the email for SAP Hana Alert Notification Action Group"
-            }
-        },
         "_artifactsLocation": {
             "type": "string",
             "defaultValue": "https://raw.githubusercontent.com/Volkanco/AzureDeploy/master/OMSSolutions/oms-sap-hana-monitoring-solution",
