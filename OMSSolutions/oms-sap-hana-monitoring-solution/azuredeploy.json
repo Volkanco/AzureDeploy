@@ -168,7 +168,6 @@
             {
                 "searchName": "SAP Hana Failed Config Checks Detected",
                 "description": "SAP Hana Failed Config Checks Detected. Azure SAp Hana Monitoring  perform Hana configuration checks every hour. ",
-                "severity": "warning",
                 "query": "SAPHana_CL | where Category == \"ConfigurationCheck\"  | where SubCategory_s <> \"SAP HANA MINI CHECKS\"  |where isnotempty(NAME_s) |where RESULT_s==\"Fail\"",
                 "alertTresholdValue": 0,
                 "operator": "GreaterThan",
@@ -184,8 +183,7 @@
             {
                 "searchName": "Hana Data Collector Job Not Running",
                 "description": "Hana Data Collector Job Not Running. Make sure hybrid runbook VM configured up and running and its communicating to Azure Automation",
-                "severity": "critical",
-                "query": "SAPHana_CL | where CollectorType_s == \"State\" and Category== \"Connectivity\" and SubCategory_s ==\"Host\" |where TimeGenerated > ago(30d)  | summarize LastCall=arg_max(TimeGenerated,*) by HOST_s  | project Host=HOST_s,MinSinceLastData=datetime_diff('Minute',now(),LastCall) | where MinSinceLastData > 30 ",
+                 "query": "SAPHana_CL | where CollectorType_s == \"State\" and Category== \"Connectivity\" and SubCategory_s ==\"Host\" |where TimeGenerated > ago(30d)  | summarize LastCall=arg_max(TimeGenerated,*) by HOST_s  | project Host=HOST_s,MinSinceLastData=datetime_diff('Minute',now(),LastCall) | where MinSinceLastData > 30 ",
                 "alertTresholdValue": 0,
                 "operator": "GreaterThan",
                 "alertThrottleInMinutes": 15,
@@ -200,7 +198,6 @@
             {
                 "searchName": "Hana Data Collector Failed to Connect Hana DB",
                 "description": "Hana Data Collector Job Not Running. Make sure hybrid runbook VM configured up and running and its communicating to Azure Automation",
-                "severity": "critical",
                 "query": "SAPHana_CL | where CollectorType_s == \"State\" and Category== \"Connectivity\" and SubCategory_s ==\"Host\"  |where TimeGenerated > ago(1d) | summarize LastCall=arg_max(TimeGenerated,*) by HOST_s,Database_s | project Host=strcat(Database_s,\"|\",HOST_s),LastStatus=strcat(Connection_s,\":\",ErrorMessage_s),MinSinceLastData=datetime_diff('Minute',now(),LastCall) | where LastStatus !contains \"Successful\"",
                 "alertTresholdValue": 0,
                 "operator": "GreaterThan",
@@ -216,7 +213,6 @@
             {
                 "searchName": "High CPU Utilization on Hana Host",
                 "description": "High CPU Utilization on Hana Host.  Host utilization was > 80%",
-                "severity": "critical",
                 "query": "let CPUThreshold=80; SAPHana_CL | where CollectorType_s has \"Performance\" | where PerfObject_s ==\"Host\" and PerfCounter_s ==\"CPU_PCT\" | summarize CPU=avg(PerfValue_d) by Host=HOST_s, bin (TimeGenerated, 5m) |where CPU > CPUThreshold",   
                 "alertTresholdValue": 0,
                 "operator": "GreaterThan",
@@ -232,7 +228,6 @@
             {
                 "searchName": "High Memory Utilization on Hana Host",
                 "description": "High Memory Utilization on Hana Host, Memory used % > 90",
-                "severity": "critical",
                 "query": "let MemoryThreshold=90; SAPHana_CL | where CollectorType_s == \"Performance\" | where PerfObject_s ==\"Host\" and PerfCounter_s ==\"FREE_PHYSICAL_MEMORY\" |summarize FREE=avg(PerfValue_d) by HOST_s,PerfCounter_s, bin(TimeGenerated, 15m) | join kind= inner (     SAPHana_CL | where CollectorType_s == \"Performance\" | where PerfObject_s ==\"Host\" and PerfCounter_s ==\"USED_PHYSICAL_MEMORY\" |summarize USED=avg(PerfValue_d) by HOST_s,PerfCounter_s, bin(TimeGenerated, 15m) ) on HOST_s |project Host=HOST_s, USEDPCT=(USED/(FREE+USED))*100,TimeGenerated |where USEDPCT > MemoryThreshold",
                 "alertTresholdValue": 0,
                 "operator": "GreaterThan",
@@ -248,7 +243,6 @@
             {
                 "searchName": "Hana Disk Free Space Alert",
                 "description": "Hana Disk Free Space Alert , disks with >90% utilization detected",
-                "severity": "critical",
                 "query": "let DiskSpaceThreshold=90; SAPHana_CL | where CollectorType_s ==\"Inventory\" and Category== \"Disks\" | summarize arg_max(TimeGenerated, *) by PATH_s,SUBPATH_s,DEVICE_ID_d |project Host=strcat(HOST_s,\" : \" ,USAGE_TYPE_s), Path=PATH_s,SizeinGb=round(TOTAL_SIZE_d,0),UsedGB=round(USED_SIZE_d,0) | project Host, Path, SizevsUsed=strcat(SizeinGb,\"/\", UsedGB),USEDPCT=round(UsedGB*100/SizeinGb,0) |where USEDPCT>DiskSpaceThreshold",
                 "alertTresholdValue": 0,
                 "operator": "GreaterThan",
@@ -264,7 +258,6 @@
             {
                 "searchName": "Hana Services Not Active",
                 "description": "Hana Services Not Active",
-                "severity": "critical",
                 "query": "let HanaConnectionTable=SAPHana_CL |where CollectorType_s == \"State\" and Category== \"Connectivity\" and SubCategory_s ==\"Host\" |where TimeGenerated > ago(30d) |summarize LastCall=arg_max(TimeGenerated,*) by HOST_s |project Host=HOST_s,MinSinceLastData=datetime_diff('Minute',now(),LastCall),IsCollectorOnline=iff(LastCall< ago(1h),\"Offline\",\"Online\"),LastStatus=Connection_s; HanaConnectionTable |join kind= fullouter (        SAPHana_CL     | where CollectorType_s ==\"Inventory\" and Category== \"Services\"     | summarize arg_max(TimeGenerated, *) by HOST_s,SERVICE_NAME_s     |project Instance=Instance_s,Host=HOST_s, Status=ACTIVE_STATUS_s , Service=SERVICE_NAME_s ,Port=SQL_PORT_d ) on Host | project Host=strcat(Instance,\"; \",iff(isempty(Host),Host1 ,Host)) , Status=case(IsCollectorOnline==\"Offline\",\"Unkown\",LastStatus==\"Failed\", \"Unkown\", Status==\"YES\", \"Active\", Status), CollectorStatus=IsCollectorOnline, Service=iff(isempty(Service),\"Unkown\",Service) | where CollectorStatus <> \"Offline\" and  Status <> \"Active\" ",
                 "alertTresholdValue": 0,
                 "operator": "GreaterThan",
@@ -280,7 +273,6 @@
             {
                 "searchName": "Medium Priority Alerts Detected for SAP Hana",
                 "description": "Medium Priority Alerts Detected for SAP Hana",
-                "severity": "warning",
                 "query": "let lastdatapoint = SAPHana_CL | where CollectorType_s ==\"Inventory\" | where Category == \"Alerts\" |summarize arg_max(TimeGenerated, *) by ALERT_HOST_s ,Database_s; SAPHana_CL | where CollectorType_s ==\"Inventory\" | where Category == \"Alerts\" |join kind= inner (     lastdatapoint ) on $left.ALERT_HOST_s==$right.ALERT_HOST_s and   $left.Database_s==$right.Database_s and $left.TimeGenerated==$right.TimeGenerated | project DB=Database_s,Alert=strcat(ALERT_NAME_s,\" ; \",ALERT_DETAILS_s),ALERT_HOST_s,ALERT_RATING_d |extend Priority=case(ALERT_RATING_d==1,\"Information\" ,ALERT_RATING_d==3,\"Medium\",ALERT_RATING_d==4,\"High\",\"NotDefined\")| where Priority == \"Medium\"",
                 "alertTresholdValue": 0,
                 "operator": "GreaterThan",
@@ -296,7 +288,6 @@
             {
                 "searchName": "High Priority Alerts Detected for SAP Hana",
                 "description": "High Priority Alerts Detected for SAP Hana",
-                "severity": "critical",
                 "query": "let lastdatapoint = SAPHana_CL | where CollectorType_s ==\"Inventory\" | where Category == \"Alerts\" |summarize arg_max(TimeGenerated, *) by ALERT_HOST_s ,Database_s; SAPHana_CL | where CollectorType_s ==\"Inventory\" | where Category == \"Alerts\" |join kind= inner (     lastdatapoint ) on $left.ALERT_HOST_s==$right.ALERT_HOST_s and   $left.Database_s==$right.Database_s and $left.TimeGenerated==$right.TimeGenerated | project DB=Database_s,Alert=strcat(ALERT_NAME_s,\" ; \",ALERT_DETAILS_s),ALERT_HOST_s,ALERT_RATING_d |extend Priority=case(ALERT_RATING_d==1,\"Information\" ,ALERT_RATING_d==3,\"Medium\",ALERT_RATING_d==4,\"High\",\"NotDefined\")| where Priority == \"High\" ",
                 "alertTresholdValue": 0,
                 "operator": "GreaterThan",
@@ -312,7 +303,6 @@
             {
                 "searchName": "SAP HANA Instance Unavailable",
                 "description": "SAP HANA Instance Unavailable , check Hana daemon status",
-                "severity": "critical",
                 "query": "HanaAvailability_CL | summarize arg_max(TimeGenerated, *) by Computer | parse RawData with  Status\" \" FromDate \"-\" EventDate |project Computer , Status ,EventDate , TimeGenerated | where Status == \"Unavailable\" ",
                 "alertTresholdValue": 0,
                 "operator": "GreaterThan",
