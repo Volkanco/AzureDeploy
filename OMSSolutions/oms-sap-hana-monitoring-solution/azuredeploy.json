@@ -47,27 +47,7 @@
                 "description": "Specify the Azure Region for your OMS Automation Account"
             }
         },
-        "linkedWorkspaceSKU": {
-            "type": "array",
-            "defaultValue": [
-                "pernode",
-                "OMS"
-            ],
-            "allowedValues": [
-                [
-                    "pernode",
-                    "OMS"
-                ],
-                [
-                    "free",
-                    "free"
-                ]
-            ],
-            "metadata": {
-                "description": "Choose the SKU for linked workspace "
-            }
-        },
-        "sapHanaMonitorUser": {
+      "sapHanaMonitorUser": {
             "type": "string",
             "metadata": {
                 "description": "Specify the username  for Hana Monitoring Role"
