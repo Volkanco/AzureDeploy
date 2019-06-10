@@ -5427,6 +5427,7 @@
             },
             "tags": {},
             "properties": {
+                "etag": "*",
                 "description": "[variables('alertArray')[copyIndex()].description]",
                 "displayName": "[variables('alertArray')[copyIndex()].alertName]",
                 "enabled": "false",        
