@@ -5421,11 +5421,11 @@
              "name": "[concat(parameters('logAnalyticsWorkspaceName'), '|', tolower(variables('alertArray')[copyIndex()].searchCategory), '|', toLower(variables('alertArray')[copyIndex()].searchName), '|','schedule-',uniqueString(resourceGroup().id, deployment().name,parameters('logAnalyticsWorkspaceName'), '|', variables('alertArray')[copyIndex()].searchCategory, '|', variables('alertArray')[copyIndex()].searchName), '/', 'alert-',uniqueString(resourceGroup().id, deployment().name,parameters('logAnalyticsWorkspaceName')]",           
             "type": "microsoft.insights/scheduledqueryrules",
             "location": "[parameters('logAnalyticsRegion')]",
-            "tags": {},
             "copy": {
                 "name": "actioncopy",
                 "count": "[length(variables('alertArray'))]"
             },
+            "tags": {},
             "properties": {
                 "description": "[variables('alertArray')[copyIndex()].description]",
                 "displayName": "[variables('alertArray')[copyIndex()].alertName]",
