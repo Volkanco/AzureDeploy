@@ -93,6 +93,13 @@
               "description": "The unique guid for the workbook instance"
             }
           },
+          "dashboardGuid": {
+            "type": "string",
+            "defaultValue": "[newGuid()]",
+            "metadata": {
+              "description": "The unique guid for the workbook instance"
+            }
+          },
         "_artifactsLocation": {
             "type": "string",
             "defaultValue": "https://raw.githubusercontent.com/Volkanco/AzureDeploy/master/OMSSolutions/oms-sap-hana-monitoring-solution",
@@ -5683,7 +5690,7 @@
             "metadata": { },
             "apiVersion": "2015-08-01-preview",
             "type": "Microsoft.Portal/dashboards",
-            "name": "[variables('dashboardName')]",
+            "name": "[parameters('dashboardGuid')]",
             "location": "[parameters('logAnalyticsRegion')]",
             "tags": {
                 "hidden-title": "[variables('dashboardName')]"
