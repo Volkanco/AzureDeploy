@@ -5503,9 +5503,9 @@
             ]
         },
         {
-            "name": "Host CPU Utilization Analysis",
+            "name": "[parameters('workbookId1')]",
             "type": "microsoft.insights/workbooks",
-            "location": "[resourceGroup().location]",
+            "location": "East US",
             "apiVersion": "2018-06-17-preview",
             "dependsOn": [],
             "kind": "shared",
@@ -5518,9 +5518,9 @@
             }
           },
           {
-            "name": "Hana DB Growth Analysis",
+            "name": "[parameters('workbookId2')]",
             "type": "microsoft.insights/workbooks",
-            "location": "[parameters('logAnalyticsRegion')]",
+            "location": "East US",
             "apiVersion": "2018-06-17-preview",
             "dependsOn": [],
             "kind": "shared",
@@ -5684,7 +5684,7 @@
             "apiVersion": "2015-08-01-preview",
             "type": "Microsoft.Portal/dashboards",
             "name": "[variables('dashboardName')]",
-            "location": "westus",
+            "location": "[parameters('logAnalyticsRegion')]",
             "tags": {
                 "hidden-title": "[variables('dashboardName')]"
             }
