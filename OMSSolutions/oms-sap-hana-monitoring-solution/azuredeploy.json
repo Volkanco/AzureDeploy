@@ -147,6 +147,7 @@
         },
           "singleQuote": "'",
           "solutionName" : "AzureAutomation",
+          "dashboardName": "Azure Sap HANA Dashboard",
         "dataCollectionFrequency": "15",
         "ingestSchedulerGuid": "[guid(uniqueString(deployment().name))]",
         "opsInsightWorkspaceID": "AzureHANAMonitor_WS_ID",
@@ -5519,7 +5520,7 @@
           {
             "name": "Hana DB Growth Analysis",
             "type": "microsoft.insights/workbooks",
-            "location": "[resourceGroup().location]",
+            "location": "[parameters('logAnalyticsRegion')]",
             "apiVersion": "2018-06-17-preview",
             "dependsOn": [],
             "kind": "shared",
@@ -5530,7 +5531,162 @@
               "sourceId": "[variables('workbookSourceId')]",
               "category": "[variables('workbookType')]"
             }
-          }
+          },
+          {
+            "properties": {
+                "lenses": {
+                    "0": {
+                        "order": 0,
+                        "parts": {
+                            "0": {
+                                "position": {
+                                    "x": 0,
+                                    "y": 0,
+                                    "rowSpan": 2,
+                                    "colSpan": 4
+                                },
+                                "metadata": {
+                                    "inputs": [
+                                        {
+                                            "name": "id",
+                                            "value": 
+                                            "[resourceId('Microsoft.OperationalInsights/workspaces/views/', parameters('logAnalyticsWorkspaceName'), variables('omsSolutions').customSolution.name)]"
+                                        },
+                                        {
+                                            "name": "solutionId",
+                                            "isOptional": true
+                                        },
+                                        {
+                                            "name": "timeInterval",
+                                            "value": {
+                                                "_Now": "2019-06-11T08:19:53.471Z",
+                                                "_duration": 86400000,
+                                                "_end": null
+                                            },
+                                            "isOptional": true
+                                        },
+                                        {
+                                            "name": "timeRange",
+                                            "binding": "timeRange",
+                                            "isOptional": true
+                                        }
+                                    ],
+                                    "type": "Extension/Microsoft_OperationsManagementSuite_Workspace/PartType/ViewTileIFramePart"
+                                }
+                            },
+                            "1": {
+                                "position": {
+                                    "x": 0,
+                                    "y": 2,
+                                    "rowSpan": 2,
+                                    "colSpan": 4
+                                },
+                                "metadata": {
+                                    "inputs": [
+                                        {
+                                            "name": "id",
+                                            "value": "/subscriptions/5c92a61a-9066-465a-9a6d-4b0b062ca7a5/resourcegroups/hanamonitortest/providers/Microsoft.OperationalInsights/workspaces/hanamonitortestla1/views/Azure HANA Databases"
+                                        },
+                                        {
+                                            "name": "solutionId",
+                                            "isOptional": true
+                                        },
+                                        {
+                                            "name": "timeInterval",
+                                            "value": {
+                                                "_Now": "2019-06-11T08:19:53.471Z",
+                                                "_duration": 86400000,
+                                                "_end": null
+                                            },
+                                            "isOptional": true
+                                        },
+                                        {
+                                            "name": "timeRange",
+                                            "binding": "timeRange",
+                                            "isOptional": true
+                                        }
+                                    ],
+                                    "type": "Extension/Microsoft_OperationsManagementSuite_Workspace/PartType/ViewTileIFramePart"
+                                }
+                            },
+                            "2": {
+                                "position": {
+                                    "x": 0,
+                                    "y": 4,
+                                    "rowSpan": 2,
+                                    "colSpan": 4
+                                },
+                                "metadata": {
+                                    "inputs": [
+                                        {
+                                            "name": "id",
+                                            "value": "[resourceId('Microsoft.OperationalInsights/workspaces/views/', parameters('logAnalyticsWorkspaceName'), 'Azure  HANA Configuration Checks')]"
+                                        },
+                                        {
+                                            "name": "solutionId",
+                                            "isOptional": true
+                                        },
+                                        {
+                                            "name": "timeInterval",
+                                            "value": {
+                                                "_Now": "2019-06-11T08:19:53.471Z",
+                                                "_duration": 86400000,
+                                                "_end": null
+                                            },
+                                            "isOptional": true
+                                        },
+                                        {
+                                            "name": "timeRange",
+                                            "binding": "timeRange",
+                                            "isOptional": true
+                                        }
+                                    ],
+                                    "type": "Extension/Microsoft_OperationsManagementSuite_Workspace/PartType/ViewTileIFramePart"
+                                }
+                            }
+                        }
+                    }
+                },
+                "metadata": {
+                    "model": {
+                        "timeRange": {
+                            "value": {
+                                "relative": {
+                                    "duration": 24,
+                                    "timeUnit": 1
+                                }
+                            },
+                            "type": "MsPortalFx.Composition.Configuration.ValueTypes.TimeRange"
+                        },
+                        "filterLocale": {
+                            "value": "en-us"
+                        },
+                        "filters": {
+                            "value": {
+                                "MsPortalFx_TimeRange": {
+                                    "model": {
+                                        "format": "utc",
+                                        "granularity": "auto",
+                                        "relative": "24h"
+                                    },
+                                    "displayCache": {
+                                        "name": "UTC Time",
+                                        "value": "Past 24 hours"
+                                    },
+                                    "filteredPartIds": []
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+             "name": "[variables('dashboardName')]",
+            "type": "Microsoft.Portal/dashboards",
+            "location": "[parameters('logAnalyticsRegion')]",
+            "tags": {
+                "hidden-title": "[variables('dashboardName')]"
+            }
+        }
     ],
     "outputs": {}
 }
