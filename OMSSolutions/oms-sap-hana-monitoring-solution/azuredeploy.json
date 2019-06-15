@@ -5680,10 +5680,11 @@
                     }
                 }
             },
-             "name": "[variables('dashboardName')]",
-             "apiVersion": "2015-08-01-preview",
+            "metadata": { },
+            "apiVersion": "2015-08-01-preview",
             "type": "Microsoft.Portal/dashboards",
-            "location": "[parameters('logAnalyticsRegion')]",
+            "name": "[variables('dashboardName')]",
+            "location": "westus",
             "tags": {
                 "hidden-title": "[variables('dashboardName')]"
             }
