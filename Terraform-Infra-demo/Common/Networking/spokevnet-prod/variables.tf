@@ -2,6 +2,12 @@
 # VARIABLES
 #############################################################################
 
+
+variable "AppName" {
+  type  = string
+}
+
+
 variable "busunit" {
   type    = string
 }

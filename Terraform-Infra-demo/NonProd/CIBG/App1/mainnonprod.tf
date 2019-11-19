@@ -3,8 +3,9 @@ provider "azurerm" {
 
 }
 
+
 module "spokesubnet_setup" {
-  source            = "../modules/spokesubnet-nonprod"
+  source            = "../../../Common/Networking/spokesubnet-nonprod"
   AppName=var.AppName
   busunit=var.busunit
   location = var.location 

@@ -11,7 +11,7 @@ data "azurerm_subscription" "current" {}
 
 locals {
   resource_suffix = "prod-${lower(var.busunit)}-${var.location_short["${var.location}"]}"
-  spokerg = "rg-spoke-${local.resource_suffix}"
+  spokerg = "rg-spoke-${var.AppName}-${local.resource_suffix}"
 }
 
 
@@ -19,14 +19,11 @@ locals {
 # RESOURCES
 #############################################################################
 
-
-
-
 ## NETWORKING ##
 
 resource "azurerm_resource_group" "spoke" {
   name     = "${local.spokerg}"
-  location = var.location
+  location = "${var.location}"
 
   tags = "${var.tags}"
 }

@@ -6,7 +6,7 @@ provider "azurerm" {
 # RG naming will be  rg-hub-{busunit}-{ShortLocation}
 
 module "prod_hub_setup" {
-  source            = "../modules/hub-prod"
+  source            = "../../../Common/Networking/hub-prod"
   busunit=var.busunit
   location = var.location 
   vnet_cidr_range=var.vnet_cidr_range

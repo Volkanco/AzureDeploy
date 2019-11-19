@@ -1,5 +1,5 @@
 # Environment code 
-busunit="cit"
+busunit="itservices"
 
 #Location of the Hub VNET
 location = "uaenorth"

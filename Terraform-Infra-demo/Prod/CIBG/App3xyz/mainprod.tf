@@ -5,31 +5,25 @@ provider "azurerm" {
 
 
 module "spokeprodvnet_setup" {
-  source            = "../modules/spokenvnet-prod"
+  source            = "../../../Common/Networking/spokevnet-prod"
   AppName=var.AppName
-  peering_role_def_name=var.peering_role_def_name
-  resource_group_name=var.resource_group_name
-  vnet_name =var.vnet_name
-  vnet_cidr_range=var.vnet_cidr_range
+  busunit=var.busunit
   location = var.location 
-  environment=var.environment
+  hub_private_rg=var.hub_private_rg
+  hub_private_vnet=var.hub_private_vnet
+  vnet_cidr_range=var.vnet_cidr_range
+  spoke_subnet_prefixes=var.spoke_subnet_prefixes
+  spoke_subnet_names=var.spoke_subnet_names
+  onprem_address_prefix=var.onprem_address_prefix
+  hubfwip=var.hubfwip
   dns_servers=var.dns_servers
-  subnet_names=var.subnet_names
-  subnet_prefixes=var.subnet_prefixes
-  HubFwIP = var.HubFwIP
-  hub_sub_id=var.hub_sub_id
-  hub_vnet_name=var.hub_vnet_name
-  hub_vnet_id=var.hub_vnet_id
-  hub_resource_group=var.hub_resource_group
-  hub_client_id=var.hub_client_id
-  hub_principal_id=var.hub_principal_id
-  hub_client_secret=var.hub_client_secret
+  tags=var.tags
+ 
 }
 
 
-
-
 #Add NSG Rules as needed 
+/*
 resource "azurerm_network_security_rule" "HubFwInbound" {
   name                        = "HubFwInbound-${var.AppName}"
   priority                    = 200
@@ -39,8 +33,9 @@ resource "azurerm_network_security_rule" "HubFwInbound" {
   source_port_range           = "*"
   destination_port_range      = "*"
   source_address_prefix       = "${var.hubfwip}"
-  destination_address_prefix  = "[${spokeprodvnet_setup.vnet_subnets_address_prefix},]" 
-  resource_group_name         = "[${spokeprodvnet_setup.resource_group_name}"
-  network_security_group_name = "${spokeprodvnet_setup.nsg_name}"
+  destination_address_prefix  = "${element(module.spokeprodvnet_setup.vnet_subnets_address_prefix,0)}," 
+  resource_group_name         = "[${module.spokeprodvnet_setup.resource_group_name}"
+  network_security_group_name = "${module.spokeprodvnet_setup.nsg_name}"
 }
 
+*/

@@ -8,7 +8,7 @@ provider "azurerm" {
 # RG naming will be  rg-spoke-{busunit}-{ShortLocation}
 
 module "prod_spoke_setup" {
-  source            = "../modules/spokevnet-nonprod"
+  source            = "../../../Common/Networking/spokevnet-nonprod"
   busunit=var.busunit
   location = var.location 
   hub_private_rg=var.hub_private_rg
