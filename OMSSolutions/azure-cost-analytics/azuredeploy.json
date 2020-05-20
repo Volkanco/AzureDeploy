@@ -83,7 +83,7 @@
                 "description": "Specify the Azure Region for your OMS Automation Account"
             }
         },  
-        "ingestParentRunbook": {
+        "workbookId": {
       "type": "string",
       "defaultValue": "[newGuid()]",
       "metadata": {
