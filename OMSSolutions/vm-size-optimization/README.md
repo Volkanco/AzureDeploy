@@ -53,3 +53,15 @@ Workbook compares the actual usage for CPU/Memory/Iops and compares them to the 
 This part displays all the managed disk which is not unattached or reserved by a deallocated VMs . These can be cleaned up or converted to VHD blobs to save cost.
 
 ![alt text](images/wbimage4.PNG "Part4")
+
+
+## Template Deployment
+
+[![Deploy to Azure](http://azuredeploy.net/deploybutton.png)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FVolkanco%2FAzureDeploy%2Fmaster%2FOMSSolutions%2Fvm-size-optimization%2Fazuredeploy.json) 
+<a href="http://armviz.io/#/?load=https%3A%2F%2raw.githubusercontent.com%2FVolkanco%2FAzureDeploy%2Fmaster%2FOMSSolutions%2Fvm-size-optimization%2Fazuredeploy.json" target="_blank">
+    <img src="http://armviz.io/visualizebutton.png"/>
+</a>
+
+Once deployed workbook can be accessed under Azure Portal/Monitoring/Workbooks
+
+![alt text](images/wbimage6.PNG "Workbook")
