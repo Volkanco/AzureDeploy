@@ -32,7 +32,7 @@ New-AzResourceGroupDeployment -Name azcostanalytics -ResourceGroupName <yourRG> 
 
 make sure you select regions from  allowed values 
 
-# Log Analytics:
+### Log Analytics:
  "allowedValues": [
                "East US",
                 "West Europe",
@@ -63,7 +63,7 @@ make sure you select regions from  allowed values
                 "Switzerland West"
             ],            
 
-# Automaton:
+### Automaton:
          "allowedValues": [
                 "Japan East",
                 "East US 2",
