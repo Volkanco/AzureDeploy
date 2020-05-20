@@ -113,6 +113,7 @@ return($all)
 
 ### MAIN Data Collection Logic 
 #Connect to azure 
+Enable-AzureRmAlias
 
 $connectionName = "AzureRunAsConnection"
 try
