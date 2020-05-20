@@ -30,7 +30,7 @@
 
 New-AzResourceGroupDeployment -Name azcostanalytics -ResourceGroupName <yourRG> -Mode Incremental -TemplateUri https://raw.githubusercontent.com/Volkanco/AzureDeploy/master/OMSSolutions/azure-cost-analytics/azuredeploy.json  -logAnalyticsWorkspaceName <your LA WS> -logAnalyticsRegion "West Europe" -automationAccountName scazlabaaweu1 -automationRegion "West Europe"
 
-make sure you select regions from  allowed values 
+Make sure you select regions from  allowed values !
 
 ### Log Analytics:
  "allowedValues": [
