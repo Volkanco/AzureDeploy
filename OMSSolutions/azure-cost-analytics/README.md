@@ -61,7 +61,7 @@ make sure you select regions from  allowed values
                 "Brazil South",
                 "Switzerland North",
                 "Switzerland West"
-            ]            
+            ],            
 
 # Automaton:
          "allowedValues": [
