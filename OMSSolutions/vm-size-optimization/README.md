@@ -36,3 +36,11 @@ You can filter subscriptions , log analytics workspaces, resurce groups and set 
 
 Data is pulled from log analtics workspace and  all azure VMs  needs to be configured to report to one or many workspaces. 
 VM Insights solution should be enabled to be able to provide Azure size history and size optimization recommendations.
+
+
+## Solution Views 
+
+![alt text](images/wbimage1.PNG "part1")
+![alt text](images/wbimage2.PNG "Part2")
+![alt text](images/wbimage3.PNG "Part3")
+![alt text](images/wbimage4.PNG "Part4")
