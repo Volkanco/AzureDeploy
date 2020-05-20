@@ -146,21 +146,36 @@ Write-Output "with ADAL"
 
 
 
-$content=@()
-$dt=get-date
+$subs=Get-AzSubscription
 
-
-
-IF ($startdate -ne $null -and $enddate -ne $null)
+foreach ($sub in $subs)
 {
-        $billperiod=$startdate.ToString('yyyyMM')
-    $content+=get-AzConsumptionUsageDetail -BillingPeriodName $billperiod -Expand MeterDetails -IncludeAdditionalProperties -StartDate $startdate -EndDate $enddate
-}Else
-{
-    $billperiod=$dt.ToString('yyyyMM')
-    $content+=get-AzConsumptionUsageDetail -BillingPeriodName $billperiod  -Expand MeterDetails -IncludeAdditionalProperties -StartDate $dt.AddDays(-1) -EndDate $dt
 
-}
+    Set-AzContext -SubscriptionObject $sub
+    
+
+    $AzLAUploadsuccess=0
+    $AzLAUploaderror=0
+
+
+    $content=@()
+    $dt=get-date
+
+
+
+    IF ($startdate -ne $null -and $enddate -ne $null)
+    {
+            $billperiod=$startdate.ToString('yyyyMM')
+        $content+=get-AzConsumptionUsageDetail -BillingPeriodName $billperiod -Expand MeterDetails -IncludeAdditionalProperties -StartDate $startdate -EndDate $enddate
+    }Else
+    {
+        $billperiod=$dt.ToString('yyyyMM')
+        $start=(get-date).AddDays(-1).Date
+        $end=$start.Date.AddHours(23).AddMinutes(59).AddSeconds(59);
+        $content+=get-AzConsumptionUsageDetail -BillingPeriodName $billperiod  -Expand MeterDetails -IncludeAdditionalProperties -StartDate $start -EndDate $end
+
+    }
+
 
 
 [System.Collections.ArrayList]$usage=@()
@@ -204,11 +219,6 @@ foreach ($item in $content)
 }
 
 
-
-
-
-$usage| select -first 5
-
 #upload data if exist 
 If($usage)
 {
@@ -251,8 +261,11 @@ If($usage)
 
 }
 
+
+}
 Write-output "Successfull upload job count : $AzLAUploadsuccess"
 write-output  "Failed Upload Job count : $AzLAUploaderror "
+
 
 
 
