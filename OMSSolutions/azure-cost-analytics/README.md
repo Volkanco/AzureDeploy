@@ -106,4 +106,3 @@ Make sure you select regions from  allowed values !
 
 Once deployed workbook can be accessed under Azure Portal/Monitoring/Workbooks
 
-![alt text](images/wbimage6.PNG "Workbook")
