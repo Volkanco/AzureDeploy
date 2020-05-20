@@ -89,7 +89,7 @@
       "metadata": {
         "description": "The unique guid for this workbook instance"
       },  
-      "ingestParentRunbook": {
+      "ingestSchedulerGuid": {
       "type": "string",
       "defaultValue": "[newGuid()]",
       "metadata": {
