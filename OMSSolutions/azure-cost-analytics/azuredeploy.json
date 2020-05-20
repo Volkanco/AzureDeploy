@@ -88,7 +88,8 @@
       "defaultValue": "[newGuid()]",
       "metadata": {
         "description": "The unique guid for this workbook instance"
-      },  
+      }
+    },  
       "ingestSchedulerGuid": {
       "type": "string",
       "defaultValue": "[newGuid()]",
@@ -96,8 +97,7 @@
         "description": "The unique guid for this workbook instance"
       }
     }
-    }
-        ,
+     ,
         "_artifactsLocation": {
             "type": "string",
             "defaultValue": "https://raw.githubusercontent.com/Volkanco/AzureDeploy/master/OMSSolutions/azure-cost-analytics",
@@ -268,7 +268,7 @@
                     "apiVersion": "2015-10-31",
                     "location": "[parameters('automationRegion')]",
                     "dependsOn": [
-                        "[concat('Microsoft.Automation/automautomationRegionationAccounts/', parameters('automationAccountName'))]",
+                        "[concat('Microsoft.Automation/automationAccounts/', parameters('automationAccountName'))]",
                         "[concat('Microsoft.Automation/automationAccounts/', parameters('automationAccountName'), '/runbooks/', variables('runbooks').ingestParentRunbook.name)]"
                     ],
                     "tags": {},
