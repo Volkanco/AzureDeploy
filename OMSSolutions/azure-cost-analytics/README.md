@@ -1,22 +1,19 @@
 # Azure VM Size Optimization Wokbook
 
-[![Deploy to Azure](http://azuredeploy.net/deploybutton.png)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FVolkanco%2FAzureDeploy%2Fmaster%2FOMSSolutions%2Fvm-size-optimization%2Fazuredeploy.json) 
-<a href="http://armviz.io/#/?load=https%3A%2F%2raw.githubusercontent.com%2FVolkanco%2FAzureDeploy%2Fmaster%2FOMSSolutions%2Fvm-size-optimization%2Fazuredeploy.json" target="_blank">
+[![Deploy to Azure](http://azuredeploy.net/deploybutton.png)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FVolkanco%2FAzureDeploy%2Fmaster%2FOMSSolutions%2Fazure-cost-analytics%2Fazuredeploy.json) 
+<a href="http://armviz.io/#/?load=https%3A%2F%2raw.githubusercontent.com%2FVolkanco%2FAzureDeploy%2Fmaster%2FOMSSolutions%2Fazure-cost-analytics%2Fazuredeploy.json" target="_blank">
     <img src="http://armviz.io/visualizebutton.png"/>
 </a>
 
->[AZURE.NOTE]This is preliminary documentation for Azure VM Optimization Workbook which helps vizualizing the  VM usage indicators fetched from Azure Monitor/Log Analytics.
+>[AZURE.NOTE]This is preliminary documentation for Azure Cost Analytics solution which helps vizualizing Azure Usage using Azure Automation and Azure Monitor cusotm logs.
 
 
-Azure Size Optimizations Workbook  corrlates  the following data per Azure VM ;
 
-* RDP or SSH logins
-* Reboots
-* CPU Utilization 
-* Memory Utilization
-* Disk IOPs
-* NW Sent / Receive
-* Inbound Connections
+
+
+
+
+
 
 ![alt text](images/wbimage2.PNG "VM Usage")
 
@@ -57,8 +54,8 @@ This part displays all the managed disk which is not unattached or reserved by a
 
 ## Template Deployment
 
-[![Deploy to Azure](http://azuredeploy.net/deploybutton.png)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FVolkanco%2FAzureDeploy%2Fmaster%2FOMSSolutions%2Fvm-size-optimization%2Fazuredeploy.json) 
-<a href="http://armviz.io/#/?load=https%3A%2F%2raw.githubusercontent.com%2FVolkanco%2FAzureDeploy%2Fmaster%2FOMSSolutions%2Fvm-size-optimization%2Fazuredeploy.json" target="_blank">
+[![Deploy to Azure](http://azuredeploy.net/deploybutton.png)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FVolkanco%2FAzureDeploy%2Fmaster%2FOMSSolutions%2Fazure-cost-analytics%2Fazuredeploy.json) 
+<a href="http://armviz.io/#/?load=https%3A%2F%2raw.githubusercontent.com%2FVolkanco%2FAzureDeploy%2Fmaster%2FOMSSolutions%2Fazure-cost-analytics%2Fazuredeploy.json" target="_blank">
     <img src="http://armviz.io/visualizebutton.png"/>
 </a>
 
