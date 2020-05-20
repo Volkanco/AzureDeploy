@@ -21,13 +21,78 @@
 
 ## Pre-reqs
 
-- **Azure Monitor should be enabled for VMs**
+- **Azure Automatation RunAS Account should be created**
+- **Azure Automatation RunAS Account should have Reader / Billing Reader or Contributor access to customers subscriptions**
+- **Az.Accounts and Az.Billing modules should be imported from gallery manually**
 
-Data is pulled from log analtics workspace and  all azure VMs  needs to be configured to report to one or many workspaces. 
-VM Insights solution should be enabled to be able to provide Azure size history and size optimization recommendations.
+
+## Template Deployment using PowerShell
+
+New-AzResourceGroupDeployment -Name azcostanalytics -ResourceGroupName <yourRG> -Mode Incremental -TemplateUri https://raw.githubusercontent.com/Volkanco/AzureDeploy/master/OMSSolutions/azure-cost-analytics/azuredeploy.json  -logAnalyticsWorkspaceName <your LA WS> -logAnalyticsRegion "West Europe" -automationAccountName scazlabaaweu1 -automationRegion "West Europe"
+
+make sure you select regions from  allowed values 
+
+Log Analytics:
+ "allowedValues": [
+               "East US",
+                "West Europe",
+                "Southeast Asia",
+                "Australia Southeast",
+                "West Central US",
+                "Japan East",
+                "UK South",
+                "Central India",
+                "Canada Central",
+                "East US 2 EUAP",
+                "West US 2",
+                "Australia Central",
+                "Australia East",
+                "France Central",
+                "Korea Central",
+                "North Europe",
+                "Central US",
+                "East Asia",
+                "East US 2",
+                "South Central US",
+                "North Central US",
+                "West US",
+                "UK West",
+                "South Africa North",
+                "Brazil South",
+                "Switzerland North",
+                "Switzerland West"
+            ]            
+Automaton:
+         "allowedValues": [
+                "Japan East",
+                "East US 2",
+                "West Europe",
+                "South Africa North",
+                "UK West",
+                "Switzerland North",
+                "Southeast Asia",
+                "South Central US",
+                "North Central US",
+                "East Asia",
+                "Central US",
+                "West US",
+                "Australia Central",
+                "Australia East",
+                "Korea Central",
+                "East US",
+                "West US 2",
+                "Brazil South",
+                "Central US EUAP",
+                "UK South",
+                "West Central US",
+                "North Europe",
+                "Canada Central",
+                "Australia Southeast",
+                "Central India",
+                "France Central"
+            ],
 
 
-## Solution Views 
 
 
 
