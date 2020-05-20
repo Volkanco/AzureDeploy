@@ -82,7 +82,22 @@
             "metadata": {
                 "description": "Specify the Azure Region for your OMS Automation Account"
             }
-        },
+        },  
+        "ingestParentRunbook": {
+      "type": "string",
+      "defaultValue": "[newGuid()]",
+      "metadata": {
+        "description": "The unique guid for this workbook instance"
+      },  
+      "ingestParentRunbook": {
+      "type": "string",
+      "defaultValue": "[newGuid()]",
+      "metadata": {
+        "description": "The unique guid for this workbook instance"
+      }
+    }
+    }
+        ,
         "_artifactsLocation": {
             "type": "string",
             "defaultValue": "https://raw.githubusercontent.com/Volkanco/AzureDeploy/master/OMSSolutions/azure-cost-analytics",
@@ -119,8 +134,7 @@
                 "author": "volkanc@microsoft.com"
             }
         },
-        "ingestSchedulerGuid": "[newGuid()]",
-        "AZMONWorkspaceID": "AzureCostAnalytics-AZMON_WS_ID",
+            "AZMONWorkspaceID": "AzureCostAnalytics-AZMON_WS_ID",
         "AZMONWorkspaceIDType": "string",
         "AZMONWorkspaceIDDescription": "Value of the user's Azure Monitor",
         "AZMONWorkspaceKey": "AzureCostAnalytics-AZMON_WS_KEY",
@@ -142,8 +156,7 @@
           ],
           "workbookDisplayName":"Azure Consumption v1",
           "workbookType":"workbook",
-          "workbookSourceId":"Azure Monitor",
-          "workbookId":"[newGuid()]"
+          "workbookSourceId":"Azure Monitor"
     },
     "resources": [
                 {
@@ -268,7 +281,7 @@
                     }
                 },
                 {
-                    "name": "[concat(parameters('automationAccountName'), '/',variables('ingestSchedulerGuid'))]",
+                    "name": "[concat(parameters('automationAccountName'), '/',parameters('ingestSchedulerGuid'))]",
                     "type": "microsoft.automation/automationAccounts/jobSchedules",
                     "apiVersion": "2015-10-31",
                     "location": "[parameters('automationRegion')]",
@@ -321,7 +334,7 @@
             }
         },
             {
-      "name": "[variables('workbookId')]",
+      "name": "[parameters('workbookId')]",
       "type": "microsoft.insights/workbooks",
       "location": "[resourceGroup().location]",
       "apiVersion": "2018-06-17-preview",
