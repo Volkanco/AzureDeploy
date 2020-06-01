@@ -1,8 +1,8 @@
 ﻿param
 (
-[Parameter(Mandatory=$false)] [datetime] $startdate,
-[Parameter(Mandatory=$false)] [datetime] $enddate
+    [Parameter(Mandatory=$false)] [int] $ingestpastndays
 )
+
 
 
 
@@ -140,128 +140,219 @@ catch {
 }
 
 
-$context = Get-AzureRmContext
+$context = Get-AzContext
 $SubscriptionId = $context.Subscription
-
-Write-Output "with ADAL"
-
 
 
 $subs=Get-AzSubscription
+$dt=get-date
+
+$AzLAUploadsuccess=0
+$AzLAUploaderror=0
 
 foreach ($sub in $subs)
 {
+   
+    Set-AzContext -Subscription $sub.id 
 
-    Set-AzContext -SubscriptionObject $sub
+
+    IF ($ingestpastndays)
+    {
+    
+        $i=$ingestpastndays
+    
+        do
+        {
+            "{0}  - {1}  to {2}" -f $i, $dt.AddDays(-1*$i).Date, $dt.AddDays(-1*($i-1)).Date.AddSeconds(-1)
+            $content=@()
+       
+            $billperiod=$dt.AddDays(-1*$i).Date.ToString('yyyyMM')
+            $content+=get-AzConsumptionUsageDetail  -Expand MeterDetails -IncludeAdditionalProperties -StartDate $dt.AddDays(-1*$i).Date -EndDate $dt.AddDays(-1*($i-1)).Date.AddSeconds(-1)
+
+            $i--
+
+            [System.Collections.ArrayList]$usage=@()
+
+            foreach ($item in $content)
+            {
+    
+                $usage.add([PSCustomObject]@{            
+                        AccountName=$item.AccountName
+                        AdditionalInfo=$item.AdditionalInfo
+                        AdditionalProperties=$item.AdditionalProperties
+                        BillableQuantity=$item.BillableQuantity
+                        BillingPeriodId=$item.BillingPeriodId
+                        BillingPeriodName=$item.BillingPeriodName
+                        ConsumedService=$item.ConsumedService
+                        CostCenter=$item.CostCenter
+                        Currency=$item.Currency
+                        DepartmentName=$item.DepartmentName
+                        Id=$item.Id
+                        InstanceId=$item.InstanceId
+                        InstanceLocation=$item.InstanceLocation
+                        InstanceName=$item.InstanceName
+                        InvoiceId=$item.InvoiceId
+                        InvoiceName=$item.InvoiceName
+                        IsEstimated=$item.IsEstimated
+                        MeterDetails=$item.MeterDetails
+                        MeterId=$item.MeterId
+                        Name=$item.Name
+                        PretaxCost=$item.PretaxCost
+                        Product=$item.Product
+                        SubscriptionGuid=$item.SubscriptionGuid
+                        SubscriptionName=$item.SubscriptionName
+                        Tags=$(convertto-json -InputObject $item.Tags)
+                        Type=$item.Type
+                        UsageEnd=$item.UsageEnd
+                        UsageQuantity=$item.UsageQuantity
+                        UsageStart=$item.UsageStart
+                        ver=1
+                        })|Out-Null
+            }
+
+            #upload data if exist 
+            If($usage)
+            {
+
+                $jsonlogs=$null
+                $dataitem=$null
+	            $splitSize=5000	
+                 Write-Verbose "$($usage.Count)  usage items found from $($usage[0].UsageStart)  to $($usage[0].UsageEnd)"
+
+                #if more than 5000 items in array split and upload them to Azure Monitor
+				
+                   If ($usage.count -gt $splitSize) {
+     
+                    for ($Index = 0; $Index -lt $usage.count; $Index += $splitSize) {
+    
+                    $jsonlogs = ConvertTo-Json -InputObject $usage[$index..($index + $splitSize - 1)]
+                    $post=Post-LogAnalyticsData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
+                    Write-Verbose $index
+                        if ($post -in (200..299))
+                        {
+	                        $AzLAUploadsuccess++
+                        }Else
+                        {
+	                        $AzLAUploaderror++
+                        }
+                    }
+                }Else
+                {
+                    $jsonlogs= ConvertTo-Json -InputObject $usage
+                    $post=$null; 
+                    $post=Post-LogAnalyticsData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
+                        if ($post -in (200..299))
+                        {
+                            $AzLAUploadsuccess++
+                        }Else
+                        {
+                            $AzLAUploaderror++
+                        }
+                    }
+
+            }
+            
+        }
+        While ($i -gt 0 )
     
 
-    $AzLAUploadsuccess=0
-    $AzLAUploaderror=0
-
-
-    $content=@()
-    $dt=get-date
-
-
-
-    IF ($startdate -ne $null -and $enddate -ne $null)
-    {
-            $billperiod=$startdate.ToString('yyyyMM')
-        $content+=get-AzConsumptionUsageDetail -BillingPeriodName $billperiod -Expand MeterDetails -IncludeAdditionalProperties -StartDate $startdate -EndDate $enddate
     }Else
     {
-        $billperiod=$dt.ToString('yyyyMM')
-        $start=(get-date).AddDays(-1).Date
-        $end=$start.Date.AddHours(23).AddMinutes(59).AddSeconds(59);
-        $content+=get-AzConsumptionUsageDetail -BillingPeriodName $billperiod  -Expand MeterDetails -IncludeAdditionalProperties -StartDate $start -EndDate $end
+   
+        "{0}  - {1}  to {2}" -f $i, $dt.AddDays(-1).Date, $dt.Date.AddSeconds(-1)
+   
+        $content=@()
+       
+        $billperiod=$dt.AddDays(-1).Date.ToString('yyyyMM')
+        $content+=get-AzConsumptionUsageDetail  -Expand MeterDetails -IncludeAdditionalProperties -StartDate $dt.AddDays(-1).Date -EndDate $dt.Date.AddSeconds(-1)
+
+        [System.Collections.ArrayList]$usage=@()
+
+        foreach ($item in $content)
+        {
+    
+            $usage.add([PSCustomObject]@{            
+                        AccountName=$item.AccountName
+                        AdditionalInfo=$item.AdditionalInfo
+                        AdditionalProperties=$item.AdditionalProperties
+                        BillableQuantity=$item.BillableQuantity
+                        BillingPeriodId=$item.BillingPeriodId
+                        BillingPeriodName=$item.BillingPeriodName
+                        ConsumedService=$item.ConsumedService
+                        CostCenter=$item.CostCenter
+                        Currency=$item.Currency
+                        DepartmentName=$item.DepartmentName
+                        Id=$item.Id
+                        InstanceId=$item.InstanceId
+                        InstanceLocation=$item.InstanceLocation
+                        InstanceName=$item.InstanceName
+                        InvoiceId=$item.InvoiceId
+                        InvoiceName=$item.InvoiceName
+                        IsEstimated=$item.IsEstimated
+                        MeterDetails=$item.MeterDetails
+                        MeterId=$item.MeterId
+                        Name=$item.Name
+                        PretaxCost=$item.PretaxCost
+                        Product=$item.Product
+                        SubscriptionGuid=$item.SubscriptionGuid
+                        SubscriptionName=$item.SubscriptionName
+                        Tags=$(convertto-json -InputObject $item.Tags)
+                        Type=$item.Type
+                        UsageEnd=$item.UsageEnd
+                        UsageQuantity=$item.UsageQuantity
+                        UsageStart=$item.UsageStart
+                        ver=1
+                        })|Out-Null
+        }
+
+        #upload data if exist 
+        If($usage)
+        {
+
+            $jsonlogs=$null
+            $dataitem=$null
+	        $splitSize=5000	
+
+            Write-Verbose "$($usage.Count)  usage items found from $($usage[0].UsageStart)  to $($usage[0].UsageEnd)"
+
+            #if more than 5000 items in array split and upload them to Azure Monitor
+				
+               If ($usage.count -gt $splitSize) {
+     
+                for ($Index = 0; $Index -lt $usage.count; $Index += $splitSize) {
+    
+                $jsonlogs = ConvertTo-Json -InputObject $usage[$index..($index + $splitSize - 1)]
+                $post=Post-LogAnalyticsData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
+                Write-Verbose $index
+                    if ($post -in (200..299))
+                    {
+	                    $AzLAUploadsuccess++
+                    }Else
+                    {
+	                    $AzLAUploaderror++
+                    }
+      
+                }
+            }Else
+            {
+                $jsonlogs= ConvertTo-Json -InputObject $usage
+                $post=$null; 
+                $post=Post-LogAnalyticsData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
+                    if ($post -in (200..299))
+                    {
+                      $AzLAUploadsuccess++
+                    }Else
+                    {
+                        $AzLAUploaderror++
+                    }
+                }
+
+        }
+
+
+
 
     }
-
-
-
-[System.Collections.ArrayList]$usage=@()
-
-
-foreach ($item in $content)
-{
-    
-    $usage.add([PSCustomObject]@{            
-                AccountName=$item.AccountName
-                AdditionalInfo=$item.AdditionalInfo
-                AdditionalProperties=$item.AdditionalProperties
-                BillableQuantity=$item.BillableQuantity
-                BillingPeriodId=$item.BillingPeriodId
-                BillingPeriodName=$item.BillingPeriodName
-                ConsumedService=$item.ConsumedService
-                CostCenter=$item.CostCenter
-                Currency=$item.Currency
-                DepartmentName=$item.DepartmentName
-                Id=$item.Id
-                InstanceId=$item.InstanceId
-                InstanceLocation=$item.InstanceLocation
-                InstanceName=$item.InstanceName
-                InvoiceId=$item.InvoiceId
-                InvoiceName=$item.InvoiceName
-                IsEstimated=$item.IsEstimated
-                MeterDetails=$item.MeterDetails
-                MeterId=$item.MeterId
-                Name=$item.Name
-                PretaxCost=$item.PretaxCost
-                Product=$item.Product
-                SubscriptionGuid=$item.SubscriptionGuid
-                SubscriptionName=$item.SubscriptionName
-                Tags=$(convertto-json -InputObject $item.Tags)
-                Type=$item.Type
-                UsageEnd=$item.UsageEnd
-                UsageQuantity=$item.UsageQuantity
-                UsageStart=$item.UsageStart
-                ver=1
-                })|Out-Null
-}
-
-
-#upload data if exist 
-If($usage)
-{
-
-    $jsonlogs=$null
-    $dataitem=$null
-	$splitSize=5000	
-
-    #if more than 5000 items in array split and upload them to Azure Monitor
-				
-       If ($usage.count -gt $splitSize) {
-     
-        for ($Index = 0; $Index -lt $usage.count; $Index += $splitSize) {
-    
-        $jsonlogs = ConvertTo-Json -InputObject $usage[$index..($index + $splitSize - 1)]
-        $post=Post-LogAnalyticsData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
-        Write-Output $index
-            if ($post -in (200..299))
-            {
-	            $AzLAUploadsuccess++
-            }Else
-            {
-	            $AzLAUploaderror++
-            }
-        $Index
-        }
-    }Else
-    {
-        $jsonlogs= ConvertTo-Json -InputObject $usage
-        $post=$null; 
-        $post=Post-LogAnalyticsData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
-            if ($post -in (200..299))
-            {
-            $AzLAUploadsuccess++
-            }Else
-            {
-            $AzLAUploaderror++
-            }
-        }
-
-}
-
 
 }
 Write-output "Successfull upload job count : $AzLAUploadsuccess"
