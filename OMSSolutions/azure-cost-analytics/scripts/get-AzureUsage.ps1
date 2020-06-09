@@ -175,6 +175,7 @@ foreach ($sub in $subs)
     
                     $dt=(Get-Date).AddDays(-1*($i-1)).ToString("yyyy-MM-dd")
                     $dt1=(Get-Date).AddDays(-1*$i).ToString("yyyy-MM-dd")
+                    Write-output "Ingesting $dt1 to $dt "
                     
                     $ua=@()
                     $us=Get-UsageAggregates   -ReportedStartTime $dt1   -ReportedEndTime $dt -AggregationGranularity Daily -ShowDetails 1
