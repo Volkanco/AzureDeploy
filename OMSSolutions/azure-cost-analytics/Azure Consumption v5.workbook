@@ -68,15 +68,6 @@
             "typeSettings": {
               "selectableValues": [
                 {
-                  "durationMs": 3600000
-                },
-                {
-                  "durationMs": 14400000
-                },
-                {
-                  "durationMs": 43200000
-                },
-                {
                   "durationMs": 86400000
                 },
                 {
@@ -103,7 +94,8 @@
                 {
                   "durationMs": 7776000000
                 }
-              ]
+              ],
+              "allowCustom": true
             }
           },
           {
@@ -160,65 +152,6 @@
         "json": " Select the workspace  where Azure Usage data is ingested !\r\nOnly subscriptions with usage data displayed in subscription selection!\r\nPlease note that it might take additional 24H for usage data to be recorded under your subscription!"
       },
       "name": "text - 26"
-    },
-    {
-      "type": 9,
-      "content": {
-        "version": "KqlParameterItem/1.0",
-        "parameters": [
-          {
-            "id": "c6d7579d-99f1-426b-9f97-363ab604340d",
-            "version": "KqlParameterItem/1.0",
-            "name": "usagethismonth",
-            "type": 1,
-            "value": " AzureUsage_CL   | where TimeGenerated > ago(14d)  | where Type_s == \"Microsoft.Consumption/usageDetails\" | summarize arg_max(PretaxCost_d, *) by  TimeGenerated, InstanceId_s,MeterId_g, Name_g,SubscriptionGuid_g,SubscriptionName_s,  InstanceLocation_s  | summarize Cost=round(sum(PretaxCost_d),4) , Usage=sum(UsageQuantity_d) by  TimeGenerated, InstanceId_s,MeterId_g, Name_g,SubscriptionGuid_g,SubscriptionName_s,  InstanceLocation_s, AccountName_s, Currency_s,ConsumedService_s,Product_s | project TimeGenerated , ResourceId=InstanceId_s, MeterId_g ,SubscriptionGuid_g, SubscriptionName_s, AccountName_s, Currency_s,ConsumedService_s,Product_s,Location=InstanceLocation_s , Cost, Usage | join kind=leftouter (AzureUsage_CL  | where TimeGenerated > ago(14d)  | where Type_s == \"Microsoft.Commerce/UsageAggregate\" | summarize c=count() by  MeterId_g , MeterCategory_s , MeterSubCategory_s, MeterName_s ) on MeterId_g | extend MeterCategory=iff(isnotempty( MeterCategory_s), MeterCategory_s, tostring(split(Product_s,'-')[0])) | project-away MeterId_g1, c     AzureUsage_CL | where TimeGenerated >= startofmonth(now()) and TimeGenerated < startofday(now())  | where Type_s == \"Microsoft.Consumption/usageDetails\" | summarize arg_max(PretaxCost_d, *) by  TimeGenerated, InstanceId_s,MeterId_g, Name_g,SubscriptionGuid_g,SubscriptionName_s,  InstanceLocation_s  | summarize Cost=round(sum(PretaxCost_d),4) , Usage=sum(UsageQuantity_d) by  TimeGenerated, InstanceId_s,MeterId_g, Name_g,SubscriptionGuid_g,SubscriptionName_s,  InstanceLocation_s, AccountName_s, Currency_s,ConsumedService_s,Product_s | project TimeGenerated , ResourceId=InstanceId_s, MeterId_g ,SubscriptionGuid_g,AccountName_s, Currency_s,ConsumedService_s,Product_s,Location=InstanceLocation_s , Cost, Usage | join kind=leftouter (AzureUsage_CL | where TimeGenerated >= startofmonth(now()) and TimeGenerated < startofday(now())  | where Type_s == \"Microsoft.Commerce/UsageAggregate\" | summarize c=count() by  MeterId_g , MeterCategory_s , MeterSubCategory_s, MeterName_s ) on MeterId_g | extend MeterCategory=iff(isnotempty( MeterCategory_s), MeterCategory_s, tostring(split(Product_s,'-')[0])) | project-away MeterId_g1, c",
-            "criteriaData": [
-              {
-                "condition": "else result = ' AzureUsage_CL   | where TimeGenerated {TimeRange}  | where Type_s == \"Microsoft.Consumption/usageDetails\" | summarize arg_max(PretaxCost_d, *) by  TimeGenerated, InstanceId_s,MeterId_g, Name_g,SubscriptionGuid_g,SubscriptionName_s,  InstanceLocation_s  | summarize Cost=round(sum(PretaxCost_d),4) , Usage=sum(UsageQuantity_d) by  TimeGenerated, InstanceId_s,MeterId_g, Name_g,SubscriptionGuid_g,SubscriptionName_s,  InstanceLocation_s, AccountName_s, Currency_s,ConsumedService_s,Product_s | project TimeGenerated , ResourceId=InstanceId_s, MeterId_g ,SubscriptionGuid_g, SubscriptionName_s, AccountName_s, Currency_s,ConsumedService_s,Product_s,Location=InstanceLocation_s , Cost, Usage | join kind=leftouter (AzureUsage_CL  | where TimeGenerated {TimeRange}  | where Type_s == \"Microsoft.Commerce/UsageAggregate\" | summarize c=count() by  MeterId_g , MeterCategory_s , MeterSubCategory_s, MeterName_s ) on MeterId_g | extend MeterCategory=iff(isnotempty( MeterCategory_s), MeterCategory_s, tostring(split(Product_s,'-')[0])) | project-away MeterId_g1, c     AzureUsage_CL | where TimeGenerated >= startofmonth(now()) and TimeGenerated < startofday(now())  | where Type_s == \"Microsoft.Consumption/usageDetails\" | summarize arg_max(PretaxCost_d, *) by  TimeGenerated, InstanceId_s,MeterId_g, Name_g,SubscriptionGuid_g,SubscriptionName_s,  InstanceLocation_s  | summarize Cost=round(sum(PretaxCost_d),4) , Usage=sum(UsageQuantity_d) by  TimeGenerated, InstanceId_s,MeterId_g, Name_g,SubscriptionGuid_g,SubscriptionName_s,  InstanceLocation_s, AccountName_s, Currency_s,ConsumedService_s,Product_s | project TimeGenerated , ResourceId=InstanceId_s, MeterId_g ,SubscriptionGuid_g,AccountName_s, Currency_s,ConsumedService_s,Product_s,Location=InstanceLocation_s , Cost, Usage | join kind=leftouter (AzureUsage_CL | where TimeGenerated >= startofmonth(now()) and TimeGenerated < startofday(now())  | where Type_s == \"Microsoft.Commerce/UsageAggregate\" | summarize c=count() by  MeterId_g , MeterCategory_s , MeterSubCategory_s, MeterName_s ) on MeterId_g | extend MeterCategory=iff(isnotempty( MeterCategory_s), MeterCategory_s, tostring(split(Product_s,'-')[0])) | project-away MeterId_g1, c'",
-                "criteriaContext": {
-                  "operator": "Default",
-                  "rightValType": "param",
-                  "resultValType": "static",
-                  "resultVal": " AzureUsage_CL   | where TimeGenerated {TimeRange}  | where Type_s == \"Microsoft.Consumption/usageDetails\" | summarize arg_max(PretaxCost_d, *) by  TimeGenerated, InstanceId_s,MeterId_g, Name_g,SubscriptionGuid_g,SubscriptionName_s,  InstanceLocation_s  | summarize Cost=round(sum(PretaxCost_d),4) , Usage=sum(UsageQuantity_d) by  TimeGenerated, InstanceId_s,MeterId_g, Name_g,SubscriptionGuid_g,SubscriptionName_s,  InstanceLocation_s, AccountName_s, Currency_s,ConsumedService_s,Product_s | project TimeGenerated , ResourceId=InstanceId_s, MeterId_g ,SubscriptionGuid_g, SubscriptionName_s, AccountName_s, Currency_s,ConsumedService_s,Product_s,Location=InstanceLocation_s , Cost, Usage | join kind=leftouter (AzureUsage_CL  | where TimeGenerated {TimeRange}  | where Type_s == \"Microsoft.Commerce/UsageAggregate\" | summarize c=count() by  MeterId_g , MeterCategory_s , MeterSubCategory_s, MeterName_s ) on MeterId_g | extend MeterCategory=iff(isnotempty( MeterCategory_s), MeterCategory_s, tostring(split(Product_s,'-')[0])) | project-away MeterId_g1, c     AzureUsage_CL | where TimeGenerated >= startofmonth(now()) and TimeGenerated < startofday(now())  | where Type_s == \"Microsoft.Consumption/usageDetails\" | summarize arg_max(PretaxCost_d, *) by  TimeGenerated, InstanceId_s,MeterId_g, Name_g,SubscriptionGuid_g,SubscriptionName_s,  InstanceLocation_s  | summarize Cost=round(sum(PretaxCost_d),4) , Usage=sum(UsageQuantity_d) by  TimeGenerated, InstanceId_s,MeterId_g, Name_g,SubscriptionGuid_g,SubscriptionName_s,  InstanceLocation_s, AccountName_s, Currency_s,ConsumedService_s,Product_s | project TimeGenerated , ResourceId=InstanceId_s, MeterId_g ,SubscriptionGuid_g,AccountName_s, Currency_s,ConsumedService_s,Product_s,Location=InstanceLocation_s , Cost, Usage | join kind=leftouter (AzureUsage_CL | where TimeGenerated >= startofmonth(now()) and TimeGenerated < startofday(now())  | where Type_s == \"Microsoft.Commerce/UsageAggregate\" | summarize c=count() by  MeterId_g , MeterCategory_s , MeterSubCategory_s, MeterName_s ) on MeterId_g | extend MeterCategory=iff(isnotempty( MeterCategory_s), MeterCategory_s, tostring(split(Product_s,'-')[0])) | project-away MeterId_g1, c"
-                }
-              }
-            ],
-            "timeContext": {
-              "durationMs": 0
-            },
-            "timeContextFromParameter": "TimeRange"
-          },
-          {
-            "id": "349c6340-a21b-48b7-8d25-200a0995ec10",
-            "version": "KqlParameterItem/1.0",
-            "name": "usagetimerangeraw",
-            "type": 1,
-            "value": " AzureUsage_CL   | where TimeGenerated > ago(14d)  | where Type_s == \"Microsoft.Consumption/usageDetails\" | summarize arg_max(PretaxCost_d, *) by  TimeGenerated, InstanceId_s,MeterId_g, Name_g,SubscriptionGuid_g,SubscriptionName_s,  InstanceLocation_s  | summarize Cost=round(sum(PretaxCost_d),4) , Usage=sum(UsageQuantity_d) by  TimeGenerated, InstanceId_s,MeterId_g, Name_g,SubscriptionGuid_g,SubscriptionName_s,  InstanceLocation_s, AccountName_s, Currency_s,ConsumedService_s,Product_s | project TimeGenerated , ResourceId=InstanceId_s, MeterId_g ,SubscriptionGuid_g,SubscriptionName_s,AccountName_s, Currency_s,ConsumedService_s,Product_s,Location=InstanceLocation_s , Cost, Usage | join kind=leftouter (AzureUsage_CL  | where TimeGenerated > ago(14d)  | where Type_s == \"Microsoft.Commerce/UsageAggregate\" | summarize c=count() by  MeterId_g , MeterCategory_s , MeterSubCategory_s, MeterName_s ) on MeterId_g | extend MeterCategory=iff(isnotempty( MeterCategory_s), MeterCategory_s, tostring(split(Product_s,'-')[0])) | project-away MeterId_g1, c",
-            "criteriaData": [
-              {
-                "condition": "else result = ' AzureUsage_CL   | where TimeGenerated {TimeRange}  | where Type_s == \"Microsoft.Consumption/usageDetails\" | summarize arg_max(PretaxCost_d, *) by  TimeGenerated, InstanceId_s,MeterId_g, Name_g,SubscriptionGuid_g,SubscriptionName_s,  InstanceLocation_s  | summarize Cost=round(sum(PretaxCost_d),4) , Usage=sum(UsageQuantity_d) by  TimeGenerated, InstanceId_s,MeterId_g, Name_g,SubscriptionGuid_g,SubscriptionName_s,  InstanceLocation_s, AccountName_s, Currency_s,ConsumedService_s,Product_s | project TimeGenerated , ResourceId=InstanceId_s, MeterId_g ,SubscriptionGuid_g,SubscriptionName_s,AccountName_s, Currency_s,ConsumedService_s,Product_s,Location=InstanceLocation_s , Cost, Usage | join kind=leftouter (AzureUsage_CL  | where TimeGenerated {TimeRange}  | where Type_s == \"Microsoft.Commerce/UsageAggregate\" | summarize c=count() by  MeterId_g , MeterCategory_s , MeterSubCategory_s, MeterName_s ) on MeterId_g | extend MeterCategory=iff(isnotempty( MeterCategory_s), MeterCategory_s, tostring(split(Product_s,'-')[0])) | project-away MeterId_g1, c'",
-                "criteriaContext": {
-                  "operator": "Default",
-                  "rightValType": "param",
-                  "resultValType": "static",
-                  "resultVal": " AzureUsage_CL   | where TimeGenerated {TimeRange}  | where Type_s == \"Microsoft.Consumption/usageDetails\" | summarize arg_max(PretaxCost_d, *) by  TimeGenerated, InstanceId_s,MeterId_g, Name_g,SubscriptionGuid_g,SubscriptionName_s,  InstanceLocation_s  | summarize Cost=round(sum(PretaxCost_d),4) , Usage=sum(UsageQuantity_d) by  TimeGenerated, InstanceId_s,MeterId_g, Name_g,SubscriptionGuid_g,SubscriptionName_s,  InstanceLocation_s, AccountName_s, Currency_s,ConsumedService_s,Product_s | project TimeGenerated , ResourceId=InstanceId_s, MeterId_g ,SubscriptionGuid_g,SubscriptionName_s,AccountName_s, Currency_s,ConsumedService_s,Product_s,Location=InstanceLocation_s , Cost, Usage | join kind=leftouter (AzureUsage_CL  | where TimeGenerated {TimeRange}  | where Type_s == \"Microsoft.Commerce/UsageAggregate\" | summarize c=count() by  MeterId_g , MeterCategory_s , MeterSubCategory_s, MeterName_s ) on MeterId_g | extend MeterCategory=iff(isnotempty( MeterCategory_s), MeterCategory_s, tostring(split(Product_s,'-')[0])) | project-away MeterId_g1, c"
-                }
-              }
-            ],
-            "timeContext": {
-              "durationMs": 0
-            },
-            "timeContextFromParameter": "TimeRange"
-          }
-        ],
-        "style": "pills",
-        "queryType": 0
-      },
-      "conditionalVisibility": {
-        "parameterName": "showhidden",
-        "comparison": "isNotEqualTo"
-      },
-      "name": "parameters - 39 - Copy"
     },
     {
       "type": 9,
@@ -325,6 +258,13 @@
             "linkTarget": "parameter",
             "linkLabel": "Recommendations",
             "subTarget": "6",
+            "style": "link"
+          },
+          {
+            "cellValue": "selectedtab",
+            "linkTarget": "parameter",
+            "linkLabel": "AlertQueries",
+            "subTarget": "9",
             "style": "link"
           }
         ]
@@ -2168,7 +2108,7 @@
               "size": 2,
               "title": "Top 10 RGs by Usage",
               "timeContext": {
-                "durationMs": 604800000
+                "durationMs": 2419200000
               },
               "timeContextFromParameter": "TimeRange",
               "queryType": 0,
@@ -2230,7 +2170,7 @@
               "size": 0,
               "title": " Select a  RG to See the details",
               "timeContext": {
-                "durationMs": 604800000
+                "durationMs": 0
               },
               "timeContextFromParameter": "TimeRange",
               "exportFieldName": "RG",
@@ -2297,7 +2237,7 @@
               "query": "let subfilter= \"{subforgraph}\";\r\nlet azusage = materialize(AzureUsage_CL \r\n| where TimeGenerated {TimeRange} \r\n|where SubscriptionGuid_g == subfilter\r\n| extend RG=tostring(split(InstanceId_s,'/')[4])\r\n| where RG==\"{RG}\"\r\n| where Type_s == \"Microsoft.Consumption/usageDetails\" \r\n| summarize arg_max(PretaxCost_d, *) by TimeGenerated, InstanceId_s,MeterId_g, Name_g,SubscriptionGuid_g,SubscriptionName_s, InstanceLocation_s \r\n| summarize Cost=round(sum(PretaxCost_d),4) , Usage=sum(UsageQuantity_d) by TimeGenerated, InstanceId_s,MeterId_g, Name_g,SubscriptionGuid_g,SubscriptionName_s, InstanceLocation_s, AccountName_s, Currency_s,ConsumedService_s,Product_s \r\n| project TimeGenerated , ResourceId=InstanceId_s, MeterId_g ,SubscriptionGuid_g,SubscriptionName_s,AccountName_s, Currency_s,ConsumedService_s,Product_s,Location=InstanceLocation_s , Cost, Usage \r\n| join kind=leftouter \r\n(AzureUsage_CL \r\n| where TimeGenerated {TimeRange}\r\n| where Type_s == \"Microsoft.Commerce/UsageAggregate\" | summarize c=count() by MeterId_g , MeterCategory_s , MeterSubCategory_s, MeterName_s ) on MeterId_g \r\n| extend MeterCategory=iff(isnotempty( MeterCategory_s), MeterCategory_s, tostring(split(Product_s,'-')[0])) | project-away MeterId_g1, c);\r\nlet trends=azusage\r\n| make-series CostTrend=round(sum(Cost),4) default=double(0) on TimeGenerated in range({TimeRange:start},endofday(datetime_add('day',-1,now())), 1d) by MeterCategory; \r\nazusage\r\n| summarize Cost=round(sum(Cost),4) by MeterCategory\r\n| join kind= leftouter (trends ) on MeterCategory \r\n\r\n\r\n",
               "size": 0,
               "timeContext": {
-                "durationMs": 604800000
+                "durationMs": 0
               },
               "timeContextFromParameter": "TimeRange",
               "queryType": 0,
@@ -2464,7 +2404,7 @@
                   "crossComponentResources": [
                     "{Workspace}"
                   ],
-                  "value": "AppGateway",
+                  "value": "Storage",
                   "typeSettings": {
                     "additionalResourceOptions": []
                   },
@@ -2486,11 +2426,11 @@
             "type": 3,
             "content": {
               "version": "KqlItem/1.0",
-              "query": "let tagkey = \"{Tag}\";\r\nlet data = AzureUsage_CL\r\n//| where TimeGenerated {TimeRange}\r\n| summarize arg_max(PretaxCost_d, *) by  TimeGenerated, InstanceId_s,MeterId_g, Name_g,SubscriptionGuid_g,SubscriptionName_s,  InstanceLocation_s \r\n| where isnotempty(Tags_s)\r\n| mv-expand Tags=todynamic(Tags_s)\r\n| extend keys=tostring(bag_keys(Tags)[0])\r\n| where keys==tagkey\r\n| extend TagValue=tostring(Tags.[tagkey])\r\n| summarize Usage = round(sum(PretaxCost_d),4) by Subs=SubscriptionGuid_g , SubscriptionName=SubscriptionName_s ,tostring(Tags),TagValue\r\n| extend RequestId = strcat(Subs, '::', Tags);\r\nlet nodes = data\r\n| where RequestId !startswith \"Overall::\"\r\n    | summarize Usage=sum(Usage) by SubscriptionName,RequestId, TagValue\r\n    | project Id = RequestId, Name = TagValue, Usage, Kind = 'Tags', Sub=SubscriptionName;\r\n    nodes\r\n    | sort by Usage asc\r\n",
+              "query": "let tagkey = \"{Tag}\";\r\nlet data = AzureUsage_CL\r\n| where TimeGenerated {TimeRange}\r\n| where Type_s == \"Microsoft.Consumption/usageDetails\"\r\n | where SubscriptionGuid_g in ('*') or '*' in ('*')\r\n| summarize arg_max(PretaxCost_d, *) by  TimeGenerated, InstanceId_s,MeterId_g, Name_g,SubscriptionGuid_g,SubscriptionName_s,  InstanceLocation_s \r\n| where isnotempty(Tags_s)\r\n| mv-expand Tags=todynamic(Tags_s)\r\n| extend keys=tostring(bag_keys(Tags)[0])\r\n| where keys==tagkey\r\n| extend TagValue=tostring(Tags.[tagkey])\r\n| summarize Usage = round(sum(PretaxCost_d),4) by Subs=SubscriptionGuid_g , SubscriptionName=SubscriptionName_s ,tostring(Tags),TagValue\r\n| extend RequestId = strcat(Subs, '::', Tags);\r\nlet nodes = data\r\n| where RequestId !startswith \"Overall::\"\r\n    | summarize Usage=sum(Usage) by SubscriptionName,RequestId, TagValue\r\n    | project Id = RequestId, Name = TagValue, Usage, Kind = 'Tags', Sub=SubscriptionName;\r\n    nodes\r\n    | sort by Usage asc\r\n",
               "size": 2,
-              "title": "Graph - Sub to tagkey",
+              "title": "Cost for Selected Tag",
               "timeContext": {
-                "durationMs": 1209600000
+                "durationMs": 0
               },
               "timeContextFromParameter": "TimeRange",
               "queryType": 0,
@@ -2559,11 +2499,11 @@
             "type": 3,
             "content": {
               "version": "KqlItem/1.0",
-              "query": "let tagkey = \"{Tag}\";\r\nlet  tagvalue=\"{TagValue}\";\r\nlet data = AzureUsage_CL\r\n| where TimeGenerated {TimeRange}\r\n| where Type_s == \"Microsoft.Consumption/usageDetails\"\r\n//| where SubscriptionGuid_g ==  subfilter\r\n| summarize arg_max(PretaxCost_d, *) by  TimeGenerated, InstanceId_s,MeterId_g, Name_g,SubscriptionGuid_g,SubscriptionName_s,  InstanceLocation_s \r\n| where isnotempty(Tags_s)\r\n| mv-expand Tags=todynamic(Tags_s)\r\n| extend keys=tostring(bag_keys(Tags)[0])\r\n| where keys==tagkey\r\n| extend keys=tostring(bag_keys(Tags)[0])\r\n| extend TagValue=tostring(Tags.[tagkey])\r\n| where isnotempty(Tags.[tagkey])\r\n| where Tags.[tagkey]==tagvalue\r\n| summarize Usage = round(sum(PretaxCost_d),4) by Subs=SubscriptionGuid_g , SubscriptionName=SubscriptionName_s ,tostring(Tags), TagValue,ResourceId=InstanceId_s , ResName=InstanceName_s\r\n| extend RequestId = strcat(Subs, '::', Tags);\r\nlet links = data\r\n| where RequestId !startswith \"Overall::\"\r\n| summarize Usage=sum(Usage) by Subs=strcat('Overall::', Subs),  RequestId\r\n| project SourceId = Subs, TargetId = RequestId, Usage, Kind = 'Subs -> Tags'\r\n| union (data\r\n| summarize Usage=sum(Usage) by  Subs=strcat('Overall::', Subs)\r\n| project SourceId = \"Overall\", TargetId = Subs, Usage, Kind = 'Overall -> Subs'),\r\n(data\r\n| where RequestId !startswith \"Overall::\"\r\n| summarize Usage=sum(Usage) by   RequestId , ResourceId\r\n| project SourceId = RequestId, TargetId = ResourceId, Usage, Kind = 'Tags -> Res')\r\n;\r\nlet nodes = data\r\n| where RequestId !startswith \"Overall::\"\r\n| summarize Usage=sum(Usage) by Subs,RequestId=strcat('Overall::', Subs),SubscriptionName\r\n| project Id=RequestId , Name = SubscriptionName, Usage, Kind = 'Subs'\r\n| union (data\r\n| where RequestId !startswith \"Overall::\"\r\n    | summarize Usage=sum(Usage) by RequestId, Tags,TagValue\r\n    | project Id = RequestId, Name = TagValue, Usage, Kind = 'Tags'),\r\n    (data\r\n    | summarize Usage=sum(Usage) \r\n    | project Id = \"Overall\", Name = \"Subs Total\", Usage, Kind = 'Overall'\r\n       ),\r\n       (data\r\n    | summarize Usage=sum(Usage) by RequestId, ResourceId , ResName\r\n    | project Id = ResourceId, Name = ResName, Usage, Kind = 'Resource');\r\n    nodes\r\n| union (links)\r\n",
+              "query": "let tagkey = \"{Tag}\";\r\nlet azusage = materialize(AzureUsage_CL \r\n| where TimeGenerated {TimeRange} \r\n| where SubscriptionGuid_g in ('*') or '*' in ('*')\r\n| where Type_s == \"Microsoft.Consumption/usageDetails\" \r\n| summarize arg_max(PretaxCost_d, *) by  TimeGenerated, InstanceId_s,MeterId_g, Name_g,SubscriptionGuid_g,SubscriptionName_s,  InstanceLocation_s \r\n| where isnotempty(Tags_s)\r\n| mv-expand Tags=todynamic(Tags_s)\r\n| extend keys=tostring(bag_keys(Tags)[0])\r\n| where keys==tagkey\r\n| extend TagValue=tostring(Tags.[tagkey])\r\n| summarize Cost = round(sum(PretaxCost_d),4) by SubscriptionGuid_g , SubscriptionName_s ,tostring(Tags),TagValue, MeterId_g, Product_s, ResourceId=InstanceId_s\r\n| join kind=leftouter \r\n(AzureUsage_CL \r\n| where TimeGenerated {TimeRange}\r\n| where Type_s == \"Microsoft.Commerce/UsageAggregate\" | summarize c=count() by MeterId_g , MeterCategory_s , MeterSubCategory_s, MeterName_s ) on MeterId_g \r\n| extend MeterCategory=iff(isnotempty( MeterCategory_s), MeterCategory_s, tostring(split(Product_s,'-')[0])) | project-away MeterId_g1, c);\r\nazusage\r\n| summarize Cost = round(sum(Cost),4) by Id=SubscriptionGuid_g , SubscriptionName=SubscriptionName_s ,ParentId = ''\r\n| extend Kind = 'Usage', Name = strcat('🔑 Sub-', SubscriptionName) \r\n| union (\r\nazusage\r\n| summarize Cost = round(sum(Cost),4) by Subscription=SubscriptionGuid_g ,ParentId = SubscriptionGuid_g , Id=strcat(SubscriptionGuid_g ,'\\\\',Tags),Tags\r\n| extend Kind = 'Usage', Name = strcat('🔖 TAG-',Tags) ),\r\n (\r\nazusage\r\n| extend ResourceName=tostring(split(ResourceId,'/')[8])\r\n| summarize Cost = round(sum(Cost),4) by Subscription=SubscriptionGuid_g , SubscriptionName=SubscriptionName_s ,ParentId =strcat(SubscriptionGuid_g ,'\\\\',Tags), Id=ResourceId,ResourceName\r\n| extend Kind = 'Usage', Name = strcat('📌 Resource-', ResourceName) )\r\n| project Name, Kind, Cost,ParentId, Id,Tags\r\n| order by Cost desc",
               "size": 2,
-              "title": "Graph - Sub to tagvalue",
+              "title": "Cost for Selected Tag ",
               "timeContext": {
-                "durationMs": 1209600000
+                "durationMs": 2419200000
               },
               "timeContextFromParameter": "TimeRange",
               "queryType": 0,
@@ -2571,7 +2511,40 @@
               "crossComponentResources": [
                 "{Workspace}"
               ],
-              "visualization": "graph",
+              "visualization": "table",
+              "gridSettings": {
+                "formatters": [
+                  {
+                    "columnMatch": "Cost",
+                    "formatter": 4,
+                    "formatOptions": {
+                      "palette": "greenRed"
+                    },
+                    "numberFormat": {
+                      "unit": 0,
+                      "options": {
+                        "style": "decimal",
+                        "maximumFractionDigits": 1
+                      }
+                    }
+                  },
+                  {
+                    "columnMatch": "ParentId",
+                    "formatter": 5
+                  },
+                  {
+                    "columnMatch": "Id",
+                    "formatter": 5
+                  }
+                ],
+                "hierarchySettings": {
+                  "idColumn": "Id",
+                  "parentColumn": "ParentId",
+                  "treeType": 0,
+                  "expanderColumn": "Name",
+                  "expandTopLevel": true
+                }
+              },
               "graphSettings": {
                 "type": 0,
                 "topContent": {
@@ -2619,11 +2592,219 @@
                 "hivesMargin": 5
               }
             },
+            "name": "query - 32 - Copy - Copy - Copy - Copy"
+          },
+          {
+            "type": 1,
+            "content": {
+              "json": "## Selected Tag  \"{Tag}\":\"{TagValue}\"\r\n\r\n"
+            },
+            "name": "text - 5"
+          },
+          {
+            "type": 3,
+            "content": {
+              "version": "KqlItem/1.0",
+              "query": "let tagkey = \"{Tag}\";\r\nlet  tagvalue=\"{TagValue}\";\r\nlet azusage = materialize(AzureUsage_CL\r\n| where TimeGenerated {TimeRange}\r\n| where Type_s == \"Microsoft.Consumption/usageDetails\"\r\n | where SubscriptionGuid_g in ('*') or '*' in ('*')\r\n| summarize arg_max(PretaxCost_d, *) by  TimeGenerated, InstanceId_s,MeterId_g, Name_g,SubscriptionGuid_g,SubscriptionName_s,  InstanceLocation_s \r\n| where isnotempty(Tags_s)\r\n| mv-expand Tags=todynamic(Tags_s)\r\n| extend keys=tostring(bag_keys(Tags)[0])\r\n| where keys==tagkey\r\n| extend keys=tostring(bag_keys(Tags)[0])\r\n| extend TagValue=tostring(Tags.[tagkey])\r\n| where isnotempty(Tags.[tagkey])\r\n| where Tags.[tagkey]==tagvalue\r\n| summarize Cost = round(sum(PretaxCost_d),4) by TimeGenerated,SubscriptionGuid_g , SubscriptionName_s ,tostring(Tags), TagValue,ResourceId=InstanceId_s , ResName=InstanceName_s, MeterId_g, Product_s\r\n| join kind=leftouter \r\n(AzureUsage_CL \r\n| where TimeGenerated {TimeRange}\r\n| where Type_s == \"Microsoft.Commerce/UsageAggregate\" | summarize c=count() by MeterId_g , MeterCategory_s , MeterSubCategory_s, MeterName_s ) on MeterId_g \r\n| extend MeterCategory=iff(isnotempty( MeterCategory_s), MeterCategory_s, tostring(split(Product_s,'-')[0])) | project-away MeterId_g1, c);\r\nlet trends=azusage\r\n| make-series CostTrend=round(sum(Cost),4) default=double(0) on TimeGenerated in range({TimeRange:start},endofday(datetime_add('day',-1,now())), 1d) by MeterCategory; \r\nazusage\r\n| summarize Cost=round(sum(Cost),4) by MeterCategory\r\n| join kind= leftouter (trends ) on MeterCategory \r\n",
+              "size": 2,
+              "title": "Service for Selected Tag Value",
+              "timeContext": {
+                "durationMs": 0
+              },
+              "timeContextFromParameter": "TimeRange",
+              "queryType": 0,
+              "resourceType": "microsoft.operationalinsights/workspaces",
+              "crossComponentResources": [
+                "{Workspace}"
+              ],
+              "visualization": "table",
+              "gridSettings": {
+                "formatters": [
+                  {
+                    "columnMatch": "Cost",
+                    "formatter": 4,
+                    "formatOptions": {
+                      "palette": "orange"
+                    },
+                    "numberFormat": {
+                      "unit": 0,
+                      "options": {
+                        "style": "decimal",
+                        "useGrouping": false,
+                        "maximumFractionDigits": 1
+                      }
+                    }
+                  },
+                  {
+                    "columnMatch": "MeterCategory1",
+                    "formatter": 5
+                  },
+                  {
+                    "columnMatch": "CostTrend",
+                    "formatter": 10,
+                    "formatOptions": {
+                      "palette": "blue"
+                    }
+                  },
+                  {
+                    "columnMatch": "TimeGenerated",
+                    "formatter": 5
+                  }
+                ]
+              },
+              "graphSettings": {
+                "type": 0,
+                "topContent": {
+                  "columnMatch": "Name",
+                  "formatter": 12,
+                  "formatOptions": {
+                    "palette": "blue"
+                  }
+                },
+                "centerContent": {
+                  "columnMatch": "Usage",
+                  "formatter": 12,
+                  "formatOptions": {},
+                  "numberFormat": {
+                    "unit": 17,
+                    "options": {
+                      "style": "decimal",
+                      "maximumFractionDigits": 2,
+                      "maximumSignificantDigits": 3
+                    }
+                  }
+                },
+                "bottomContent": {
+                  "columnMatch": "Kind",
+                  "formatter": 12,
+                  "formatOptions": {
+                    "palette": "blue"
+                  }
+                },
+                "nodeIdField": "Id",
+                "sourceIdField": "SourceId",
+                "targetIdField": "TargetId",
+                "edgeSize": "Usage",
+                "nodeSize": {
+                  "sizeField": "Usage",
+                  "minSize": 100,
+                  "maxSize": 130
+                },
+                "staticNodeSize": 100,
+                "colorSettings": {
+                  "nodeColorField": "Kind",
+                  "type": 1,
+                  "colorPalette": "default"
+                },
+                "hivesMargin": 5
+              }
+            },
+            "customWidth": "50",
             "conditionalVisibility": {
               "parameterName": "TagValue",
               "comparison": "isNotEqualTo"
             },
-            "name": "query - 32 - Copy - Copy - Copy"
+            "name": "TagdetailsbyService"
+          },
+          {
+            "type": 3,
+            "content": {
+              "version": "KqlItem/1.0",
+              "query": "let tagkey = \"{Tag}\";\r\nlet  tagvalue=\"{TagValue}\";\r\nlet azusage = materialize(AzureUsage_CL\r\n| where TimeGenerated {TimeRange}\r\n| where Type_s == \"Microsoft.Consumption/usageDetails\"\r\n | where SubscriptionGuid_g in ('*') or '*' in ('*')\r\n| summarize arg_max(PretaxCost_d, *) by  TimeGenerated, InstanceId_s,MeterId_g, Name_g,SubscriptionGuid_g,SubscriptionName_s,  InstanceLocation_s \r\n| where isnotempty(Tags_s)\r\n| mv-expand Tags=todynamic(Tags_s)\r\n| extend keys=tostring(bag_keys(Tags)[0])\r\n| where keys==tagkey\r\n| extend keys=tostring(bag_keys(Tags)[0])\r\n| extend TagValue=tostring(Tags.[tagkey])\r\n| where isnotempty(Tags.[tagkey])\r\n| where Tags.[tagkey]==tagvalue\r\n| summarize Cost = round(sum(PretaxCost_d),4) by TimeGenerated,SubscriptionGuid_g , SubscriptionName_s ,tostring(Tags), TagValue,ResourceId=InstanceId_s , ResName=InstanceName_s, MeterId_g, Product_s\r\n| join kind=leftouter \r\n(AzureUsage_CL \r\n| where TimeGenerated {TimeRange}\r\n| where Type_s == \"Microsoft.Commerce/UsageAggregate\" | summarize c=count() by MeterId_g , MeterCategory_s , MeterSubCategory_s, MeterName_s ) on MeterId_g \r\n| extend MeterCategory=iff(isnotempty( MeterCategory_s), MeterCategory_s, tostring(split(Product_s,'-')[0])) | project-away MeterId_g1, c);\r\nlet trends=azusage\r\n| make-series CostTrend=round(sum(Cost),4) default=double(0) on TimeGenerated in range({TimeRange:start},endofday(datetime_add('day',-1,now())), 1d) by ResourceId,MeterCategory; \r\nazusage\r\n| summarize Cost=round(sum(Cost),4) by ResourceId,MeterCategory\r\n| join kind= leftouter (trends ) on ResourceId ,MeterCategory\r\n| project-away ResourceId1, MeterCategory1\r\n| order by Cost desc",
+              "size": 2,
+              "title": "Resources for Selected Tag",
+              "timeContext": {
+                "durationMs": 0
+              },
+              "timeContextFromParameter": "TimeRange",
+              "queryType": 0,
+              "resourceType": "microsoft.operationalinsights/workspaces",
+              "crossComponentResources": [
+                "{Workspace}"
+              ],
+              "visualization": "table",
+              "gridSettings": {
+                "formatters": [
+                  {
+                    "columnMatch": "Cost",
+                    "formatter": 4,
+                    "formatOptions": {
+                      "palette": "blue"
+                    },
+                    "numberFormat": {
+                      "unit": 0,
+                      "options": {
+                        "style": "decimal",
+                        "maximumFractionDigits": 1
+                      }
+                    }
+                  },
+                  {
+                    "columnMatch": "CostTrend",
+                    "formatter": 10,
+                    "formatOptions": {
+                      "palette": "blue"
+                    }
+                  },
+                  {
+                    "columnMatch": "TimeGenerated",
+                    "formatter": 5
+                  }
+                ]
+              },
+              "graphSettings": {
+                "type": 0,
+                "topContent": {
+                  "columnMatch": "Name",
+                  "formatter": 12,
+                  "formatOptions": {
+                    "palette": "blue"
+                  }
+                },
+                "centerContent": {
+                  "columnMatch": "Usage",
+                  "formatter": 12,
+                  "formatOptions": {},
+                  "numberFormat": {
+                    "unit": 17,
+                    "options": {
+                      "style": "decimal",
+                      "maximumFractionDigits": 2,
+                      "maximumSignificantDigits": 3
+                    }
+                  }
+                },
+                "bottomContent": {
+                  "columnMatch": "Kind",
+                  "formatter": 12,
+                  "formatOptions": {
+                    "palette": "blue"
+                  }
+                },
+                "nodeIdField": "Id",
+                "sourceIdField": "SourceId",
+                "targetIdField": "TargetId",
+                "edgeSize": "Usage",
+                "nodeSize": {
+                  "sizeField": "Usage",
+                  "minSize": 100,
+                  "maxSize": 130
+                },
+                "staticNodeSize": 100,
+                "colorSettings": {
+                  "nodeColorField": "Kind",
+                  "type": 1,
+                  "colorPalette": "default"
+                },
+                "hivesMargin": 5
+              }
+            },
+            "customWidth": "50",
+            "conditionalVisibility": {
+              "parameterName": "TagValue",
+              "comparison": "isNotEqualTo"
+            },
+            "name": "Tagdetailsbyresource"
           }
         ]
       },
@@ -2718,7 +2899,7 @@
               "query": "AzureUsage_CL\r\n| where TimeGenerated {TimeRange}\r\n| summarize arg_max(PretaxCost_d, *) by  TimeGenerated, InstanceId_s,MeterId_g, Name_g,SubscriptionGuid_g,SubscriptionName_s,  InstanceLocation_s \r\n| where SubscriptionGuid_g in ({subscription}) or '*' in ({subscription})\r\n| summarize Cost=round(sum(PretaxCost_d),4) by Subscription=SubscriptionGuid_g , SubscriptionName=SubscriptionName_s, TimeGenerated \r\n| sort by Subscription, SubscriptionName, TimeGenerated asc\r\n| serialize\r\n|  extend  p_cost = iff(Subscription==prev(Subscription) , p_cost = prev(Cost,1) , p_cost=Cost)\r\n| project   Subscription , SubscriptionName , TimeGenerated , Cost , p_cost , cost_diff=Cost-p_cost, cost_pctdiff=round((Cost/p_cost)*100-100,1)\r\n| sort by cost_diff desc\r\n\r\n",
               "size": 0,
               "timeContext": {
-                "durationMs": 604800000
+                "durationMs": 2419200000
               },
               "timeContextFromParameter": "TimeRange",
               "queryType": 0,
@@ -2779,7 +2960,7 @@
               "size": 0,
               "title": "Cost Diff DoD by Resource",
               "timeContext": {
-                "durationMs": 604800000
+                "durationMs": 2419200000
               },
               "timeContextFromParameter": "TimeRange",
               "queryType": 0,
@@ -2846,7 +3027,7 @@
               "size": 0,
               "title": "Cost Diff DoD by Resource",
               "timeContext": {
-                "durationMs": 604800000
+                "durationMs": 2419200000
               },
               "timeContextFromParameter": "TimeRange",
               "queryType": 0,
@@ -2913,7 +3094,7 @@
               "size": 0,
               "title": "Cost Diff WoW",
               "timeContext": {
-                "durationMs": 604800000
+                "durationMs": 2419200000
               },
               "timeContextFromParameter": "TimeRange",
               "queryType": 0,
@@ -2985,7 +3166,7 @@
               "size": 0,
               "title": "Cost Diff MoM",
               "timeContext": {
-                "durationMs": 604800000
+                "durationMs": 2419200000
               },
               "timeContextFromParameter": "TimeRange",
               "queryType": 0,
