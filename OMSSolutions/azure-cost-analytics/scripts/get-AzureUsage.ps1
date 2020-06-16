@@ -163,30 +163,35 @@ foreach ($sub in $subs)
     
     $dt=get-date
       
-      IF($ingestpastndays -eq $null){$ingestpastndays=2}
+      IF($ingestpastndays -eq $null -or $ingestpastndays -lt 2){$ingestpastndays=2}
            
-                IF ($ingestpastndays)
-                {
-                       #UsageAggregate
-                    $i=$ingestpastndays
-    
-                    do
-                    {
-    
-                    $dt=(Get-Date).AddDays(-1*($i-1)).ToString("yyyy-MM-dd")
-                    $dt1=(Get-Date).AddDays(-1*$i).ToString("yyyy-MM-dd")
-                    Write-output "Ingesting $dt1 to $dt "
-                    
-                    $ua=@()
-                    $us=Get-UsageAggregates   -ReportedStartTime $dt1   -ReportedEndTime $dt -AggregationGranularity Daily -ShowDetails 1
-                    $ua+=$us.UsageAggregations
 
-                    do
-                    {
+                #UsageAggregate
+            $i=$ingestpastndays
+
+            do
+            {
+
+            $dt=(Get-Date).AddDays(-1*($i-1)).ToString("yyyy-MM-dd")
+            $dt1=(Get-Date).AddDays(-1*$i).ToString("yyyy-MM-dd")
+            Write-output "Ingesting $dt1 to $dt "
+            
+            $ua=@()
+
+            Try{
+                $us=Get-UsageAggregates   -ReportedStartTime $dt1   -ReportedEndTime $dt -AggregationGranularity Daily -ShowDetails 1
+            }catch {
+                    Write-warning -Message $_.Exception
+                        
+            }
+                $ua+=$us.UsageAggregations
+
+            do
+            {
                         $us=Get-UsageAggregates -ContinuationToken $us.ContinuationToken -ReportedStartTime $dt1  -ReportedEndTime  $dt  -ShowDetails 1
                         $ua+=$us.UsageAggregations
 
-                    } while($us.ContinuationToken  -ne $null) 
+                    } while($null  -ne $us.ContinuationToken ) 
 
                         $i--
                     [System.Collections.ArrayList]$usage=@()
@@ -263,22 +268,26 @@ foreach ($sub in $subs)
                     }
 
        
-                    }
-                    While ($i -gt 0 )
+            }
+            While ($i -gt 0 )
                     
                     #usageDetails
 
                      $i=$ingestpastndays
     
-                    do
-                    {
+            do
+            {
                      $dt=get-date
                     $billperiod=$dt.AddDays(-1*$i).Date.ToString('yyyyMM')
                     
                     $content=@()
-                    $content+=get-AzConsumptionUsageDetail -Expand MeterDetails -IncludeAdditionalProperties -StartDate $dt.AddDays(-1*$i).Date -EndDate $dt.AddDays(-1*($i-1)).Date.AddSeconds(-1)
-
-                    $i--
+                   
+                    Try{
+                        $content+=get-AzConsumptionUsageDetail -Expand MeterDetails -IncludeAdditionalProperties -StartDate $dt.AddDays(-1*$i).Date -EndDate $dt.AddDays(-1*($i-1)).Date.AddSeconds(-1)
+                    }catch {
+                            Write-warning -Message $_.Exception
+                              
+                    }
 
                     [System.Collections.ArrayList]$usagedetail=@()
 
@@ -360,12 +369,12 @@ foreach ($sub in $subs)
 
                     }
 
-       
-                    }
-                    While ($i -gt 0 )
+                    $i--
+            }
+            While ($i -gt 0 )
     
 
-                }
+                
 
 }
 
