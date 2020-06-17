@@ -106,5 +106,5 @@ Make sure you select regions from  allowed values !
 
 Once deployed workbook can be accessed under Azure Portal/Monitoring/Workbooks
 
-To deploy individual workbooks only ; 
+To deploy v5 workbook only ; 
 [![Deploy WB v5](http://azuredeploy.net/deploybutton.png)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FVolkanco%2FAzureDeploy%2Fmaster%2FOMSSolutions%2Fazure-cost-analytics%2FAzureConsumptionWBv5.json) 
