@@ -352,6 +352,7 @@
               "query": "let day=dayofmonth(now());\r\nlet start= startofmonth(datetime_add('month',-1,now())) ;\r\nlet end =   datetime_add('day',day,start );\r\nlet azusage = materialize(AzureUsage_CL\r\n| where TimeGenerated >= start\r\n| where Type_s == \"Microsoft.Consumption/usageDetails\"\r\n| summarize arg_max(PretaxCost_d, *) by  TimeGenerated, InstanceId_s,MeterId_g, Name_g,SubscriptionGuid_g,SubscriptionName_s,  InstanceLocation_s \r\n| summarize Cost=round(sum(PretaxCost_d),4) , Usage=sum(UsageQuantity_d) by  TimeGenerated, SubscriptionGuid_g,SubscriptionName_s, Currency_s);\r\nazusage\r\n| where TimeGenerated >= startofmonth(now())\r\n| summarize ThisMCost=round(sum(Cost),4) by Subscription=SubscriptionGuid_g , SubscriptionName=SubscriptionName_s, Currency_s\r\n| join kind=leftouter (\r\nazusage\r\n| where TimeGenerated >= start\r\n| where TimeGenerated  < end\r\n| summarize PrevMSameDayCost=round(sum(Cost),0) by Subscription=SubscriptionGuid_g , SubscriptionName=SubscriptionName_s\r\n) on Subscription\r\n| join kind=leftouter (\r\nazusage\r\n| where TimeGenerated >= start\r\n| where TimeGenerated  < startofmonth(now())\r\n| summarize PrevMTotal=round(sum(Cost),0) by Subscription=SubscriptionGuid_g , SubscriptionName=SubscriptionName_s\r\n) on Subscription\r\n| project  Subscription, SubscriptionName=strcat(Currency_s , ' - ',SubscriptionName ), ThisMCost, PrevMSameDayCost, PrevMTotal \r\n\r\n\r\n",
               "size": 1,
               "title": "Usage (Prev Month - Same Day) by Subscription",
+              "showExportToExcel": true,
               "queryType": 0,
               "resourceType": "microsoft.operationalinsights/workspaces",
               "crossComponentResources": [
@@ -407,6 +408,7 @@
               "size": 1,
               "aggregation": 3,
               "title": "Usage Forecast",
+              "showExportToExcel": true,
               "queryType": 0,
               "resourceType": "microsoft.operationalinsights/workspaces",
               "crossComponentResources": [
@@ -476,7 +478,7 @@
               "size": 2,
               "title": "Graph - TotalUsage - SelectedTime",
               "timeContext": {
-                "durationMs": 604800000
+                "durationMs": 1209600000
               },
               "timeContextFromParameter": "TimeRange",
               "queryType": 0,
@@ -545,9 +547,10 @@
               "version": "KqlItem/1.0",
               "query": "{usagetimerangeraw} \r\n| where SubscriptionGuid_g in ({subscription}) or '*' in ({subscription})\r\n| summarize Cost=round(sum(Cost),4) by MeterCategory, Subscription=SubscriptionGuid_g , SubscriptionName=SubscriptionName_s\r\n| sort by Cost desc",
               "size": 2,
+              "showAnalytics": true,
               "title": "Usage by ConsumedService ",
               "timeContext": {
-                "durationMs": 604800000
+                "durationMs": 1209600000
               },
               "timeContextFromParameter": "TimeRange",
               "exportFieldName": "ConsumedService",
@@ -650,6 +653,7 @@
               "version": "KqlItem/1.0",
               "query": "let trends=\r\n{usagetimerangeraw}\r\n| where SubscriptionGuid_g in ({subscription}) or '*' in ({subscription})\r\n| make-series CostTrend=round(sum(Cost),4) default=double(0) on TimeGenerated in range({TimeRange:start},endofday(datetime_add('day',-1,now())), 1d) by MeterCategory; \r\n{usagetimerangeraw} \r\n| where SubscriptionGuid_g in ({subscription}) or '*' in ({subscription})\r\n| summarize Cost=round(sum(Cost),4) by MeterCategory\r\n| join kind= leftouter (trends ) on MeterCategory \r\n\r\n\r\n",
               "size": 0,
+              "showAnalytics": true,
               "title": "Usage Trends -  Select a Service to see details",
               "exportFieldName": "MeterCategory",
               "exportParameterName": "MeterCategory",
@@ -750,9 +754,10 @@
               "query": "let meter=\"{MeterCategory}\";\r\nlet azusage = materialize({usagetimerangeraw});\r\nazusage\r\n| where MeterCategory==meter\r\n| summarize Cost = round(sum(Cost),4) by Id=SubscriptionGuid_g , SubscriptionName=SubscriptionName_s ,ParentId = ''\r\n| extend Kind = 'Usage', Name = strcat('🔑 Sub-', SubscriptionName) \r\n| union (\r\nazusage\r\n| where MeterCategory==meter\r\n| summarize Cost = round(sum(Cost),4) by Subscription=SubscriptionGuid_g , SubscriptionName=SubscriptionName_s ,ParentId = SubscriptionGuid_g , Id=strcat(SubscriptionGuid_g ,'\\\\',MeterCategory),MeterCategory\r\n| extend Kind = 'Usage', Name = strcat('🧾 MeterCategory-', MeterCategory) ),\r\n (\r\nazusage\r\n| where MeterCategory==meter\r\n| summarize Cost = round(sum(Cost),4) by Subscription=SubscriptionGuid_g , SubscriptionName=SubscriptionName_s ,ParentId =strcat(SubscriptionGuid_g ,'\\\\',MeterCategory) , Id=strcat(SubscriptionGuid_g ,'\\\\',MeterCategory,'\\\\',MeterSubCategory_s),MeterSubCategory_s\r\n| extend Kind = 'Usage', Name = strcat('🧾 SubCategory-', MeterSubCategory_s) ),\r\n(azusage\r\n| where MeterCategory==meter\r\n| summarize Cost = round(sum(Cost),4) by Subscription=SubscriptionGuid_g , SubscriptionName=SubscriptionName_s ,ParentId = strcat(SubscriptionGuid_g ,'\\\\',MeterCategory,'\\\\',MeterSubCategory_s),MeterCategory, Id=ResourceId, InstanceName=tostring(split(ResourceId,'/')[8])\r\n| extend Kind = 'Usage', Name = strcat('🏷 Instance-', InstanceName))\r\n| project Name, Kind, Cost,ParentId, Id\r\n| order by Cost desc\r\n",
               "size": 0,
               "timeContext": {
-                "durationMs": 604800000
+                "durationMs": 1209600000
               },
               "timeContextFromParameter": "TimeRange",
+              "showExportToExcel": true,
               "queryType": 0,
               "resourceType": "microsoft.operationalinsights/workspaces",
               "crossComponentResources": [
@@ -932,6 +937,7 @@
               "version": "KqlItem/1.0",
               "query": "let timerange=1d;\r\n    AzureUsage_CL\r\n| where TimeGenerated >= ago(timerange)\r\n| where SubscriptionGuid_g in ({subscription}) or '*' in ({subscription})\r\n| where ConsumedService_s == \"Microsoft.Compute\" \r\n| extend ReservationId = tostring(parse_json(AdditionalInfo_s).ReservationId) \r\n| extend ReservationOrderId = tostring(parse_json(AdditionalInfo_s).ReservationOrderId)\r\n| extend UsageType = tostring(parse_json(AdditionalInfo_s).UsageType)  \r\n| extend VCPUs = tostring(parse_json(AdditionalInfo_s).VCPUs) \r\n| extend ServiceType= tostring(parse_json(AdditionalInfo_s).ServiceType) \r\n| extend ImageType = tostring(parse_json(AdditionalInfo_s).ImageType) \r\n| extend ConsumptionMeter = tostring(parse_json(AdditionalInfo_s).ConsumptionMeter) \r\n| where UsageType startswith \"ComputeHR\"\r\n| summarize arg_max(TimeGenerated, *) by  InstanceName_s , ServiceType , Product_s \r\n| project TimeGenerated , InstanceName_s , ServiceType  \r\n| summarize TotalVMs=dcount(InstanceName_s) by ServiceType",
               "size": 1,
+              "showExportToExcel": true,
               "queryType": 0,
               "resourceType": "microsoft.operationalinsights/workspaces",
               "crossComponentResources": [
@@ -1019,6 +1025,7 @@
               "version": "KqlItem/1.0",
               "query": "\r\nlet timerange=1d;\r\n    AzureUsage_CL\r\n| where TimeGenerated >= ago(timerange)\r\n| where ConsumedService_s == \"Microsoft.Compute\" \r\n| summarize arg_max(PretaxCost_d, *) by  TimeGenerated, InstanceId_s,MeterId_g, Name_g,SubscriptionGuid_g,SubscriptionName_s,  InstanceLocation_s \r\n| where SubscriptionGuid_g in ({subscription}) or '*' in ({subscription})\r\n| extend ReservationId = tostring(parse_json(AdditionalInfo_s).ReservationId) \r\n| extend ReservationOrderId = tostring(parse_json(AdditionalInfo_s).ReservationOrderId)\r\n| extend UsageType = tostring(parse_json(AdditionalInfo_s).UsageType)  \r\n| extend VCPUs = tostring(parse_json(AdditionalInfo_s).VCPUs) \r\n| extend ServiceType= tostring(parse_json(AdditionalInfo_s).ServiceType) \r\n| extend ImageType = tostring(parse_json(AdditionalInfo_s).ImageType) \r\n| extend ConsumptionMeter = tostring(parse_json(AdditionalInfo_s).ConsumptionMeter) \r\n| where UsageType startswith \"ComputeHR\"\r\n| summarize arg_max(TimeGenerated, *) by  InstanceName_s , ServiceType , Product_s \r\n| project TimeGenerated , InstanceName_s , ServiceType  \r\n| summarize TotalVMs=dcount(InstanceName_s) by ServiceType\r\n| join kind= fullouter (\r\nAzureUsage_CL\r\n| where TimeGenerated >= ago(timerange)\r\n| where ConsumedService_s == \"Microsoft.Compute\" \r\n| where SubscriptionGuid_g in ({subscription}) or '*' in ({subscription})\r\n| extend ReservationId = tostring(parse_json(AdditionalInfo_s).ReservationId) \r\n| extend ReservationOrderId = tostring(parse_json(AdditionalInfo_s).ReservationOrderId)\r\n| extend UsageType = tostring(parse_json(AdditionalInfo_s).UsageType)  \r\n| extend VCPUs = tostring(parse_json(AdditionalInfo_s).VCPUs) \r\n| extend ServiceType= tostring(parse_json(AdditionalInfo_s).ServiceType) \r\n| extend ImageType = tostring(parse_json(AdditionalInfo_s).ImageType) \r\n| extend ConsumptionMeter = tostring(parse_json(AdditionalInfo_s).ConsumptionMeter) \r\n| where UsageType startswith \"ComputeHR\"\r\n| summarize arg_max(TimeGenerated, *) by  InstanceName_s , ServiceType , Product_s \r\n| project TimeGenerated , InstanceName_s , ServiceType  , ReservationId, Product_s , PretaxCost_d , VCPUs  ,MeterId_g\r\n| where isnotempty(ReservationId)\r\n| summarize VMwithReservation=dcount(InstanceName_s) by ServiceType\r\n) on ServiceType\r\n|project Family=ServiceType,TotalVMs,VMwithReservation=iff(isempty(VMwithReservation),0,VMwithReservation)\r\n\r\n\r\n",
               "size": 0,
+              "showExportToExcel": true,
               "queryType": 0,
               "resourceType": "microsoft.operationalinsights/workspaces",
               "crossComponentResources": [
@@ -1226,6 +1233,7 @@
                 "durationMs": 1209600000
               },
               "timeContextFromParameter": "TimeRange",
+              "showExportToExcel": true,
               "queryType": 0,
               "resourceType": "microsoft.operationalinsights/workspaces",
               "crossComponentResources": [
@@ -1395,7 +1403,7 @@
             "type": 3,
             "content": {
               "version": "KqlItem/1.0",
-              "query": "let timerange=2d;\r\n    AzureUsage_CL\r\n| where TimeGenerated >= ago(timerange)\r\n| where ConsumedService_s == \"Microsoft.Compute\" \r\n| summarize arg_max(PretaxCost_d, *) by  TimeGenerated, InstanceId_s,MeterId_g, Name_g,SubscriptionGuid_g,SubscriptionName_s,  InstanceLocation_s \r\n| where SubscriptionGuid_g in ({subscription}) or '*' in ({subscription})\r\n| extend ReservationId = tostring(parse_json(AdditionalInfo_s).ReservationId) \r\n| extend ReservationOrderId = tostring(parse_json(AdditionalInfo_s).ReservationOrderId)\r\n| extend UsageType = tostring(parse_json(AdditionalInfo_s).UsageType)  \r\n| extend VCPUs = tostring(parse_json(AdditionalInfo_s).VCPUs) \r\n| extend ServiceType= tostring(parse_json(AdditionalInfo_s).ServiceType) \r\n| extend ImageType = tostring(parse_json(AdditionalInfo_s).ImageType) \r\n| extend ConsumptionMeter = tostring(parse_json(AdditionalInfo_s).ConsumptionMeter) \r\n| where UsageType startswith \"ComputeHR\"\r\n| summarize arg_max(TimeGenerated, *) by  InstanceName_s , ServiceType , Product_s , Location=InstanceLocation_s\r\n| project TimeGenerated , InstanceName_s , ServiceType  ,Location\r\n| summarize TotalVMs=dcount(InstanceName_s) by ServiceType,Location\r\n| join kind= fullouter (\r\nAzureUsage_CL\r\n| where TimeGenerated >= ago(timerange)\r\n| where ConsumedService_s == \"Microsoft.Compute\" \r\n| where SubscriptionGuid_g in ({subscription}) or '*' in ({subscription})\r\n| extend ReservationId = tostring(parse_json(AdditionalInfo_s).ReservationId) \r\n| extend ReservationOrderId = tostring(parse_json(AdditionalInfo_s).ReservationOrderId)\r\n| extend UsageType = tostring(parse_json(AdditionalInfo_s).UsageType)  \r\n| extend VCPUs = tostring(parse_json(AdditionalInfo_s).VCPUs) \r\n| extend ServiceType= tostring(parse_json(AdditionalInfo_s).ServiceType) \r\n| extend ImageType = tostring(parse_json(AdditionalInfo_s).ImageType) \r\n| extend ConsumptionMeter = tostring(parse_json(AdditionalInfo_s).ConsumptionMeter) \r\n| where UsageType startswith \"ComputeHR\"\r\n| summarize arg_max(TimeGenerated, *) by  InstanceName_s , ServiceType , Product_s \r\n| project TimeGenerated , InstanceName_s , ServiceType  , ReservationId, Product_s , PretaxCost_d , VCPUs  ,MeterId_g\r\n| where isnotempty(ReservationId)\r\n| summarize VMwithReservation=dcount(InstanceName_s) by ServiceType\r\n) on ServiceType\r\n|project Family=ServiceType,TotalVMs,VMwithReservation=iff(isempty(VMwithReservation),0,VMwithReservation),Location\r\n| extend VMWithoutReservation=TotalVMs-VMwithReservation\r\n| where VMWithoutReservation <> 0\r\n\r\n\r\n\r\n\r\n",
+              "query": "let timerange=2d;\r\n    AzureUsage_CL\r\n| where TimeGenerated >= ago(timerange)\r\n| where ConsumedService_s == \"Microsoft.Compute\" \r\n| summarize arg_max(PretaxCost_d, *) by  TimeGenerated, InstanceId_s,MeterId_g, Name_g,SubscriptionGuid_g,SubscriptionName_s,  InstanceLocation_s \r\n| where SubscriptionGuid_g in ({subscription}) or '*' in ({subscription})\r\n| extend ReservationId = tostring(parse_json(AdditionalInfo_s).ReservationId) \r\n| extend ReservationOrderId = tostring(parse_json(AdditionalInfo_s).ReservationOrderId)\r\n| extend UsageType = tostring(parse_json(AdditionalInfo_s).UsageType)  \r\n| extend VCPUs = tostring(parse_json(AdditionalInfo_s).VCPUs) \r\n| extend ServiceType= tostring(parse_json(AdditionalInfo_s).ServiceType) \r\n| extend ImageType = tostring(parse_json(AdditionalInfo_s).ImageType) \r\n| extend ConsumptionMeter = tostring(parse_json(AdditionalInfo_s).ConsumptionMeter) \r\n| where UsageType startswith \"ComputeHR\"\r\n| summarize arg_max(TimeGenerated, *) by  InstanceName_s , ServiceType , Product_s , Location=InstanceLocation_s\r\n| project TimeGenerated , InstanceName_s , ServiceType  ,Location\r\n| summarize TotalVMs=dcount(InstanceName_s) by ServiceType,Location\r\n| join kind= fullouter (\r\nAzureUsage_CL\r\n| where TimeGenerated >= ago(timerange)\r\n| where ConsumedService_s == \"Microsoft.Compute\" \r\n| where SubscriptionGuid_g in ({subscription}) or '*' in ({subscription})\r\n| extend ReservationId = tostring(parse_json(AdditionalInfo_s).ReservationId) \r\n| extend ReservationOrderId = tostring(parse_json(AdditionalInfo_s).ReservationOrderId)\r\n| extend UsageType = tostring(parse_json(AdditionalInfo_s).UsageType)  \r\n| extend VCPUs = tostring(parse_json(AdditionalInfo_s).VCPUs) \r\n| extend ServiceType= tostring(parse_json(AdditionalInfo_s).ServiceType) \r\n| extend ImageType = tostring(parse_json(AdditionalInfo_s).ImageType) \r\n| extend ConsumptionMeter = tostring(parse_json(AdditionalInfo_s).ConsumptionMeter) \r\n| where UsageType startswith \"ComputeHR\"\r\n| summarize arg_max(TimeGenerated, *) by  InstanceName_s , ServiceType , Product_s \r\n| project TimeGenerated , InstanceName_s , ServiceType  , ReservationId, Product_s , PretaxCost_d , VCPUs  ,MeterId_g\r\n| where isnotempty(ReservationId)\r\n| summarize VMwithReservation=dcount(InstanceName_s) by ServiceType\r\n) on ServiceType\r\n|project Family=ServiceType,TotalVMs,VMwithReservation=iff(isempty(VMwithReservation),0,VMwithReservation),Location\r\n| extend VMWithoutReservation=TotalVMs-VMwithReservation\r\n| where Family !startswith \"Standard_A\" and Family !startswith \"Standard_G\" \r\n| where VMWithoutReservation <> 0\r\n\r\n\r\n\r\n\r\n",
               "size": 4,
               "title": "VMs without Reservation",
               "queryType": 0,
@@ -1505,9 +1513,10 @@
             "type": 3,
             "content": {
               "version": "KqlItem/1.0",
-              "query": "    AzureUsage_CL\r\n| where TimeGenerated {TimeRange}\r\n| where ConsumedService_s == \"Microsoft.Compute\" \r\n| summarize arg_max(PretaxCost_d, *) by  TimeGenerated, InstanceId_s,MeterId_g, Name_g,SubscriptionGuid_g,SubscriptionName_s,  InstanceLocation_s \r\n| where SubscriptionGuid_g in ({subscription}) or '*' in ({subscription})\r\n| extend ReservationId = tostring(parse_json(AdditionalInfo_s).ReservationId) \r\n| extend ReservationOrderId = tostring(parse_json(AdditionalInfo_s).ReservationOrderId)\r\n| extend UsageType = tostring(parse_json(AdditionalInfo_s).UsageType)  \r\n| extend VCPUs = tostring(parse_json(AdditionalInfo_s).VCPUs) \r\n| extend ServiceType= tostring(parse_json(AdditionalInfo_s).ServiceType) \r\n| extend ImageType = tostring(parse_json(AdditionalInfo_s).ImageType) \r\n| extend ConsumptionMeter = tostring(parse_json(AdditionalInfo_s).ConsumptionMeter) \r\n| extend OS=iff(isempty(ImageType) or ImageType startswith \"Windows\", \"Windows\",\"Linux\") \r\n| extend Ahub=iff(OS == \"Windows\" and ImageType==\"Windows Server BYOL\", \"Ahub\",iff(OS == \"Windows\", \"PayG\",\"N/A\")) \r\n| where UsageType startswith \"ComputeHR\"\r\n| summarize Cost=round(sum(PretaxCost_d),4)  by ResourceId=InstanceId_s, InstanceName_s , ServiceType , Product_s , SubscriptionName_s,OS, Ahub\r\n| where Product_s <> \"VM RI - Compute\" \r\n| join kind= leftouter (\r\n        AzureUsage_CL\r\n| where TimeGenerated {TimeRange}\r\n| where ConsumedService_s == \"Microsoft.Compute\" \r\n| where SubscriptionGuid_g in ({subscription}) or '*' in ({subscription})\r\n| extend ReservationId = tostring(parse_json(AdditionalInfo_s).ReservationId) \r\n| extend ReservationOrderId = tostring(parse_json(AdditionalInfo_s).ReservationOrderId)\r\n| extend UsageType = tostring(parse_json(AdditionalInfo_s).UsageType)  \r\n| extend VCPUs = tostring(parse_json(AdditionalInfo_s).VCPUs) \r\n| extend ServiceType= tostring(parse_json(AdditionalInfo_s).ServiceType) \r\n| extend ImageType = tostring(parse_json(AdditionalInfo_s).ImageType) \r\n| extend ConsumptionMeter = tostring(parse_json(AdditionalInfo_s).ConsumptionMeter) \r\n| where UsageType startswith \"ComputeHR\"\r\n| summarize Cost=round(sum(PretaxCost_d),4)  by ResourceId=InstanceId_s, InstanceName_s , ServiceType , Product_s , SubscriptionName_s\r\n| where Product_s == \"VM RI - Compute\" \r\n) on ResourceId\r\n|project ResourceId , InstanceName=InstanceName_s , ServiceType , Product=Product_s ,Cost, isRI=iff(Product_s1==\"VM RI - Compute\" , \"RI\" , \"No RI\"), SubscriptionName=SubscriptionName_s,OS, Ahub\r\n| where iff({shownori}==1,isRI==\"No RI\",1==1)\r\n",
+              "query": "    AzureUsage_CL\r\n| where TimeGenerated {TimeRange}\r\n| where ConsumedService_s == \"Microsoft.Compute\" \r\n| summarize arg_max(PretaxCost_d, *) by  TimeGenerated, InstanceId_s,MeterId_g, Name_g,SubscriptionGuid_g,SubscriptionName_s,  InstanceLocation_s \r\n| where SubscriptionGuid_g in ({subscription}) or '*' in ({subscription})\r\n| extend ReservationId = tostring(parse_json(AdditionalInfo_s).ReservationId) \r\n| extend ReservationOrderId = tostring(parse_json(AdditionalInfo_s).ReservationOrderId)\r\n| extend UsageType = tostring(parse_json(AdditionalInfo_s).UsageType)  \r\n| extend VCPUs = tostring(parse_json(AdditionalInfo_s).VCPUs) \r\n| extend ServiceType= tostring(parse_json(AdditionalInfo_s).ServiceType) \r\n| extend ImageType = tostring(parse_json(AdditionalInfo_s).ImageType) \r\n| extend ConsumptionMeter = tostring(parse_json(AdditionalInfo_s).ConsumptionMeter) \r\n| extend OS=iff(isempty(ImageType) or ImageType startswith \"Windows\", \"Windows\",\"Linux\") \r\n| extend Ahub=iff(OS == \"Windows\" and ImageType==\"Windows Server BYOL\", \"Ahub\",iff(OS == \"Windows\", \"PayG\",\"N/A\")) \r\n| where UsageType startswith \"ComputeHR\"\r\n| summarize Cost=round(sum(PretaxCost_d),4)  by ResourceId=InstanceId_s, InstanceName_s , ServiceType , Product_s , SubscriptionName_s,OS, Ahub\r\n| where Product_s <> \"VM RI - Compute\" \r\n| join kind= leftouter (\r\n        AzureUsage_CL\r\n| where TimeGenerated {TimeRange}\r\n| where ConsumedService_s == \"Microsoft.Compute\" \r\n| where SubscriptionGuid_g in ({subscription}) or '*' in ({subscription})\r\n| extend ReservationId = tostring(parse_json(AdditionalInfo_s).ReservationId) \r\n| extend ReservationOrderId = tostring(parse_json(AdditionalInfo_s).ReservationOrderId)\r\n| extend UsageType = tostring(parse_json(AdditionalInfo_s).UsageType)  \r\n| extend VCPUs = tostring(parse_json(AdditionalInfo_s).VCPUs) \r\n| extend ServiceType= tostring(parse_json(AdditionalInfo_s).ServiceType) \r\n| extend ImageType = tostring(parse_json(AdditionalInfo_s).ImageType) \r\n| extend ConsumptionMeter = tostring(parse_json(AdditionalInfo_s).ConsumptionMeter) \r\n| where UsageType startswith \"ComputeHR\"\r\n| summarize Cost=round(sum(PretaxCost_d),4)  by ResourceId=InstanceId_s, InstanceName_s , ServiceType , Product_s , SubscriptionName_s\r\n| where Product_s == \"VM RI - Compute\" \r\n) on ResourceId\r\n|project ResourceId , InstanceName=InstanceName_s , ServiceType , Product=Product_s ,Cost, isRI=iff(ServiceType startswith \"Standard_A\" or ServiceType startswith \"Standard_G\" ,\"N/A\",iff(Product_s1==\"VM RI - Compute\" , \"RI\" , \"No RI\")), SubscriptionName=SubscriptionName_s,OS, Ahub\r\n| where iff({shownori}==1,isRI==\"No RI\",1==1)\r\n",
               "size": 0,
               "title": "VM Cost for Selected Time ",
+              "showExportToExcel": true,
               "queryType": 0,
               "resourceType": "microsoft.operationalinsights/workspaces",
               "crossComponentResources": [
@@ -1679,6 +1688,7 @@
               "query": "AzureUsage_CL\r\n| where TimeGenerated >= ago(2d)\r\n| where ConsumedService_s == \"Microsoft.Compute\" \r\n| summarize arg_max(PretaxCost_d, *) by  TimeGenerated, ResourceId=InstanceId_s,MeterId_g, Name_g,SubscriptionGuid_g,SubscriptionName_s,  InstanceLocation_s \r\n//| where SubscriptionGuid_g in ({subscription}) or '*' in ({subscription})\r\n| extend UsageType = tostring(parse_json(AdditionalInfo_s).UsageType)  \r\n| extend VCPUs = tostring(parse_json(AdditionalInfo_s).VCPUs) \r\n| extend ServiceType= tostring(parse_json(AdditionalInfo_s).ServiceType) \r\n| extend ImageType = tostring(parse_json(AdditionalInfo_s).ImageType) \r\n| extend ConsumptionMeter = tostring(parse_json(AdditionalInfo_s).ConsumptionMeter) \r\n| where UsageType startswith \"ComputeHR\"\r\n| project PretaxCost_d,ResourceId, InstanceName_s, UsageType, VCPUs, ServiceType, ImageType, Product_s, ConsumptionMeter\r\n| where UsageType == \"ComputeHR\" \r\n| extend OS=iff(isempty(ImageType) or ImageType startswith \"Windows\", \"Windows\",\"Linux\") \r\n| where OS==\"Windows\"\r\n| extend LicenseType=iff(ImageType==\"Windows Server BYOL\", \"Ahub\",\"PayG\") \r\n| where  LicenseType <> \"Ahub\" and Product_s <> \"VM RI - Compute\"\r\n| summarize Cost=sum(PretaxCost_d) by ResourceId, OS, Product_s\r\n",
               "size": 0,
               "title": "VMs without AHUB",
+              "showExportToExcel": true,
               "queryType": 0,
               "resourceType": "microsoft.operationalinsights/workspaces",
               "crossComponentResources": [
@@ -1738,6 +1748,7 @@
               "query": "let timerange=2d;\r\n    AzureUsage_CL\r\n| where TimeGenerated >= ago(timerange)\r\n| where ConsumedService_s == \"Microsoft.Compute\" \r\n| summarize arg_max(PretaxCost_d, *) by  TimeGenerated, InstanceId_s,MeterId_g, Name_g,SubscriptionGuid_g,SubscriptionName_s,  InstanceLocation_s \r\n| where SubscriptionGuid_g in ({subscription}) or '*' in ({subscription})\r\n| extend ReservationId = tostring(parse_json(AdditionalInfo_s).ReservationId) \r\n| extend ReservationOrderId = tostring(parse_json(AdditionalInfo_s).ReservationOrderId)\r\n| extend UsageType = tostring(parse_json(AdditionalInfo_s).UsageType)  \r\n| extend VCPUs = tostring(parse_json(AdditionalInfo_s).VCPUs) \r\n| extend ServiceType= tostring(parse_json(AdditionalInfo_s).ServiceType) \r\n| extend ImageType = tostring(parse_json(AdditionalInfo_s).ImageType) \r\n| extend ConsumptionMeter = tostring(parse_json(AdditionalInfo_s).ConsumptionMeter) \r\n| where UsageType startswith \"ComputeHR\"\r\n| summarize arg_max(TimeGenerated, *) by  InstanceName_s , ServiceType , Product_s , Location=InstanceLocation_s\r\n| project TimeGenerated , InstanceName_s , ServiceType  ,Location\r\n| summarize TotalVMs=dcount(InstanceName_s) by ServiceType,Location\r\n| join kind= fullouter (\r\nAzureUsage_CL\r\n| where TimeGenerated >= ago(timerange)\r\n| where ConsumedService_s == \"Microsoft.Compute\" \r\n| where SubscriptionGuid_g in ({subscription}) or '*' in ({subscription})\r\n| extend ReservationId = tostring(parse_json(AdditionalInfo_s).ReservationId) \r\n| extend ReservationOrderId = tostring(parse_json(AdditionalInfo_s).ReservationOrderId)\r\n| extend UsageType = tostring(parse_json(AdditionalInfo_s).UsageType)  \r\n| extend VCPUs = tostring(parse_json(AdditionalInfo_s).VCPUs) \r\n| extend ServiceType= tostring(parse_json(AdditionalInfo_s).ServiceType) \r\n| extend ImageType = tostring(parse_json(AdditionalInfo_s).ImageType) \r\n| extend ConsumptionMeter = tostring(parse_json(AdditionalInfo_s).ConsumptionMeter) \r\n| where UsageType startswith \"ComputeHR\"\r\n| summarize arg_max(TimeGenerated, *) by  InstanceName_s , ServiceType , Product_s \r\n| project TimeGenerated , InstanceName_s , ServiceType  , ReservationId, Product_s , PretaxCost_d , VCPUs  ,MeterId_g\r\n| where isnotempty(ReservationId)\r\n| summarize VMwithReservation=dcount(InstanceName_s) by ServiceType\r\n) on ServiceType\r\n|project Family=ServiceType,TotalVMs,VMwithReservation=iff(isempty(VMwithReservation),0,VMwithReservation),Location\r\n| extend VMWithoutReservation=TotalVMs-VMwithReservation\r\n| where VMWithoutReservation <> 0\r\n\r\n\r\n\r\n\r\n",
               "size": 4,
               "title": "VMs without Reservation",
+              "showExportToExcel": true,
               "queryType": 0,
               "resourceType": "microsoft.operationalinsights/workspaces",
               "crossComponentResources": [
@@ -1848,6 +1859,7 @@
               "query": "    AzureUsage_CL\r\n| where TimeGenerated {TimeRange}\r\n| where ConsumedService_s == \"Microsoft.Compute\" \r\n| summarize arg_max(PretaxCost_d, *) by  TimeGenerated, InstanceId_s,MeterId_g, Name_g,SubscriptionGuid_g,SubscriptionName_s,  InstanceLocation_s \r\n| where SubscriptionGuid_g in ({subscription}) or '*' in ({subscription})\r\n| extend ReservationId = tostring(parse_json(AdditionalInfo_s).ReservationId) \r\n| extend ReservationOrderId = tostring(parse_json(AdditionalInfo_s).ReservationOrderId)\r\n| extend UsageType = tostring(parse_json(AdditionalInfo_s).UsageType)  \r\n| extend VCPUs = tostring(parse_json(AdditionalInfo_s).VCPUs) \r\n| extend ServiceType= tostring(parse_json(AdditionalInfo_s).ServiceType) \r\n| extend ImageType = tostring(parse_json(AdditionalInfo_s).ImageType) \r\n| extend ConsumptionMeter = tostring(parse_json(AdditionalInfo_s).ConsumptionMeter) \r\n| extend OS=iff(isempty(ImageType) or ImageType startswith \"Windows\", \"Windows\",\"Linux\") \r\n| extend Ahub=iff(OS == \"Windows\" and ImageType==\"Windows Server BYOL\", \"Ahub\",iff(OS == \"Windows\", \"PayG\",\"N/A\")) \r\n| where UsageType startswith \"ComputeHR\"\r\n| summarize Cost=round(sum(PretaxCost_d),4)  by ResourceId=InstanceId_s, InstanceName_s , ServiceType , Product_s , SubscriptionName_s,OS, Ahub\r\n| where Product_s <> \"VM RI - Compute\" \r\n| join kind= leftouter (\r\n        AzureUsage_CL\r\n| where TimeGenerated {TimeRange}\r\n| where ConsumedService_s == \"Microsoft.Compute\" \r\n| where SubscriptionGuid_g in ({subscription}) or '*' in ({subscription})\r\n| extend ReservationId = tostring(parse_json(AdditionalInfo_s).ReservationId) \r\n| extend ReservationOrderId = tostring(parse_json(AdditionalInfo_s).ReservationOrderId)\r\n| extend UsageType = tostring(parse_json(AdditionalInfo_s).UsageType)  \r\n| extend VCPUs = tostring(parse_json(AdditionalInfo_s).VCPUs) \r\n| extend ServiceType= tostring(parse_json(AdditionalInfo_s).ServiceType) \r\n| extend ImageType = tostring(parse_json(AdditionalInfo_s).ImageType) \r\n| extend ConsumptionMeter = tostring(parse_json(AdditionalInfo_s).ConsumptionMeter) \r\n| where UsageType startswith \"ComputeHR\"\r\n| summarize Cost=round(sum(PretaxCost_d),4)  by ResourceId=InstanceId_s, InstanceName_s , ServiceType , Product_s , SubscriptionName_s\r\n| where Product_s == \"VM RI - Compute\" \r\n) on ResourceId\r\n|project ResourceId , InstanceName=InstanceName_s , ServiceType , Product=Product_s ,Cost, isRI=iff(Product_s1==\"VM RI - Compute\" , \"RI\" , \"No RI\"), SubscriptionName=SubscriptionName_s,OS, Ahub\r\n| where iff({shownori}==1,isRI==\"No RI\",1==1)\r\n| where isRI==\"No RI\"\r\n",
               "size": 0,
               "title": "VMs not using RI",
+              "showExportToExcel": true,
               "queryType": 0,
               "resourceType": "microsoft.operationalinsights/workspaces",
               "crossComponentResources": [
@@ -2108,7 +2120,7 @@
               "size": 2,
               "title": "Top 10 RGs by Usage",
               "timeContext": {
-                "durationMs": 2419200000
+                "durationMs": 1209600000
               },
               "timeContextFromParameter": "TimeRange",
               "queryType": 0,
@@ -2175,6 +2187,7 @@
               "timeContextFromParameter": "TimeRange",
               "exportFieldName": "RG",
               "exportParameterName": "RG",
+              "showExportToExcel": true,
               "queryType": 0,
               "resourceType": "microsoft.operationalinsights/workspaces",
               "crossComponentResources": [
@@ -2240,6 +2253,7 @@
                 "durationMs": 0
               },
               "timeContextFromParameter": "TimeRange",
+              "showExportToExcel": true,
               "queryType": 0,
               "resourceType": "microsoft.operationalinsights/workspaces",
               "crossComponentResources": [
@@ -2305,6 +2319,7 @@
                 "durationMs": 0
               },
               "timeContextFromParameter": "TimeRange",
+              "showExportToExcel": true,
               "queryType": 0,
               "resourceType": "microsoft.operationalinsights/workspaces",
               "crossComponentResources": [
@@ -2430,7 +2445,7 @@
               "size": 2,
               "title": "Cost for Selected Tag",
               "timeContext": {
-                "durationMs": 0
+                "durationMs": 1209600000
               },
               "timeContextFromParameter": "TimeRange",
               "queryType": 0,
@@ -2503,9 +2518,10 @@
               "size": 2,
               "title": "Cost for Selected Tag ",
               "timeContext": {
-                "durationMs": 2419200000
+                "durationMs": 0
               },
               "timeContextFromParameter": "TimeRange",
+              "showExportToExcel": true,
               "queryType": 0,
               "resourceType": "microsoft.operationalinsights/workspaces",
               "crossComponentResources": [
@@ -2612,6 +2628,7 @@
                 "durationMs": 0
               },
               "timeContextFromParameter": "TimeRange",
+              "showExportToExcel": true,
               "queryType": 0,
               "resourceType": "microsoft.operationalinsights/workspaces",
               "crossComponentResources": [
@@ -2717,6 +2734,7 @@
                 "durationMs": 0
               },
               "timeContextFromParameter": "TimeRange",
+              "showExportToExcel": true,
               "queryType": 0,
               "resourceType": "microsoft.operationalinsights/workspaces",
               "crossComponentResources": [
@@ -2876,8 +2894,7 @@
                   "timeContext": {
                     "durationMs": 0
                   },
-                  "timeContextFromParameter": "TimeRange",
-                  "value": "Week over Week"
+                  "timeContextFromParameter": "TimeRange"
                 }
               ],
               "style": "pills",
@@ -2899,9 +2916,10 @@
               "query": "AzureUsage_CL\r\n| where TimeGenerated {TimeRange}\r\n| summarize arg_max(PretaxCost_d, *) by  TimeGenerated, InstanceId_s,MeterId_g, Name_g,SubscriptionGuid_g,SubscriptionName_s,  InstanceLocation_s \r\n| where SubscriptionGuid_g in ({subscription}) or '*' in ({subscription})\r\n| summarize Cost=round(sum(PretaxCost_d),4) by Subscription=SubscriptionGuid_g , SubscriptionName=SubscriptionName_s, TimeGenerated \r\n| sort by Subscription, SubscriptionName, TimeGenerated asc\r\n| serialize\r\n|  extend  p_cost = iff(Subscription==prev(Subscription) , p_cost = prev(Cost,1) , p_cost=Cost)\r\n| project   Subscription , SubscriptionName , TimeGenerated , Cost , p_cost , cost_diff=Cost-p_cost, cost_pctdiff=round((Cost/p_cost)*100-100,1)\r\n| sort by cost_diff desc\r\n\r\n",
               "size": 0,
               "timeContext": {
-                "durationMs": 2419200000
+                "durationMs": 0
               },
               "timeContextFromParameter": "TimeRange",
+              "showExportToExcel": true,
               "queryType": 0,
               "resourceType": "microsoft.operationalinsights/workspaces",
               "crossComponentResources": [
@@ -2960,9 +2978,10 @@
               "size": 0,
               "title": "Cost Diff DoD by Resource",
               "timeContext": {
-                "durationMs": 2419200000
+                "durationMs": 0
               },
               "timeContextFromParameter": "TimeRange",
+              "showExportToExcel": true,
               "queryType": 0,
               "resourceType": "microsoft.operationalinsights/workspaces",
               "crossComponentResources": [
@@ -3027,9 +3046,10 @@
               "size": 0,
               "title": "Cost Diff DoD by Resource",
               "timeContext": {
-                "durationMs": 2419200000
+                "durationMs": 0
               },
               "timeContextFromParameter": "TimeRange",
+              "showExportToExcel": true,
               "queryType": 0,
               "resourceType": "microsoft.operationalinsights/workspaces",
               "crossComponentResources": [
@@ -3094,9 +3114,10 @@
               "size": 0,
               "title": "Cost Diff WoW",
               "timeContext": {
-                "durationMs": 2419200000
+                "durationMs": 0
               },
               "timeContextFromParameter": "TimeRange",
+              "showExportToExcel": true,
               "queryType": 0,
               "resourceType": "microsoft.operationalinsights/workspaces",
               "crossComponentResources": [
@@ -3166,9 +3187,10 @@
               "size": 0,
               "title": "Cost Diff MoM",
               "timeContext": {
-                "durationMs": 2419200000
+                "durationMs": 0
               },
               "timeContextFromParameter": "TimeRange",
+              "showExportToExcel": true,
               "queryType": 0,
               "resourceType": "microsoft.operationalinsights/workspaces",
               "crossComponentResources": [
@@ -3295,6 +3317,29 @@
         "value": "2"
       },
       "name": "UsageTrends"
+    },
+    {
+      "type": 12,
+      "content": {
+        "version": "NotebookGroup/1.0",
+        "groupType": "editable",
+        "title": "Alert Queries",
+        "items": [
+          {
+            "type": 1,
+            "content": {
+              "json": "# Alert Definition \r\n\r\n##  Subscription Cost increase x%  Day over Day\r\n**update threshold as per your needs**\r\n\r\nlet threshold=5; // if cost increase %5   generate an alert , update us as per your need\r\nAzureUsage_CL\r\n| where TimeGenerated >= ago(2d)\r\n| summarize arg_max(PretaxCost_d, *) by  TimeGenerated, InstanceId_s,MeterId_g, Name_g,SubscriptionGuid_g,SubscriptionName_s,  InstanceLocation_s \r\n| summarize Cost=round(sum(PretaxCost_d),4) by Subscription=SubscriptionGuid_g , SubscriptionName=SubscriptionName_s, TimeGenerated \r\n| sort by Subscription, SubscriptionName, TimeGenerated asc\r\n| serialize\r\n|  extend  p_cost = iff(Subscription==prev(Subscription) , p_cost = prev(Cost,1) , p_cost=Cost)\r\n| project   Subscription , SubscriptionName , TimeGenerated , Cost , p_cost , cost_diff=Cost-p_cost, cost_pctdiff=round((Cost/p_cost)*100-100,1)\r\n| where cost_pctdiff >= threshold\r\n\r\n\r\n## Cost of a resource increase more than x amount and  y% Day over Day\r\n**update pct_threshold and amount_threshold as per your needs**\r\n\r\n// Alert if a cost of an Azure Resource  increases more than xx amount and y% day over day\r\n// update pct_threshold and amount_threshold as per your needs\r\nlet pct_threshold=10;\r\nlet amount_threshold=0.1;\r\nAzureUsage_CL \r\n| where TimeGenerated > ago(2d) \r\n| where Type_s == \"Microsoft.Consumption/usageDetails\" \r\n| summarize arg_max(PretaxCost_d, *) by TimeGenerated, InstanceId_s,MeterId_g, Name_g,SubscriptionGuid_g,SubscriptionName_s, InstanceLocation_s \r\n| summarize Cost=round(sum(PretaxCost_d),4) , Usage=sum(UsageQuantity_d) by TimeGenerated, InstanceId_s,MeterId_g, Name_g,SubscriptionGuid_g,SubscriptionName_s, InstanceLocation_s, AccountName_s, Currency_s,ConsumedService_s,Product_s \r\n| project TimeGenerated , ResourceId=InstanceId_s, MeterId_g ,SubscriptionGuid_g,SubscriptionName_s,AccountName_s, Currency_s,ConsumedService_s,Product_s,Location=InstanceLocation_s , Cost, Usage \r\n| join kind=leftouter (AzureUsage_CL \r\n| where TimeGenerated > ago(2d) \r\n| where Type_s == \"Microsoft.Commerce/UsageAggregate\" \r\n| summarize c=count() by MeterId_g , MeterCategory_s , MeterSubCategory_s, MeterName_s ) on MeterId_g \r\n| extend MeterCategory=iff(isnotempty( MeterCategory_s), MeterCategory_s, tostring(split(Product_s,'-')[0])) \r\n|summarize Cost=round(sum(Cost),4) by MeterCategory , ResourceId,  Subscription=SubscriptionGuid_g , SubscriptionName=SubscriptionName_s, TimeGenerated \r\n| sort by Subscription ,ResourceId,MeterCategory ,  TimeGenerated asc\r\n| serialize\r\n|  extend  prev_cost = iff(ResourceId==prev(ResourceId) and MeterCategory==prev(MeterCategory), p_cost = prev(Cost,1) , p_cost=Cost)\r\n| project  MeterCategory,ResourceId,  Subscription , SubscriptionName , TimeGenerated , Cost , prev_cost , cost_diff=Cost-prev_cost, cost_pctdiff=round((Cost/prev_cost)*100-100,1)\r\n| where cost_diff >= amount_threshold  and cost_pctdiff >= pct_threshold\r\n| sort by cost_diff desc\r\n\r\n## Cost of a Service Increases more than x amount and y% day over Day\r\n**update pct_threshold and amount_threshold as per your needs**\r\n\r\n// Alert if a cost of an Azure Resource  increases more than x amount and y% day over day \r\n// update pct_threshold and amount_threshold as per your needs\r\nlet pct_threshold=10;\r\nlet amount_threshold=10;\r\nAzureUsage_CL \r\n| where TimeGenerated > ago(2d) \r\n| where Type_s == \"Microsoft.Consumption/usageDetails\" \r\n| summarize arg_max(PretaxCost_d, *) by TimeGenerated, InstanceId_s,MeterId_g, Name_g,SubscriptionGuid_g,SubscriptionName_s, InstanceLocation_s \r\n| summarize Cost=round(sum(PretaxCost_d),4) , Usage=sum(UsageQuantity_d) by TimeGenerated, InstanceId_s,MeterId_g, Name_g,SubscriptionGuid_g,SubscriptionName_s, InstanceLocation_s, AccountName_s, Currency_s,ConsumedService_s,Product_s \r\n| project TimeGenerated , ResourceId=InstanceId_s, MeterId_g ,SubscriptionGuid_g,SubscriptionName_s,AccountName_s, Currency_s,ConsumedService_s,Product_s,Location=InstanceLocation_s , Cost, Usage \r\n| join kind=leftouter (AzureUsage_CL \r\n| where TimeGenerated > ago(2d) \r\n| where Type_s == \"Microsoft.Commerce/UsageAggregate\" \r\n| summarize c=count() by MeterId_g , MeterCategory_s , MeterSubCategory_s, MeterName_s ) on MeterId_g \r\n| extend MeterCategory=iff(isnotempty( MeterCategory_s), MeterCategory_s, tostring(split(Product_s,'-')[0])) \r\n|summarize Cost=round(sum(Cost),4) by MeterCategory ,  Subscription=SubscriptionGuid_g , SubscriptionName=SubscriptionName_s, TimeGenerated \r\n| sort by Subscription ,MeterCategory ,  TimeGenerated asc\r\n| serialize\r\n|  extend  prev_cost = iff(MeterCategory==prev(MeterCategory)  and Subscription==prev(Subscription), p_cost = prev(Cost,1) , p_cost=Cost)\r\n| project  MeterCategory,Subscription , SubscriptionName , TimeGenerated , Cost , prev_cost , cost_diff=Cost-prev_cost, cost_pctdiff=round((Cost/prev_cost)*100-100,1)\r\n| where cost_diff >= amount_threshold  and cost_pctdiff >= pct_threshold\r\n| sort by cost_diff desc\r\n\r\n "
+            },
+            "name": "text - 1"
+          }
+        ]
+      },
+      "conditionalVisibility": {
+        "parameterName": "selectedtab",
+        "comparison": "isEqualTo",
+        "value": "9"
+      },
+      "name": "AlertQueries"
     }
   ],
   "defaultResourceIds": [
