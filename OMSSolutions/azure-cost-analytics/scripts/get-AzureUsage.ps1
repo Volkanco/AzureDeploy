@@ -145,8 +145,9 @@ $SubscriptionId = $context.Subscription
 
 
 $subs=Get-AzSubscription
+Write-Output "$($subs.count) subscriptions found"
 $dt=get-date
-
+$u=0
 $AzLAUploadsuccess=0
 $AzLAUploaderror=0
 
@@ -159,6 +160,7 @@ foreach ($sub in $subs)
     IF($context.Subscription.Id -ne $sub.Id)
     {
         Continue
+        Write-Warning "Cant access $($sub.Id) , skipping...."
     }
     
     $dt=get-date
@@ -166,8 +168,8 @@ foreach ($sub in $subs)
           
     $rsvorder=@{}
 #region UsageAggregate
-                $i=1
-                IF($null -ne $ingestpastndays){$i=$ingestpastndays}
+    $i = 1
+    IF ($ingestpastndays -gt $i) { $i = $ingestpastndays }
 
             do
             {
@@ -193,7 +195,7 @@ foreach ($sub in $subs)
 
                     } while($null  -ne $us.ContinuationToken ) 
 
-                        $i--
+
                     [System.Collections.ArrayList]$usage=@()
 
                     foreach ($item in $ua)
@@ -239,9 +241,9 @@ foreach ($sub in $subs)
                         $Timestampfield="UsageEndTime"
 
                         $jsonlogs=$null
-                        $dataitem=$null
+                           $dataitem=$null
 	                    $splitSize=5000	
-
+                        $u++
                         #if more than 5000 items in array split and upload them to Azure Monitor
 				
                            If ($usage.count -gt $splitSize) {
@@ -276,7 +278,7 @@ foreach ($sub in $subs)
 
                     }
 
-       
+                    $i--
             }
             While ($i -gt 0 )
                     
@@ -286,7 +288,7 @@ foreach ($sub in $subs)
 #region usageDetails
 
                     $i=2
-                    IF($null -ne $ingestpastndays){$i=$ingestpastndays}
+                    IF ($ingestpastndays -gt $i) { $i = $ingestpastndays }
     
             do
             {
@@ -393,7 +395,7 @@ foreach ($sub in $subs)
 
                         write-output " Getting Reservation Summary"
                             $i=1
-                            IF($null -ne $ingestpastndays){$i=$ingestpastndays}
+                            IF ($ingestpastndays -gt $i) { $i = $ingestpastndays }
             
                         do
                         {
@@ -499,7 +501,7 @@ foreach ($sub in $subs)
 
 }
 
-
+Write-Output "Usage for $u subscritions will be uploaded..."
 Write-output "Successfull upload job count : $AzLAUploadsuccess"
 write-output  "Failed Upload Job count : $AzLAUploaderror "
 
