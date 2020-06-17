@@ -163,11 +163,11 @@ foreach ($sub in $subs)
     
     $dt=get-date
       
-      IF($ingestpastndays -eq $null -or $ingestpastndays -lt 2){$ingestpastndays=2}
-           
-
-                #UsageAggregate
-            $i=$ingestpastndays
+          
+    $rsvorder=@{}
+#region UsageAggregate
+                $i=1
+                IF($null -ne $ingestpastndays){$i=$ingestpastndays}
 
             do
             {
@@ -201,7 +201,16 @@ foreach ($sub in $subs)
     
                         $instancedata=$null
                         $instancedata=(convertfrom-json -InputObject $item.Properties.InstanceData).'Microsoft.Resources'
-        
+
+                        if ($instancedata.additionalInfo.ReservationOrderId){
+                            
+                            if($rsvorder.ContainsKey(-not $instancedata.additionalInfo.ReservationOrderId))
+                            {
+                                $rsvorder.add($instancedata.additionalInfo.ReservationOrderId, "")
+                            }
+                            
+                        }
+
                         $usage.add([PSCustomObject]@{            
                                     Id=$item.Id
                                     Type=$item.Type
@@ -222,7 +231,7 @@ foreach ($sub in $subs)
                                     })|Out-Null
                     }
 
-
+                    Write-Output "UsageAggregateCount:$($usage.count), Subscription:$($sub.Name), Date:$((Get-Date).AddDays(-1*($i-1)).Date.AddSeconds(-1))"
                     #upload data if exist 
                     If($usage)
                     {
@@ -271,9 +280,13 @@ foreach ($sub in $subs)
             }
             While ($i -gt 0 )
                     
-                    #usageDetails
+#endregion 
+            
 
-                     $i=$ingestpastndays
+#region usageDetails
+
+                    $i=2
+                    IF($null -ne $ingestpastndays){$i=$ingestpastndays}
     
             do
             {
@@ -327,6 +340,8 @@ foreach ($sub in $subs)
                                     })|Out-Null
                             }
 
+                    Write-Output "UsageDetailCount:$($usagedetail.count), Subscription:$($sub.Name), Date:$($dt.AddDays(-1*($i-1)).Date.AddSeconds(-1))"
+
                     #upload data if exist 
                     If($usagedetail)
                     {
@@ -372,9 +387,115 @@ foreach ($sub in $subs)
                     $i--
             }
             While ($i -gt 0 )
-    
+#endregion 
 
+#region reservationsummary 
+
+                        write-output " Getting Reservation Summary"
+                            $i=1
+                            IF($null -ne $ingestpastndays){$i=$ingestpastndays}
+            
+                        do
+                        {
+            
+                        $dt=(Get-Date).AddDays(-1*($i-1)).ToString("yyyy-MM-dd")
+                        $dt1=(Get-Date).AddDays(-1*$i).ToString("yyyy-MM-dd")
+                        Write-output "Ingesting $dt1 to $dt "
+                        
+                        $rsv=@()
+                            
+
+                        foreach ($order in $rsvorder.Keys)
+                        {
+                            
+                            Try{
+                                $rsv+= Get-AzConsumptionReservationSummary -Grain daily -ReservationOrderId $order -StartDate $dt1  -EndDate $dt
+                             }catch {
+                                    Write-warning -Message $_.Exception
+                                        
+                            }
+                    
+
+                        }
+
+                        
+            
+
+                            IF($rsv)
+                            {
+
+                                [System.Collections.ArrayList]$RSVusage=@()
+            
+                                foreach ($item in $rsv)
+                                {
                 
+                                                      
+                                    $RSVusage.add([PSCustomObject]@{            
+                                                AvgUtilizationPercentage=$item.AvgUtilizationPercentage
+                                                Id=$item.Id
+                                                MaxUtilizationPercentage=$item.MaxUtilizationPercentage
+                                                MinUtilizationPercentage=$item.MinUtilizationPercentage
+                                                Name=$item.Name
+                                                ReservationId=$item.ReservationId
+                                                ReservationOrderId=$item.ReservationOrderId
+                                                ReservedHour=$item.ReservedHour
+                                                SkuName=$item.SkuName
+                                                Type=$item.Type
+                                                UsageEndTime=[datetime]$item.UsageDate.adddays(1).AddSeconds(-1)
+                                                UsedHour=$item.UsedHour
+                                                SubscriptionGuid=$sub.Id
+                                                SubscriptionName=$sub.Name
+                                                ver=1
+                                                })|Out-Null
+                                }
+            
+
+                                Write-Output "ReservationUsageCount:$($RSVusage.count), Subscription:$($sub.Name), Date:$($dt.AddDays(-1*($i-1)).Date.AddSeconds(-1))"
+                                Write-Output "$($RSVusage.count)  reservation summary will be uploaded"                         
+                                    $Timestampfield="UsageEndTime"
+            
+                                    $jsonlogs=$null
+                                    $dataitem=$null
+                                    $splitSize=5000	
+            
+                                    #if more than 5000 items in array split and upload them to Azure Monitor
+                            
+                                       If ($usage.count -gt $splitSize) {
+                 
+                                        for ($Index = 0; $Index -lt $usage.count; $Index += $splitSize) {
+                
+                                        $jsonlogs = ConvertTo-Json -InputObject $usage[$index..($index + $splitSize - 1)]
+                                        $post=Post-LogAnalyticsData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
+                                        Write-Output $index
+                                            if ($post -in (200..299))
+                                            {
+                                                $AzLAUploadsuccess++
+                                            }Else
+                                            {
+                                                $AzLAUploaderror++
+                                            }
+                                    
+                                        }
+                                    }Else
+                                    {
+                                        $jsonlogs= ConvertTo-Json -InputObject $usage
+                                        $post=$null; 
+                                        $post=Post-LogAnalyticsData -customerId $customerId -sharedKey $sharedKey -body ([System.Text.Encoding]::UTF8.GetBytes($jsonlogs)) -logType $logname
+                                            if ($post -in (200..299))
+                                            {
+                                                 $AzLAUploadsuccess++
+                                            }Else
+                                            {
+                                                $AzLAUploaderror++
+                                            }
+                                        }
+            
+                                }
+            
+                   
+                        }
+                        While ($i -gt 0 )
+#endregion              
 
 }
 
