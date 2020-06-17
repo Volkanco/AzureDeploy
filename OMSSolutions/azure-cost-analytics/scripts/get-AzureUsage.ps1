@@ -492,7 +492,7 @@ foreach ($sub in $subs)
             
                                 }
             
-                   
+                                $i--
                         }
                         While ($i -gt 0 )
 #endregion              
