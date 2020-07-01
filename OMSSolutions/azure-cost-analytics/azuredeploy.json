@@ -133,7 +133,7 @@
             }
         },
         "parentRunbookUri": "[concat(parameters('_artifactsLocation'),'/scripts/get-AzureUsage.ps1', parameters('_artifactsLocationSasToken'))]",
-        "bydateRunbookUri": "[concat(parameters('_artifactsLocation'),'/scripts/get-AzureUsagebyDateRangeps1', parameters('_artifactsLocationSasToken'))]",
+        "bydateRunbookUri": "[concat(parameters('_artifactsLocation'),'/scripts/get-AzureUsagebyDateRange.ps1', parameters('_artifactsLocationSasToken'))]",
         "omsSolutions": {
             "customSolution": {
                 "name": "Azure Cost Analytics",
