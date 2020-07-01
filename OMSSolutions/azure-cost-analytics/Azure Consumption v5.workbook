@@ -142,7 +142,8 @@
           }
         ],
         "style": "pills",
-        "queryType": 0
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces"
       },
       "name": "parameters - 2"
     },
@@ -204,7 +205,8 @@
           }
         ],
         "style": "pills",
-        "queryType": 0
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces"
       },
       "conditionalVisibility": {
         "parameterName": "showhidden",
@@ -295,7 +297,7 @@
             "type": 3,
             "content": {
               "version": "KqlItem/1.0",
-              "query": "let day=dayofmonth(now());\r\nlet start= startofmonth(datetime_add('month',-1,now())) ;\r\nlet end =   datetime_add('day',day,start );\r\nlet usage = materialize( AzureUsage_CL\r\n| where TimeGenerated >= start\r\n| where Type_s == \"Microsoft.Consumption/usageDetails\"\r\n| summarize arg_max(PretaxCost_d, *) by  TimeGenerated, InstanceId_s,MeterId_g, Name_g,SubscriptionGuid_g,SubscriptionName_s,  InstanceLocation_s \r\n| summarize Cost=round(sum(PretaxCost_d),4) , Usage=sum(UsageQuantity_d) by  TimeGenerated,SubscriptionGuid_g,SubscriptionName_s);\r\nusage\r\n| where TimeGenerated >= startofmonth(now())\r\n| summarize ThisMCost=round(sum(Cost),4)  by  Sub=\"Parent\"\r\n| join kind=leftouter (\r\nusage\r\n| where TimeGenerated >= start\r\n| where TimeGenerated  < end\r\n| summarize PrevMSameDayCost=round(sum(Cost),0) by Sub=\"Parent\"\r\n) on Sub\r\n| join kind=leftouter (\r\nusage\r\n| where TimeGenerated >= start\r\n| where TimeGenerated  < startofmonth(now())\r\n| summarize PrevMTotal=round(sum(Cost),0) by  Sub=\"Parent\"\r\n) on Sub\r\n| project  Subscription=\"TotaL\",ThisMCost, PrevMSameDayCost, PrevMTotal\r\n\r\n\r\n",
+              "query": "let day=dayofmonth(now());\r\nlet start= startofmonth(datetime_add('month',-1,now())) ;\r\nlet end =   datetime_add('day',day,start );\r\nlet usage = materialize( AzureUsage_CL\r\n| where TimeGenerated >= start\r\n| where Type_s == \"Microsoft.Consumption/usageDetails\"\r\n| summarize arg_max(PretaxCost_d, *) by  TimeGenerated, InstanceId_s,MeterId_g, Name_g,SubscriptionGuid_g,SubscriptionName_s,  InstanceLocation_s \r\n| summarize Cost=round(sum(PretaxCost_d),4) , Usage=sum(UsageQuantity_d) by  TimeGenerated,SubscriptionGuid_g,SubscriptionName_s);\r\nusage\r\n| where TimeGenerated >= startofmonth(now())\r\n| summarize ThisMCost=round(sum(Cost),4)  by  Sub=\"Parent\"\r\n| join kind=fullouter (\r\nusage\r\n| where TimeGenerated >= start\r\n| where TimeGenerated  < end\r\n| summarize PrevMSameDayCost=round(sum(Cost),0) by Sub=\"Parent\"\r\n) on Sub\r\n| join kind=fullouter (\r\nusage\r\n| where TimeGenerated >= start\r\n| where TimeGenerated  < startofmonth(now())\r\n| summarize PrevMTotal=round(sum(Cost),0) by  Sub=\"Parent\"\r\n) on $left.Sub1==$right.Sub\r\n| project  Subscription=\"TotaL\",ThisMCost, PrevMSameDayCost, PrevMTotal\r\n\r\n\r\n",
               "size": 1,
               "title": "Overall Usage (Prev Month - Same Day)",
               "queryType": 0,
@@ -307,8 +309,7 @@
               "tileSettings": {
                 "titleContent": {
                   "columnMatch": "SubscriptionName",
-                  "formatter": 1,
-                  "formatOptions": {}
+                  "formatter": 1
                 },
                 "leftContent": {
                   "columnMatch": "ThisMCost",
@@ -320,9 +321,11 @@
                     "unit": 17,
                     "options": {
                       "style": "decimal",
+                      "useGrouping": false,
                       "maximumFractionDigits": 2,
                       "maximumSignificantDigits": 3
-                    }
+                    },
+                    "emptyValCustomText": "0"
                   }
                 },
                 "rightContent": {
@@ -330,6 +333,13 @@
                   "formatter": 4,
                   "formatOptions": {
                     "palette": "blue"
+                  },
+                  "numberFormat": {
+                    "unit": 0,
+                    "options": {
+                      "style": "decimal"
+                    },
+                    "emptyValCustomText": "N/A"
                   }
                 },
                 "secondaryContent": {
@@ -337,6 +347,13 @@
                   "formatter": 8,
                   "formatOptions": {
                     "palette": "blue"
+                  },
+                  "numberFormat": {
+                    "unit": 0,
+                    "options": {
+                      "style": "decimal"
+                    },
+                    "emptyValCustomText": "N/A"
                   }
                 },
                 "showBorder": false
@@ -349,7 +366,7 @@
             "type": 3,
             "content": {
               "version": "KqlItem/1.0",
-              "query": "let day=dayofmonth(now());\r\nlet start= startofmonth(datetime_add('month',-1,now())) ;\r\nlet end =   datetime_add('day',day,start );\r\nlet azusage = materialize(AzureUsage_CL\r\n| where TimeGenerated >= start\r\n| where Type_s == \"Microsoft.Consumption/usageDetails\"\r\n| summarize arg_max(PretaxCost_d, *) by  TimeGenerated, InstanceId_s,MeterId_g, Name_g,SubscriptionGuid_g,SubscriptionName_s,  InstanceLocation_s \r\n| summarize Cost=round(sum(PretaxCost_d),4) , Usage=sum(UsageQuantity_d) by  TimeGenerated, SubscriptionGuid_g,SubscriptionName_s, Currency_s);\r\nazusage\r\n| where TimeGenerated >= startofmonth(now())\r\n| summarize ThisMCost=round(sum(Cost),4) by Subscription=SubscriptionGuid_g , SubscriptionName=SubscriptionName_s, Currency_s\r\n| join kind=leftouter (\r\nazusage\r\n| where TimeGenerated >= start\r\n| where TimeGenerated  < end\r\n| summarize PrevMSameDayCost=round(sum(Cost),0) by Subscription=SubscriptionGuid_g , SubscriptionName=SubscriptionName_s\r\n) on Subscription\r\n| join kind=leftouter (\r\nazusage\r\n| where TimeGenerated >= start\r\n| where TimeGenerated  < startofmonth(now())\r\n| summarize PrevMTotal=round(sum(Cost),0) by Subscription=SubscriptionGuid_g , SubscriptionName=SubscriptionName_s\r\n) on Subscription\r\n| project  Subscription, SubscriptionName=strcat(Currency_s , ' - ',SubscriptionName ), ThisMCost, PrevMSameDayCost, PrevMTotal \r\n\r\n\r\n",
+              "query": "let day=dayofmonth(now());\r\nlet start= startofmonth(datetime_add('month',-1,now())) ;\r\nlet end =   datetime_add('day',day,start );\r\nlet azusage = materialize(AzureUsage_CL\r\n| where TimeGenerated >= start\r\n| where Type_s == \"Microsoft.Consumption/usageDetails\"\r\n| summarize arg_max(PretaxCost_d, *) by  TimeGenerated, InstanceId_s,MeterId_g, Name_g,SubscriptionGuid_g,SubscriptionName_s,  InstanceLocation_s \r\n| summarize Cost=round(sum(PretaxCost_d),4) , Usage=sum(UsageQuantity_d) by  TimeGenerated, SubscriptionGuid_g,SubscriptionName_s, Currency_s);\r\nazusage\r\n| where TimeGenerated >= startofmonth(now())\r\n| summarize ThisMCost=round(sum(Cost),4) by Subscription=SubscriptionGuid_g , SubscriptionName=SubscriptionName_s, Currency_s\r\n| join kind=fullouter (\r\nazusage\r\n| where TimeGenerated >= start\r\n| where TimeGenerated  < end\r\n| summarize PrevMSameDayCost=round(sum(Cost),0) by Subscription=SubscriptionGuid_g , SubscriptionName=SubscriptionName_s\r\n) on Subscription\r\n| join kind=fullouter (\r\nazusage\r\n| where TimeGenerated >= start\r\n| where TimeGenerated  < startofmonth(now())\r\n| summarize PrevMTotal=round(sum(Cost),0) by Subscription=SubscriptionGuid_g , SubscriptionName=SubscriptionName_s\r\n) on $left.Subscription1==$right.Subscription\r\n| project  Subscription, SubscriptionName=strcat(Currency_s , ' - ',iff(isempty(SubscriptionName),SubscriptionName1,SubscriptionName) ), ThisMCost, PrevMSameDayCost, PrevMTotal \r\n\r\n\r\n",
               "size": 1,
               "title": "Usage (Prev Month - Same Day) by Subscription",
               "showExportToExcel": true,
@@ -362,8 +379,7 @@
               "tileSettings": {
                 "titleContent": {
                   "columnMatch": "SubscriptionName",
-                  "formatter": 1,
-                  "formatOptions": {}
+                  "formatter": 1
                 },
                 "leftContent": {
                   "columnMatch": "ThisMCost",
@@ -375,9 +391,11 @@
                     "unit": 17,
                     "options": {
                       "style": "decimal",
+                      "useGrouping": false,
                       "maximumFractionDigits": 2,
                       "maximumSignificantDigits": 3
-                    }
+                    },
+                    "emptyValCustomText": "0"
                   }
                 },
                 "rightContent": {
@@ -385,6 +403,13 @@
                   "formatter": 4,
                   "formatOptions": {
                     "palette": "blue"
+                  },
+                  "numberFormat": {
+                    "unit": 0,
+                    "options": {
+                      "style": "decimal"
+                    },
+                    "emptyValCustomText": "N/A"
                   }
                 },
                 "secondaryContent": {
@@ -392,6 +417,13 @@
                   "formatter": 8,
                   "formatOptions": {
                     "palette": "blue"
+                  },
+                  "numberFormat": {
+                    "unit": 0,
+                    "options": {
+                      "style": "decimal"
+                    },
+                    "emptyValCustomText": "N/A"
                   }
                 },
                 "showBorder": false
@@ -408,6 +440,7 @@
               "size": 1,
               "aggregation": 3,
               "title": "Usage Forecast",
+              "noDataMessage": "Usage forecast needs 2 days of usage data present for the current month!",
               "showExportToExcel": true,
               "queryType": 0,
               "resourceType": "microsoft.operationalinsights/workspaces",
@@ -2844,7 +2877,7 @@
             "type": 3,
             "content": {
               "version": "KqlItem/1.0",
-              "query": "let day=dayofmonth(now());\r\nlet start= startofmonth(datetime_add('month',-1,now())) ;\r\nlet end =   datetime_add('day',day,start );\r\nlet azusage = materialize(AzureUsage_CL\r\n| where TimeGenerated >= start\r\n| where Type_s == \"Microsoft.Consumption/usageDetails\"\r\n| summarize arg_max(PretaxCost_d, *) by  TimeGenerated, InstanceId_s,MeterId_g, Name_g,SubscriptionGuid_g,SubscriptionName_s,  InstanceLocation_s \r\n| summarize Cost=round(sum(PretaxCost_d),4) , Usage=sum(UsageQuantity_d) by  TimeGenerated, InstanceId_s,MeterId_g, Name_g,SubscriptionGuid_g,SubscriptionName_s,  InstanceLocation_s, AccountName_s, Currency_s,ConsumedService_s,Product_s\r\n| project TimeGenerated , ResourceId=InstanceId_s, MeterId_g ,SubscriptionGuid_g,SubscriptionName_s,AccountName_s, Currency_s,ConsumedService_s,Product_s,Location=InstanceLocation_s , Cost, Usage\r\n| join kind=leftouter (AzureUsage_CL\r\n| where TimeGenerated >= start \r\n| where Type_s == \"Microsoft.Commerce/UsageAggregate\"\r\n| summarize c=count() by  MeterId_g , MeterCategory_s , MeterSubCategory_s, MeterName_s ) on MeterId_g\r\n| extend MeterCategory=iff(isnotempty( MeterCategory_s), MeterCategory_s, tostring(split(Product_s,'-')[0]))\r\n| project-away MeterId_g1, c);\r\nazusage\r\n| where TimeGenerated >= startofmonth(now())\r\n| summarize ThisMCost=round(sum(Cost),4) by Subscription=SubscriptionGuid_g , SubscriptionName=SubscriptionName_s, MeterCategory\r\n| join kind=leftouter (\r\nazusage\r\n| where TimeGenerated >= start\r\n| where TimeGenerated  < end\r\n| summarize PrevMSameDayCost=round(sum(Cost),0) by Subscription=SubscriptionGuid_g , SubscriptionName=SubscriptionName_s, MeterCategory\r\n) on Subscription , MeterCategory\r\n| join kind=leftouter (\r\nazusage\r\n| where TimeGenerated >= start\r\n| where TimeGenerated  < startofmonth(now())\r\n| summarize PrevMTotal=round(sum(Cost),0) by Subscription=SubscriptionGuid_g , SubscriptionName=SubscriptionName_s,MeterCategory\r\n) on Subscription , MeterCategory\r\n| project  Subscription, SubscriptionName ,MeterCategory, ThisMCost, PrevMSameDayCost, PrevMTotal\r\n\r\n\r\n\r\n",
+              "query": "let day=dayofmonth(now());\r\nlet start= startofmonth(datetime_add('month',-1,now())) ;\r\nlet end =   datetime_add('day',day,start );\r\nlet azusage = materialize(AzureUsage_CL\r\n| where TimeGenerated >= start\r\n| where Type_s == \"Microsoft.Consumption/usageDetails\"\r\n| summarize arg_max(PretaxCost_d, *) by  TimeGenerated, InstanceId_s,MeterId_g, Name_g,SubscriptionGuid_g,SubscriptionName_s,  InstanceLocation_s \r\n| summarize Cost=round(sum(PretaxCost_d),4) , Usage=sum(UsageQuantity_d) by  TimeGenerated, InstanceId_s,MeterId_g, Name_g,SubscriptionGuid_g,SubscriptionName_s,  InstanceLocation_s, AccountName_s, Currency_s,ConsumedService_s,Product_s\r\n| project TimeGenerated , ResourceId=InstanceId_s, MeterId_g ,SubscriptionGuid_g,SubscriptionName_s,AccountName_s, Currency_s,ConsumedService_s,Product_s,Location=InstanceLocation_s , Cost, Usage\r\n| join kind=leftouter (AzureUsage_CL\r\n| where TimeGenerated >= start \r\n| where Type_s == \"Microsoft.Commerce/UsageAggregate\"\r\n| summarize c=count() by  MeterId_g , MeterCategory_s , MeterSubCategory_s, MeterName_s ) on MeterId_g\r\n| extend MeterCategory=iff(isnotempty( MeterCategory_s), MeterCategory_s, tostring(split(Product_s,'-')[0]))\r\n| project-away MeterId_g1, c);\r\nazusage\r\n| where TimeGenerated >= startofmonth(now())\r\n| summarize ThisMCost=round(sum(Cost),4) by Subscription=SubscriptionGuid_g , SubscriptionName=SubscriptionName_s, MeterCategory\r\n| join kind=fullouter (\r\nazusage\r\n| where TimeGenerated >= start\r\n| where TimeGenerated  < end\r\n| summarize PrevMSameDayCost=round(sum(Cost),0) by Subscription=SubscriptionGuid_g , SubscriptionName=SubscriptionName_s, MeterCategory\r\n) on Subscription , MeterCategory\r\n| join kind=fullouter (\r\nazusage\r\n| where TimeGenerated >= start\r\n| where TimeGenerated  < startofmonth(now())\r\n| summarize PrevMTotal=round(sum(Cost),0) by Subscription=SubscriptionGuid_g , SubscriptionName=SubscriptionName_s,MeterCategory\r\n) on $left.Subscription1==$right.Subscription , MeterCategory\r\n| project  Subscription, SubscriptionName ,MeterCategory, ThisMCost, PrevMSameDayCost, PrevMTotal\r\n\r\n\r\n\r\n",
               "size": 0,
               "queryType": 0,
               "resourceType": "microsoft.operationalinsights/workspaces",
@@ -2898,7 +2931,8 @@
                 }
               ],
               "style": "pills",
-              "queryType": 0
+              "queryType": 0,
+              "resourceType": "microsoft.operationalinsights/workspaces"
             },
             "name": "parameters - 2"
           },
@@ -2916,7 +2950,7 @@
               "query": "AzureUsage_CL\r\n| where TimeGenerated {TimeRange}\r\n| summarize arg_max(PretaxCost_d, *) by  TimeGenerated, InstanceId_s,MeterId_g, Name_g,SubscriptionGuid_g,SubscriptionName_s,  InstanceLocation_s \r\n| where SubscriptionGuid_g in ({subscription}) or '*' in ({subscription})\r\n| summarize Cost=round(sum(PretaxCost_d),4) by Subscription=SubscriptionGuid_g , SubscriptionName=SubscriptionName_s, TimeGenerated \r\n| sort by Subscription, SubscriptionName, TimeGenerated asc\r\n| serialize\r\n|  extend  p_cost = iff(Subscription==prev(Subscription) , p_cost = prev(Cost,1) , p_cost=Cost)\r\n| project   Subscription , SubscriptionName , TimeGenerated , Cost , p_cost , cost_diff=Cost-p_cost, cost_pctdiff=round((Cost/p_cost)*100-100,1)\r\n| sort by cost_diff desc\r\n\r\n",
               "size": 0,
               "timeContext": {
-                "durationMs": 0
+                "durationMs": 1209600000
               },
               "timeContextFromParameter": "TimeRange",
               "showExportToExcel": true,
@@ -2978,7 +3012,7 @@
               "size": 0,
               "title": "Cost Diff DoD by Resource",
               "timeContext": {
-                "durationMs": 0
+                "durationMs": 1209600000
               },
               "timeContextFromParameter": "TimeRange",
               "showExportToExcel": true,
@@ -3046,7 +3080,7 @@
               "size": 0,
               "title": "Cost Diff DoD by Resource",
               "timeContext": {
-                "durationMs": 0
+                "durationMs": 1209600000
               },
               "timeContextFromParameter": "TimeRange",
               "showExportToExcel": true,
@@ -3114,7 +3148,7 @@
               "size": 0,
               "title": "Cost Diff WoW",
               "timeContext": {
-                "durationMs": 0
+                "durationMs": 1209600000
               },
               "timeContextFromParameter": "TimeRange",
               "showExportToExcel": true,
@@ -3187,7 +3221,7 @@
               "size": 0,
               "title": "Cost Diff MoM",
               "timeContext": {
-                "durationMs": 0
+                "durationMs": 1209600000
               },
               "timeContextFromParameter": "TimeRange",
               "showExportToExcel": true,
