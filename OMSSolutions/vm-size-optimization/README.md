@@ -57,7 +57,7 @@ table and see the size history and storage profile for the selected VM ;
 This view vizualize  performance metrics on   timecharts  for detailed analysis. Data behind all views can be exported to excel . 
 
 
-
+![alt text](images/wbimage9.PNG "Part2")
 
 
 # Size Optimization 
