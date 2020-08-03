@@ -46,6 +46,20 @@ VM Insights solution should be enabled to be able to provide Azure size history 
 ![alt text](images/wbimage1.PNG "part1")
 ![alt text](images/wbimage2.PNG "Part2")
 
+You can select a libe from 
+table and see the size history and storage profile for the selected VM ; 
+
+![alt text](images/wbimage7.PNG "Part2")
+
+![alt text](images/wbimage8.PNG "Part2")
+
+# Performance History of a VM 
+This view vizualize  performance metrics on   timecharts  for detailed analysis. Data behind all views can be exported to excel . 
+
+
+
+
+
 # Size Optimization 
 Workbook compares the actual usage for CPU/Memory/Iops and compares them to the threshol set by customer  and decides if CPU/Memory/IOPs can be resized. If all 3 can be resized  if checks which VM sizes on Azure will be able to accomodate the load.  
 
@@ -60,7 +74,7 @@ This part displays all the managed disk which is not unattached or reserved by a
 
 # Unused Public IPs
 
-This part displays all the managed disk which is not unattached or reserved by a deallocated VMs . These can be cleaned up or converted to VHD blobs to save cost.
+This part displays all public IP addresses that is not associcated  to a NIC.
 
 ![alt text](images/wbimage11.PNG "Part6")
 
