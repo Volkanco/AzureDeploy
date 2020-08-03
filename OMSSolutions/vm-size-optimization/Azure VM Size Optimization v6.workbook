@@ -1207,7 +1207,7 @@
                   "type": 4,
                   "isRequired": true,
                   "value": {
-                    "durationMs": 604800000
+                    "durationMs": 2592000000
                   },
                   "typeSettings": {
                     "selectableValues": [
@@ -1611,8 +1611,7 @@
                   "timeContext": {
                     "durationMs": 0
                   },
-                  "timeContextFromParameter": "TimeRange",
-                  "value": "yes"
+                  "timeContextFromParameter": "TimeRange"
                 },
                 {
                   "id": "78da93cb-59be-4500-b2ab-cd35b7c3b4f4",
@@ -2502,6 +2501,66 @@
         }
       ],
       "name": "PerfData"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "Resources\r\n|where type == \"microsoft.compute/virtualmachines\"| project name , resourceGroup, License=properties.licenseType, Os=properties.storageProfile.osDisk.osType ,publisher=properties.storageProfile.imageReference.publisher,offer=properties.storageProfile.imageReference.offer, ossku=properties.storageProfile.imageReference.sku\r\n//| where Os == \"Windows\"\r\n| extend OSLicenceType=iff(Os == \"Windows\",iff(License==\"Windows_Server\",\"AHUB\",\"None\"),\"NotApplicable\")\r\n| where OSLicenceType != \"NotApplicable\"\r\n| summarize count() by  OSLicenceType ",
+        "size": 0,
+        "title": "Azure Hybrid Use Summary",
+        "queryType": 1,
+        "resourceType": "microsoft.resourcegraph/resources",
+        "crossComponentResources": [
+          "{subscription}"
+        ],
+        "visualization": "piechart",
+        "chartSettings": {
+          "seriesLabelSettings": [
+            {
+              "seriesName": "None",
+              "color": "orange"
+            },
+            {
+              "seriesName": "AHUB",
+              "color": "green"
+            }
+          ]
+        }
+      },
+      "name": "query - 13"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "Resources\r\n| where subscriptionId in ({subscription:subid}) or '*' in ({subscription:subid})\r\n|where type == \"microsoft.compute/virtualmachines\"| project name , resourceGroup, License=properties.licenseType, Os=properties.storageProfile.osDisk.osType ,publisher=properties.storageProfile.imageReference.publisher,offer=properties.storageProfile.imageReference.offer, ossku=properties.storageProfile.imageReference.sku\r\n//| where Os == \"Windows\"\r\n| extend OSLicenceType=iff(Os == \"Windows\",iff(License==\"Windows_Server\",\"AHUB\",\"None\"),\"NotApplicable\")",
+        "size": 0,
+        "title": "Azure Hybrid Use Benefit",
+        "showExportToExcel": true,
+        "queryType": 1,
+        "resourceType": "microsoft.resourcegraph/resources",
+        "crossComponentResources": [
+          "{subscription}"
+        ],
+        "gridSettings": {
+          "formatters": [
+            {
+              "columnMatch": "License",
+              "formatter": 5
+            }
+          ],
+          "rowLimit": 1000
+        }
+      },
+      "name": "query - 12"
+    },
+    {
+      "type": 1,
+      "content": {
+        "json": "## Unused Disks\r\n\r\nManaged disks can be Attached , Reserved (Attached to an deallocated VM) or Unattached"
+      },
+      "name": "text - 15"
     },
     {
       "type": 12,
@@ -3402,13 +3461,6 @@
         "comparison": "isEqualTo"
       },
       "name": "PerfData - Copy"
-    },
-    {
-      "type": 1,
-      "content": {
-        "json": "## Unused Disks\r\n\r\nManaged disks can be Attached , Reserved (Attached to an deallocated VM) or Unattached"
-      },
-      "name": "text - 15"
     },
     {
       "type": 3,

@@ -8,7 +8,7 @@
 >[AZURE.NOTE]This is preliminary documentation for Azure VM Optimization Workbook which helps vizualizing the  VM usage indicators fetched from Azure Monitor/Log Analytics.
 
 
-Azure Size Optimizations Workbook  corrlates  the following data per Azure VM ;
+Azure Size Optimizations Workbook  correlates  the following data per Azure VM ;
 
 * RDP or SSH logins
 * Reboots
