@@ -12,6 +12,9 @@
       "type": 9,
       "content": {
         "version": "KqlParameterItem/1.0",
+        "crossComponentResources": [
+          "value::all"
+        ],
         "parameters": [
           {
             "id": "073783b8-2700-4b6b-b23a-5edefdf72797",
@@ -57,7 +60,7 @@
               "allowCustom": true
             },
             "value": {
-              "durationMs": 5184000000
+              "durationMs": 604800000
             }
           },
           {
@@ -74,14 +77,16 @@
               "value::all"
             ],
             "value": [
-              "/subscriptions/2de20a16-20c6-41af-82cd-bceb39195d1c",
-              "/subscriptions/d1d8779d-38d7-4f06-91db-9cbc8de0176f"
+              "value::all"
             ],
             "typeSettings": {
               "resourceTypeFilter": {
                 "microsoft.resources/subscriptions": true
               },
-              "additionalResourceOptions": []
+              "additionalResourceOptions": [
+                "value::all"
+              ],
+              "showDefault": false
             },
             "queryType": 1,
             "resourceType": "microsoft.resourcegraph/resources"
@@ -97,11 +102,11 @@
             "delimiter": ",",
             "query": "where type =~ 'microsoft.operationalinsights/workspaces'\r\n| summarize by id, name\r\n| project id",
             "crossComponentResources": [
-              "{subscription}"
+              "value::all"
             ],
             "value": [
-              "/subscriptions/2de20a16-20c6-41af-82cd-bceb39195d1c/resourceGroups/rg-shared-sc-weu/providers/Microsoft.OperationalInsights/workspaces/la-prod-sc-weu",
-              "/subscriptions/d1d8779d-38d7-4f06-91db-9cbc8de0176f/resourceGroups/SOC/providers/Microsoft.OperationalInsights/workspaces/CyberSecuritySOC"
+              "/subscriptions/2de20a16-20c6-41af-82cd-bceb39195d1c/resourceGroups/rg-shared-sc-weu/providers/microsoft.operationalinsights/workspaces/la-prod-sc-weu",
+              "/subscriptions/d1d8779d-38d7-4f06-91db-9cbc8de0176f/resourceGroups/soc/providers/Microsoft.OperationalInsights/workspaces/cybersecuritysoc"
             ],
             "typeSettings": {
               "resourceTypeFilter": {
@@ -109,7 +114,8 @@
               },
               "additionalResourceOptions": [
                 "value::5"
-              ]
+              ],
+              "showDefault": false
             },
             "queryType": 1,
             "resourceType": "microsoft.resourcegraph/resources"
@@ -169,8 +175,8 @@
           }
         ],
         "style": "pills",
-        "queryType": 0,
-        "resourceType": "microsoft.operationalinsights/workspaces"
+        "queryType": 1,
+        "resourceType": "microsoft.resourcegraph/resources"
       },
       "name": "parameters - 2"
     },
@@ -338,7 +344,7 @@
                   "version": "KqlParameterItem/1.0",
                   "name": "Usagequery",
                   "type": 1,
-                  "value": "let workstart=8; let workend=17; let timezoneoffset=4; let cpu=InsightsMetrics | where TimeGenerated > ago(60d) | extend subid=tostring(split(_ResourceId, '/')[2]) | where subid in ('2de20a16-20c6-41af-82cd-bceb39195d1c','d1d8779d-38d7-4f06-91db-9cbc8de0176f') or '*' in ('2de20a16-20c6-41af-82cd-bceb39195d1c','d1d8779d-38d7-4f06-91db-9cbc8de0176f') | where tostring(split(_ResourceId,'/')[4])  in ('*') or '*' in ('*') | extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset | where hour between (workstart..workend) | where Namespace == \"Processor\"  | where Name == \"UtilizationPercentage\" | summarize (cpu_p50,cpu_p95)=percentiles(Val,50,95),cpu_avg=avg(Val) by Computer, ResourceId=_ResourceId; let mem= InsightsMetrics | where TimeGenerated > ago(60d) | extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset | where Namespace == \"Memory\"  | where Name == \"AvailableMB\" | extend MemorySize = round(todouble(parse_json(Tags).[\"vm.azm.ms/memorySizeMB\"]),0) | extend MemUtil=(MemorySize-Val)/MemorySize*100 |summarize (mem_p95)=percentiles(MemUtil,95) by  Computer; let iops= InsightsMetrics | where TimeGenerated > ago(60d) | extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset | where Namespace == \"LogicalDisk\"  | where Name == \"TransfersPerSecond\" |summarize (iops_p95)=percentiles(Val,95) by  Computer; let nwsent=InsightsMetrics | where TimeGenerated > ago(60d) | extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset | where Namespace == \"Network\" | where Name == \"WriteBytesPerSecond\"  |summarize (nwsent)=percentiles(Val,95) by  Computer; let nwrec=InsightsMetrics | where TimeGenerated > ago(60d) | extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset | where Namespace == \"Network\" | where Name == \"ReadBytesPerSecond\"  |summarize (nwrec)=percentiles(Val,95) by  Computer; let boot=Syslog | where Facility ==\"daemon\" | where SyslogMessage startswith \"Startup finished\"  | where ProcessID == 1  |summarize bootcount=count() by Computer |union isfuzzy=true (Event | where TimeGenerated > ago(60d) | where EventLog == \"System\"  | where EventID == 1074  |summarize bootcount=count() by Computer); let logons=SecurityEvent | where EventID == 4624 | where LogonTypeName  ==\"10 - RemoteInteractive\"  | where Account !contains \"Font Driver Host\"  and  Account !contains \"Window Manager\" | summarize ['SSH/RDP']=count() by Computer |union  isfuzzy=true (Syslog | where Facility == \"auth\" | where SyslogMessage startswith \"Accepted password for\" or SyslogMessage startswith \"Accepted publickey for\" | summarize ['SSH/RDP']=count() by Computer); let vmcon=VMConnection | where Direction == \"inbound\"  | where SourceIp <> \"127.0.0.1\"  | summarize InboundCon=sum(LinksEstablished+LinksTerminated+LinksLive) by Computer; cpu | join kind= leftouter (    mem ) on Computer | join kind= leftouter (    nwsent ) on Computer | join kind= leftouter (    nwrec ) on Computer | join kind= leftouter (    boot ) on Computer | join kind= leftouter (    logons ) on Computer | join kind= leftouter (    iops ) on Computer | join kind= leftouter (    vmcon ) on Computer |project ResourceId,Computer , ['SSH/RDP'] , bootcount ,  cpu_p95 , cpu_avg ,mem_p95,iops_p95,Nw_Sent=format_bytes(nwsent), Nw_Rec=format_bytes(nwrec),InboundCon  \t\t\t          ",
+                  "value": "let workstart=8; let workend=17; let timezoneoffset=4; let cpu=InsightsMetrics | where TimeGenerated > ago(7d) | extend subid=tostring(split(_ResourceId, '/')[2]) | where subid in ('6785ea1f-ac40-4244-a9ce-94b12fd832ca','8c3c936a-c09b-4de3-830b-3f5f244d72e9','8c2c7b23-848d-40fe-b817-690d79ad9dfd','7fd08dcc-a653-4b0f-8f8c-4dac889fdda4','00edfbf3-f815-41d1-9e7c-d61e5522b8bf','9472dc54-45db-406b-9c01-bba9fa0cbb3c','5733bcb3-7fde-4caf-8629-41dc15e3b352','ebb79bc0-aa86-44a7-8111-cabbe0c43993','0ba674a6-9fde-43b4-8370-a7e16fdf0641','2f0675ce-dbad-46c5-8663-3c0e4740222b','66ee64da-2532-4d9a-a36b-d745327d20d9','45f9252d-e27e-4ed8-ab4e-dc5054de13fa','35ad74f4-0b37-44a7-ba94-91b6ec6026cd','0745e7d2-1e06-4d9e-9b9b-f42442b8b92f','71578c6b-75ba-4865-8f52-3e66d70389fd','e93d3ee6-fac1-412f-92d6-bfb379e81af2','d1d8779d-38d7-4f06-91db-9cbc8de0176f','8a6e61f6-4dae-4242-b835-83b8aafcbbed','bac420ed-c6fc-4a05-8ac1-8c0c52da1d6e','02d68940-61e6-42d0-81d1-8396b7451114','30ec953a-f038-4636-b9b6-4ff8ba87b572','2de20a16-20c6-41af-82cd-bceb39195d1c','5c92a61a-9066-465a-9a6d-4b0b062ca7a5','6ab6e3d7-e20c-4d3b-91a6-01f70404be60','cf814bf2-d425-4b7f-bba2-e815cef7cba7','eec2de82-6ab2-4a84-ae5f-57e9a10bf661','9ec1d932-0f3f-486c-acc6-e7d78b358f9b') or '*' in ('6785ea1f-ac40-4244-a9ce-94b12fd832ca','8c3c936a-c09b-4de3-830b-3f5f244d72e9','8c2c7b23-848d-40fe-b817-690d79ad9dfd','7fd08dcc-a653-4b0f-8f8c-4dac889fdda4','00edfbf3-f815-41d1-9e7c-d61e5522b8bf','9472dc54-45db-406b-9c01-bba9fa0cbb3c','5733bcb3-7fde-4caf-8629-41dc15e3b352','ebb79bc0-aa86-44a7-8111-cabbe0c43993','0ba674a6-9fde-43b4-8370-a7e16fdf0641','2f0675ce-dbad-46c5-8663-3c0e4740222b','66ee64da-2532-4d9a-a36b-d745327d20d9','45f9252d-e27e-4ed8-ab4e-dc5054de13fa','35ad74f4-0b37-44a7-ba94-91b6ec6026cd','0745e7d2-1e06-4d9e-9b9b-f42442b8b92f','71578c6b-75ba-4865-8f52-3e66d70389fd','e93d3ee6-fac1-412f-92d6-bfb379e81af2','d1d8779d-38d7-4f06-91db-9cbc8de0176f','8a6e61f6-4dae-4242-b835-83b8aafcbbed','bac420ed-c6fc-4a05-8ac1-8c0c52da1d6e','02d68940-61e6-42d0-81d1-8396b7451114','30ec953a-f038-4636-b9b6-4ff8ba87b572','2de20a16-20c6-41af-82cd-bceb39195d1c','5c92a61a-9066-465a-9a6d-4b0b062ca7a5','6ab6e3d7-e20c-4d3b-91a6-01f70404be60','cf814bf2-d425-4b7f-bba2-e815cef7cba7','eec2de82-6ab2-4a84-ae5f-57e9a10bf661','9ec1d932-0f3f-486c-acc6-e7d78b358f9b') | where tostring(split(_ResourceId,'/')[4])  in ('*') or '*' in ('*') | extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset | where hour between (workstart..workend) | where Namespace == \"Processor\"  | where Name == \"UtilizationPercentage\" | summarize (cpu_p50,cpu_p95)=percentiles(Val,50,95),cpu_avg=avg(Val) by Computer, ResourceId=_ResourceId; let mem= InsightsMetrics | where TimeGenerated > ago(7d) | extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset | where Namespace == \"Memory\"  | where Name == \"AvailableMB\" | extend MemorySize = round(todouble(parse_json(Tags).[\"vm.azm.ms/memorySizeMB\"]),0) | extend MemUtil=(MemorySize-Val)/MemorySize*100 |summarize (mem_p95)=percentiles(MemUtil,95) by  Computer; let iops= InsightsMetrics | where TimeGenerated > ago(7d) | extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset | where Namespace == \"LogicalDisk\"  | where Name == \"TransfersPerSecond\" |summarize (iops_p95)=percentiles(Val,95) by  Computer; let nwsent=InsightsMetrics | where TimeGenerated > ago(7d) | extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset | where Namespace == \"Network\" | where Name == \"WriteBytesPerSecond\"  |summarize (nwsent)=percentiles(Val,95) by  Computer; let nwrec=InsightsMetrics | where TimeGenerated > ago(7d) | extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset | where Namespace == \"Network\" | where Name == \"ReadBytesPerSecond\"  |summarize (nwrec)=percentiles(Val,95) by  Computer; let boot=Syslog | where Facility ==\"daemon\" | where SyslogMessage startswith \"Startup finished\"  | where ProcessID == 1  |summarize bootcount=count() by Computer |union isfuzzy=true (Event | where TimeGenerated > ago(7d) | where EventLog == \"System\"  | where EventID == 1074  |summarize bootcount=count() by Computer); let logons=SecurityEvent | where EventID == 4624 | where LogonTypeName  ==\"10 - RemoteInteractive\"  | where Account !contains \"Font Driver Host\"  and  Account !contains \"Window Manager\" | summarize ['SSH/RDP']=count() by Computer |union  isfuzzy=true (Syslog | where Facility == \"auth\" | where SyslogMessage startswith \"Accepted password for\" or SyslogMessage startswith \"Accepted publickey for\" | summarize ['SSH/RDP']=count() by Computer); let vmcon=VMConnection | where Direction == \"inbound\"  | where SourceIp <> \"127.0.0.1\"  | summarize InboundCon=sum(LinksEstablished+LinksTerminated+LinksLive) by Computer; cpu | join kind= leftouter (    mem ) on Computer | join kind= leftouter (    nwsent ) on Computer | join kind= leftouter (    nwrec ) on Computer | join kind= leftouter (    boot ) on Computer | join kind= leftouter (    logons ) on Computer | join kind= leftouter (    iops ) on Computer | join kind= leftouter (    vmcon ) on Computer |project ResourceId,Computer , ['SSH/RDP'] , bootcount ,  cpu_p95 , cpu_avg ,mem_p95,iops_p95,Nw_Sent=format_bytes(nwsent), Nw_Rec=format_bytes(nwrec),InboundCon  \t\t\t          ",
                   "criteriaData": [
                     {
                       "condition": "if (isSecurityEnabled is not empty ), result = 'let workstart={PeakHourStart}; let workend={PeakHourEnd}; let timezoneoffset=4; let cpu=InsightsMetrics | where TimeGenerated {TimeRange} | extend subid=tostring(split(_ResourceId, '/')[2]) | where subid in ({subscription:subid}) or '*' in ({subscription:subid}) | where tostring(split(_ResourceId,'/')[4])  in ({rg}) or '*' in ({rg}) | extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset | where hour between (workstart..workend) | where Namespace == \"Processor\"  | where Name == \"UtilizationPercentage\" | summarize (cpu_p50,cpu_p95)=percentiles(Val,50,95),cpu_avg=avg(Val) by Computer, ResourceId=_ResourceId; let mem= InsightsMetrics | where TimeGenerated {TimeRange} | extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset | where Namespace == \"Memory\"  | where Name == \"AvailableMB\" | extend MemorySize = round(todouble(parse_json(Tags).[\"vm.azm.ms/memorySizeMB\"]),0) | extend MemUtil=(MemorySize-Val)/MemorySize*100 |summarize (mem_p95)=percentiles(MemUtil,95) by  Computer; let iops= InsightsMetrics | where TimeGenerated {TimeRange} | extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset | where Namespace == \"LogicalDisk\"  | where Name == \"TransfersPerSecond\" |summarize (iops_p95)=percentiles(Val,95) by  Computer; let nwsent=InsightsMetrics | where TimeGenerated {TimeRange} | extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset | where Namespace == \"Network\" | where Name == \"WriteBytesPerSecond\"  |summarize (nwsent)=percentiles(Val,95) by  Computer; let nwrec=InsightsMetrics | where TimeGenerated {TimeRange} | extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset | where Namespace == \"Network\" | where Name == \"ReadBytesPerSecond\"  |summarize (nwrec)=percentiles(Val,95) by  Computer; let boot=Syslog | where Facility ==\"daemon\" | where SyslogMessage startswith \"Startup finished\"  | where ProcessID == 1  |summarize bootcount=count() by Computer |union  isfuzzy=true (Event | where TimeGenerated {TimeRange} | where EventLog == \"System\"  | where EventID == 1074  |summarize bootcount=count() by Computer); let logons=SecurityEvent | where EventID == 4624 | where LogonTypeName  ==\"10 - RemoteInteractive\"  | where Account !contains \"Font Driver Host\"  and  Account !contains \"Window Manager\" | summarize ['SSH/RDP']=count() by Computer |union  isfuzzy=true (Syslog | where Facility == \"auth\" | where SyslogMessage startswith \"Accepted password for\" or SyslogMessage startswith \"Accepted publickey for\" | summarize ['SSH/RDP']=count() by Computer); let vmcon=VMConnection | where Direction == \"inbound\"  | where SourceIp <> \"127.0.0.1\"  | summarize InboundCon=sum(LinksEstablished+LinksTerminated+LinksLive) by Computer; cpu | join kind= leftouter (    mem ) on Computer | join kind= leftouter (    nwsent ) on Computer | join kind= leftouter (    nwrec ) on Computer | join kind= leftouter (    boot ) on Computer | join kind= leftouter (    logons ) on Computer | join kind= leftouter (    iops ) on Computer | join kind= leftouter (    vmcon ) on Computer |project ResourceId,Computer , ['SSH/RDP'] , bootcount ,  cpu_p95 , cpu_avg ,mem_p95,iops_p95,Nw_Sent=format_bytes(nwsent), Nw_Rec=format_bytes(nwrec),InboundCon  \t\t\t          '",
@@ -493,7 +499,7 @@
                   "version": "KqlParameterItem/1.0",
                   "name": "CPUThreshold",
                   "type": 1,
-                  "value": "45",
+                  "value": "38",
                   "timeContext": {
                     "durationMs": 0
                   },
@@ -505,7 +511,7 @@
                   "version": "KqlParameterItem/1.0",
                   "name": "MEMThreshold",
                   "type": 1,
-                  "value": "50",
+                  "value": "48",
                   "timeContext": {
                     "durationMs": 0
                   },
@@ -518,7 +524,7 @@
                   "name": "usesamefamily",
                   "label": "Size Recommendation Scope",
                   "type": 2,
-                  "value": "selected",
+                  "value": "yes",
                   "typeSettings": {
                     "additionalResourceOptions": [],
                     "showDefault": false
@@ -606,37 +612,6 @@
                   "timeContextFromParameter": "TimeRange",
                   "queryType": 0,
                   "resourceType": "microsoft.operationalinsights/workspaces"
-                },
-                {
-                  "id": "e837027b-efd3-4287-b524-3a8f819e6022",
-                  "version": "KqlParameterItem/1.0",
-                  "name": "Usagequerynew",
-                  "type": 1,
-                  "value": "let workstart=8; let workend=17; let timezoneoffset=4; let cpu=InsightsMetrics | where TimeGenerated > ago(60d) | extend subid=tostring(split(_ResourceId, '/')[2]) | where subid in ('2de20a16-20c6-41af-82cd-bceb39195d1c','d1d8779d-38d7-4f06-91db-9cbc8de0176f') or '*' in ('2de20a16-20c6-41af-82cd-bceb39195d1c','d1d8779d-38d7-4f06-91db-9cbc8de0176f') | where tostring(split(_ResourceId,'/')[4])  in ('*') or '*' in ('*') | extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset | where hour between (workstart..workend) | where Namespace == \"Processor\"  | where Name == \"UtilizationPercentage\" | summarize (Cpu)=round(percentile(Val, 99), 2) by Computer, ResourceId=_ResourceId; let mem= InsightsMetrics | where TimeGenerated > ago(60d) | extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset | where Namespace == \"Memory\"  | where Name == \"AvailableMB\" | extend MemorySize = round(todouble(parse_json(Tags).[\"vm.azm.ms/memorySizeMB\"]),0) | extend Val=(MemorySize-Val)/MemorySize*100 |summarize (Mem)=round(percentile(Val, 99), 2) by  Computer; let iops= InsightsMetrics | where TimeGenerated > ago(60d) | extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset | where Namespace == \"LogicalDisk\"  | where Name == \"TransfersPerSecond\" |summarize (IOPs)=round(percentile(Val, 99), 2) by  Computer;let iolatency= InsightsMetrics | where TimeGenerated > ago(60d) | extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset | where Namespace == \"LogicalDisk\"  | where Name == \"TransferLatencyMs\"|summarize (IOLatency)=round(percentile(Val, 99), 2) by  Computer; let nwsent=InsightsMetrics | where TimeGenerated > ago(60d) | extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset | where Namespace == \"Network\" | where Name == \"WriteBytesPerSecond\"  |summarize (nwsent)=round(percentile(Val, 99), 2) by  Computer; let nwrec=InsightsMetrics | where TimeGenerated > ago(60d) | extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset | where Namespace == \"Network\" | where Name == \"ReadBytesPerSecond\"  |summarize (nwrec)=round(percentile(Val, 99), 2) by  Computer; let boot=Syslog | where Facility ==\"daemon\" | where SyslogMessage startswith \"Startup finished\"  | where ProcessID == 1  |summarize bootcount=count() by Computer |union isfuzzy=true (Event | where TimeGenerated > ago(60d) | where EventLog == \"System\"  | where EventID == 1074  |summarize bootcount=count() by Computer); let logons=SecurityEvent | where EventID == 4624 | where LogonTypeName  ==\"10 - RemoteInteractive\"  | where Account !contains \"Font Driver Host\"  and  Account !contains \"Window Manager\" | summarize ['SSH/RDP']=count() by Computer |union  isfuzzy=true (Syslog | where Facility == \"auth\" | where SyslogMessage startswith \"Accepted password for\" or SyslogMessage startswith \"Accepted publickey for\" | summarize ['SSH/RDP']=count() by Computer); let vmcon=VMConnection | where Direction == \"inbound\"  | where SourceIp <> \"127.0.0.1\"  | summarize InboundCon=sum(LinksEstablished+LinksTerminated+LinksLive) by Computer;let VMtrf=VMConnection | summarize ['Nw Sent Total']=format_bytes(sum(BytesSent)),  ['Nw Rec Total']=format_bytes(sum(BytesReceived)) by Computer; cpu | join kind= leftouter (    mem ) on Computer | join kind= leftouter (    nwsent ) on Computer | join kind= leftouter (    nwrec ) on Computer | join kind= leftouter (    boot ) on Computer | join kind= leftouter (    logons ) on Computer | join kind= leftouter (    iops ) on Computer | join kind= leftouter (    iolatency ) on Computer | join kind= leftouter (    vmcon ) on Computer| join kind= leftouter (    VMtrf) on Computer  |project ResourceId,Computer , ['SSH/RDP'] , bootcount ,  Cpu , Mem,IOPs,IOLatency,['Nw_Sent/sec']=format_bytes(nwsent), ['Nw_Rec/sec']=format_bytes(nwrec),InboundCon  ,['Nw Sent Total'],['Nw Rec Total']\t\t\t          ",
-                  "isHiddenWhenLocked": true,
-                  "criteriaData": [
-                    {
-                      "criteriaContext": {
-                        "leftOperand": "isSecurityEnabled",
-                        "operator": "isNotNull",
-                        "rightValType": "param",
-                        "resultValType": "static",
-                        "resultVal": "let workstart={PeakHourStart}; let workend={PeakHourEnd}; let timezoneoffset=4; let cpu=InsightsMetrics | where TimeGenerated {TimeRange} | extend subid=tostring(split(_ResourceId, '/')[2]) | where subid in ({subscription:subid}) or '*' in ({subscription:subid}) | where tostring(split(_ResourceId,'/')[4])  in ({rg}) or '*' in ({rg}) | extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset | where hour between (workstart..workend) | where Namespace == \"Processor\"  | where Name == \"UtilizationPercentage\" | summarize (Cpu)={AggregatesRight} by Computer, ResourceId=_ResourceId; let mem= InsightsMetrics | where TimeGenerated {TimeRange} | extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset | where Namespace == \"Memory\"  | where Name == \"AvailableMB\" | extend MemorySize = round(todouble(parse_json(Tags).[\"vm.azm.ms/memorySizeMB\"]),0) | extend Val=(MemorySize-Val)/MemorySize*100 |summarize (Mem)={AggregatesRight} by  Computer; let iops= InsightsMetrics | where TimeGenerated {TimeRange} | extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset | where Namespace == \"LogicalDisk\"  | where Name == \"TransfersPerSecond\" |summarize (IOPs)={AggregatesRight} by  Computer;let iolatency= InsightsMetrics | where TimeGenerated {TimeRange} | extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset | where Namespace == \"LogicalDisk\"  | where Name == \"TransferLatencyMs\"|summarize (IOLatency)={AggregatesRight} by  Computer; let nwsent=InsightsMetrics | where TimeGenerated {TimeRange} | extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset | where Namespace == \"Network\" | where Name == \"WriteBytesPerSecond\"  |summarize (nwsent)={AggregatesRight} by  Computer; let nwrec=InsightsMetrics | where TimeGenerated {TimeRange} | extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset | where Namespace == \"Network\" | where Name == \"ReadBytesPerSecond\"  |summarize (nwrec)={AggregatesRight} by  Computer; let boot=Syslog | where Facility ==\"daemon\" | where SyslogMessage startswith \"Startup finished\"  | where ProcessID == 1  |summarize bootcount=count() by Computer |union isfuzzy=true (Event | where TimeGenerated {TimeRange} | where EventLog == \"System\"  | where EventID == 1074  |summarize bootcount=count() by Computer); let logons=SecurityEvent | where EventID == 4624 | where LogonTypeName  ==\"10 - RemoteInteractive\"  | where Account !contains \"Font Driver Host\"  and  Account !contains \"Window Manager\" | summarize ['SSH/RDP']=count() by Computer |union  isfuzzy=true (Syslog | where Facility == \"auth\" | where SyslogMessage startswith \"Accepted password for\" or SyslogMessage startswith \"Accepted publickey for\" | summarize ['SSH/RDP']=count() by Computer); let vmcon=VMConnection | where Direction == \"inbound\"  | where SourceIp <> \"127.0.0.1\"  | summarize InboundCon=sum(LinksEstablished+LinksTerminated+LinksLive) by Computer;let VMtrf=VMConnection | summarize ['Nw Sent Total']=format_bytes(sum(BytesSent)),  ['Nw Rec Total']=format_bytes(sum(BytesReceived)) by Computer; cpu | join kind= leftouter (    mem ) on Computer | join kind= leftouter (    nwsent ) on Computer | join kind= leftouter (    nwrec ) on Computer | join kind= leftouter (    boot ) on Computer | join kind= leftouter (    logons ) on Computer | join kind= leftouter (    iops ) on Computer | join kind= leftouter (    iolatency ) on Computer | join kind= leftouter (    vmcon ) on Computer| join kind= leftouter (    VMtrf) on Computer  |project ResourceId,Computer , ['SSH/RDP'] , bootcount ,  Cpu , Mem,IOPs,IOLatency,['Nw_Sent/sec']=format_bytes(nwsent), ['Nw_Rec/sec']=format_bytes(nwrec),InboundCon  ,['Nw Sent Total'],['Nw Rec Total']\t\t\t          "
-                      }
-                    },
-                    {
-                      "criteriaContext": {
-                        "operator": "Default",
-                        "rightValType": "param",
-                        "resultValType": "expression",
-                        "resultVal": "let workstart={PeakHourStart}; let workend={PeakHourEnd}; let timezoneoffset=4; let cpu=InsightsMetrics | where TimeGenerated {TimeRange} | extend subid=tostring(split(_ResourceId, '/')[2]) | where subid in ({subscription:subid}) or '*' in ({subscription:subid}) | where tostring(split(_ResourceId,'/')[4])  in ({rg}) or '*' in ({rg}) | extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset | where hour between (workstart..workend) | where Namespace == \"Processor\"  | where Name == \"UtilizationPercentage\" | summarize (Cpu)={AggregatesRight} by Computer, ResourceId=_ResourceId; let mem= InsightsMetrics | where TimeGenerated {TimeRange} | extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset | where Namespace == \"Memory\"  | where Name == \"AvailableMB\" | extend MemorySize = round(todouble(parse_json(Tags).[\"vm.azm.ms/memorySizeMB\"]),0) | extend Val=(MemorySize-Val)/MemorySize*100 |summarize (Mem)={AggregatesRight} by  Computer; let iops= InsightsMetrics | where TimeGenerated {TimeRange} | extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset | where Namespace == \"LogicalDisk\"  | where Name == \"TransfersPerSecond\" |summarize (IOPs)={AggregatesRight} by  Computer; let iolatency= InsightsMetrics | where TimeGenerated {TimeRange} | extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset | where Namespace == \"LogicalDisk\"  | where Name == \"TransferLatencyMs\"|summarize (IOLatency)={AggregatesRight} by  Computer;let nwsent=InsightsMetrics | where TimeGenerated {TimeRange} | extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset | where Namespace == \"Network\" | where Name == \"WriteBytesPerSecond\"  |summarize (nwsent)={AggregatesRight} by  Computer; let nwrec=InsightsMetrics | where TimeGenerated {TimeRange} | extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset | where Namespace == \"Network\" | where Name == \"ReadBytesPerSecond\"  |summarize (nwrec)={AggregatesRight} by  Computer; let boot=Syslog | where Facility ==\"daemon\" | where SyslogMessage startswith \"Startup finished\"  | where ProcessID == 1  |summarize bootcount=count() by Computer |union isfuzzy=true (Event | where TimeGenerated {TimeRange} | where EventLog == \"System\"  | where EventID == 1074  |summarize bootcount=count() by Computer); let logons=Syslog | where Facility == \"auth\" | where SyslogMessage startswith \"Accepted password for\" or SyslogMessage startswith \"Accepted publickey for\" | summarize ['SSH/RDP']=count() by Computer; let vmcon=VMConnection | where Direction == \"inbound\"  | where SourceIp <> \"127.0.0.1\"  | summarize InboundCon=sum(LinksEstablished+LinksTerminated+LinksLive) by Computer;let VMtrf=VMConnection | summarize ['Nw Sent Total']=format_bytes(sum(BytesSent)),  ['Nw Rec Total']=format_bytes(sum(BytesReceived)) by Computer; cpu | join kind= leftouter (    mem ) on Computer | join kind= leftouter (    nwsent ) on Computer | join kind= leftouter (    nwrec ) on Computer | join kind= leftouter (    boot ) on Computer | join kind= leftouter (    logons ) on Computer | join kind= leftouter (    iops ) on Computer| join kind= leftouter (    iolatency ) on Computer  | join kind= leftouter (    vmcon ) on Computer | join kind= leftouter (    VMtrf) on Computer |project ResourceId,Computer , ['SSH/RDP'] , bootcount ,  Cpu ,Mem,IOPs,IOLatency,Nw_Sent=format_bytes(nwsent), Nw_Rec=format_bytes(nwrec),InboundCon,['Nw Sent Total'],['Nw Rec Total']"
-                      }
-                    }
-                  ],
-                  "timeContext": {
-                    "durationMs": 2592000000
-                  },
-                  "timeContextFromParameter": "TimeRange"
                 }
               ],
               "style": "pills",
@@ -666,8 +641,7 @@
                     "{Workspace}"
                   ],
                   "value": [
-                    "Standard_D_v3",
-                    "Standard_D_v2"
+                    "Standard_A"
                   ],
                   "typeSettings": {
                     "additionalResourceOptions": [
@@ -861,11 +835,11 @@
             "type": 3,
             "content": {
               "version": "KqlItem/1.0",
-              "query": "let workstart={PeakHourStart};\r\nlet workend={PeakHourEnd};\r\nlet timezoneoffset=4;\r\n{VMSizeList}\r\n{VMPriceAll}\r\nlet inv=VMComputer\r\n| where TimeGenerated {TimeRange}\r\n| where AzureSubscriptionId in ({subscription:subid}) or '*' in ({subscription:subid})\r\n| where tostring(split(_ResourceId,'/')[4])  in ({rg}) or '*' in ({rg})\r\n| summarize arg_max(TimeGenerated, *) by ResourceId=_ResourceId\r\n| project ResourceId , Computer , AzureSize ,Cpus , CpuSpeed ,PhysicalMemoryMB, AzureLocation\r\n| where isnotempty(AzureSize);\r\nlet cpu=InsightsMetrics\r\n    | where TimeGenerated >ago(30d)\r\n| extend hour=datetime_part(\"hour\", TimeGenerated) + timezoneoffset\r\n| where hour between (workstart..workend)\r\n| where Namespace == \"Processor\"\r\n| where Name == \"UtilizationPercentage\"\r\n| summarize (Cpu)= round(percentile(Val, 99), 2) by Computer, ResourceId=_ResourceId;\r\nlet mem= InsightsMetrics\r\n    | where TimeGenerated >ago(30d)\r\n| extend hour=datetime_part(\"hour\", TimeGenerated) + timezoneoffset\r\n| where Namespace == \"Memory\"\r\n| where Name == \"AvailableMB\"\r\n| extend MemorySize = round(todouble(parse_json(Tags).[\"vm.azm.ms/memorySizeMB\"]), 0)\r\n| extend Val=(MemorySize - Val) / MemorySize*100\r\n| summarize (Mem)= round(percentile(Val, 99), 2) by Computer, ResourceId=_ResourceId;\r\nlet iops= InsightsMetrics\r\n    | where TimeGenerated >ago(30d)\r\n| extend hour=datetime_part(\"hour\", TimeGenerated) + timezoneoffset\r\n| where Namespace == \"LogicalDisk\"\r\n| where Name == \"TransfersPerSecond\"\r\n| summarize (IOPs)= round(percentile(Val, 99), 2) by Computer, ResourceId=_ResourceId;\r\nlet table=inv\r\n| join kind= leftouter (cpu) on ResourceId\r\n| join kind= leftouter (mem) on ResourceId\r\n| join kind= leftouter (iops) on ResourceId\r\n| join kind= leftouter (vmsize) on $left.AzureSize == $right.Name\r\n| project Computer, AzureSize, Cpus, CpuSpeed, Cpu, Mem, IOPs, RAM=PhysicalMemoryMB, Disks, maxIops=Disks * 500, ResourceId, AzureLocation\r\n| extend s=split(AzureSize, '_')\r\n| extend Vmfamily=iff(array_length(s)==3,strcat(s[0],'_', substring(s[1], 0, 1),'_',s[2]),strcat(s[0],'_', substring(s[1], 0, 1)))\r\n| extend ramneed= RAM*Mem / 100 + 500\r\n| extend newram= case(ramneed < 0, RAM, ramneed < 1024, 1024, ramneed < 2048, 2048, ramneed < 3584, 3584, ramneed < 4096, 4096, ramneed < 7168, 7168, ramneed < 8192, 8192, ramneed < 14336, 14336, ramneed < 16386, 16384, ramneed < 28672, 28672, ramneed < 32768, 32768, 0)\r\n| extend cpu_resize=iff(Cpu < toint(\"45\") and Cpus != 1, \"yes\", \"no\")\r\n| extend mem_resize=iff(Mem < toint(\"50\") and newram < RAM, \"yes\", \"no\")\r\n| extend iops_resize=iff(IOPs < (maxIops*0.4), \"yes\", \"no\") \r\n| extend newcpu= toint(iff (Cpus <= 2, 2, Cpus/2))\r\n| join kind= leftouter (vmsize | project Name, vcores=toint(vcores), Ram, Disks) on $left.newcpu==$right.vcores \r\n//| where Name !startswith 'Basic' and AzureSize != Name and iff(Vmfamily !startswith \"B\", Name !contains'_B' , 1==1) \r\n| extend s1=split(Name, '_')\r\n| extend Vmfamily2=iff(array_length(s1)==3,strcat(s1[0],'_', substring(s1[1], 0, 1),'_',s1[2]),strcat(s[0],'_', substring(s1[1], 0, 1)))\r\n| where cpu_resize ==\"yes\" and mem_resize==\"yes\" and iops_resize == \"yes\" \r\n| where Ram <= RAM and Ram >= ramneed \r\n| where Name !startswith 'Basic' and Name !endswith 'Promo' and AzureSize != Name and  Vmfamily =~Vmfamily2// Name startswith strcat(\"Standard_\",Vmfamily)\r\n| sort by Ram asc \r\n| join kind=leftouter hint.strategy=shuffle (VMPriceAll| where type==\"Consumption\"| project  armskuname,VMCost=unitprice,Location) on $left.AzureLocation==$right.Location and $left.AzureSize==$right.armskuname\r\n| join kind=leftouter hint.strategy=shuffle (VMPriceAll| where type==\"Consumption\"| project  armskuname,NewVMCost=unitprice,Location) on $left.AzureLocation==$right.Location and $left.Name==$right.armskuname\r\n| join kind=leftouter hint.strategy=shuffle (VMPriceAll|  where reservationterm == \"1 Year\"| project  armskuname,NewVM_RI1Y=unitprice,Location,reservationterm) on $left.AzureLocation==$right.Location and $left.Name==$right.armskuname\r\n| join kind=leftouter hint.strategy=shuffle (VMPriceAll|  where reservationterm == \"3 Years\"| project  armskuname,NewVM_RI3Y=unitprice,Location,reservationterm) on $left.AzureLocation==$right.Location and $left.Name==$right.armskuname\r\n| extend  VMCost=VMCost*730, NewVMCost=NewVMCost*730, NewVM_RI1YCost=NewVM_RI1Y/12,NewVM_RI3YCost=NewVM_RI3Y/36,CostDifference=(VMCost*730)-(NewVMCost*730)\r\n| project Computer, AzureSize, NewSize=Name,newcpu,newram,VMCost,NewVMCost,CostDifference,ResourceId,vcores,Ram;\r\ntable\r\n| summarize arg_max(CostDifference,*) by ResourceId\r\n| join kind=leftouter (table\r\n| summarize possibleSizes = makelist(pack('size', strcat(NewSize , '|',CostDifference,' | ',vcores,'|',Ram))) by ResourceId,AzureSize\r\n) on ResourceId\r\n\r\n\r\n\r\n",
+              "query": "let workstart={PeakHourStart};\r\nlet workend={PeakHourEnd};\r\nlet timezoneoffset=4;\r\n{VMSizeList}\r\n{VMPriceAll}\r\nlet inv=VMComputer\r\n| where TimeGenerated {TimeRange}\r\n| where AzureSubscriptionId in ({subscription:subid}) or '*' in ({subscription:subid})\r\n| where tostring(split(_ResourceId,'/')[4])  in ({rg}) or '*' in ({rg})\r\n| summarize arg_max(TimeGenerated, *) by ResourceId=_ResourceId\r\n| project ResourceId , Computer , AzureSize ,Cpus , CpuSpeed ,PhysicalMemoryMB, AzureLocation\r\n| where isnotempty(AzureSize);\r\nlet cpu=InsightsMetrics\r\n    | where TimeGenerated >ago(30d)\r\n| extend hour=datetime_part(\"hour\", TimeGenerated) + timezoneoffset\r\n| where hour between (workstart..workend)\r\n| where Namespace == \"Processor\"\r\n| where Name == \"UtilizationPercentage\"\r\n| summarize (Cpu)= round(percentile(Val, 99), 2) by Computer, ResourceId=_ResourceId;\r\nlet mem= InsightsMetrics\r\n    | where TimeGenerated >ago(30d)\r\n| extend hour=datetime_part(\"hour\", TimeGenerated) + timezoneoffset\r\n| where Namespace == \"Memory\"\r\n| where Name == \"AvailableMB\"\r\n| extend MemorySize = round(todouble(parse_json(Tags).[\"vm.azm.ms/memorySizeMB\"]), 0)\r\n| extend Val=(MemorySize - Val) / MemorySize*100\r\n| summarize (Mem)= round(percentile(Val, 99), 2) by Computer, ResourceId=_ResourceId;\r\nlet iops= InsightsMetrics\r\n    | where TimeGenerated >ago(30d)\r\n| extend hour=datetime_part(\"hour\", TimeGenerated) + timezoneoffset\r\n| where Namespace == \"LogicalDisk\"\r\n| where Name == \"TransfersPerSecond\"\r\n| summarize (IOPs)= round(percentile(Val, 99), 2) by Computer, ResourceId=_ResourceId;\r\nlet table=inv\r\n| join kind= leftouter (cpu) on ResourceId\r\n| join kind= leftouter (mem) on ResourceId\r\n| join kind= leftouter (iops) on ResourceId\r\n| join kind= leftouter (vmsize) on $left.AzureSize == $right.Name\r\n| project Computer, AzureSize, Cpus, CpuSpeed, Cpu, Mem, IOPs, RAM=PhysicalMemoryMB, Disks, maxIops=Disks * 500, ResourceId, AzureLocation\r\n| extend s=split(AzureSize, '_')\r\n| extend Vmfamily=iff(array_length(s)==3,strcat(s[0],'_', substring(s[1], 0, 1),'_',s[2]),strcat(s[0],'_', substring(s[1], 0, 1)))\r\n| extend ramneed= RAM*Mem / 100 + 500\r\n| extend newram= case(ramneed < 0, RAM, ramneed < 1024, 1024, ramneed < 2048, 2048, ramneed < 3584, 3584, ramneed < 4096, 4096, ramneed < 7168, 7168, ramneed < 8192, 8192, ramneed < 14336, 14336, ramneed < 16386, 16384, ramneed < 28672, 28672, ramneed < 32768, 32768, 0)\r\n| extend cpu_resize=iff(Cpu < toint(\"45\") and Cpus != 1, \"yes\", \"no\")\r\n| extend mem_resize=iff(Mem < toint(\"50\") and newram < RAM, \"yes\", \"no\")\r\n| extend iops_resize=iff(IOPs < (maxIops*0.4), \"yes\", \"no\") \r\n| extend newcpu= toint(iff (Cpus <= 2, 2, Cpus/2))\r\n| join kind= leftouter (vmsize | project Name, vcores=toint(vcores), Ram, Disks) on $left.newcpu==$right.vcores \r\n//| where Name !startswith 'Basic' and AzureSize != Name and iff(Vmfamily !startswith \"B\", Name !contains'_B' , 1==1) \r\n| extend s1=split(Name, '_')\r\n| extend Vmfamily2=iff(array_length(s1)==3,strcat(s1[0],'_', substring(s1[1], 0, 1),'_',s1[2]),strcat(s[0],'_', substring(s1[1], 0, 1)))\r\n| where cpu_resize ==\"yes\" and mem_resize==\"yes\" and iops_resize == \"yes\" \r\n| where Ram <= RAM and Ram >= ramneed \r\n| where Name !startswith 'Basic'\r\n// Calculate VM Family for filtering\r\n| extend s=split(Name, '_')\r\n| extend VmfamilyTarget=case(\r\nsubstring(s[1], 0, 1) in (\"A\",\"D\",\"E\",\"F\",\"L\",\"M\") and substring(s[2], 0, 1)==\"v\",strcat(s[0],'_', substring(s[1], 0, 1),'_', s[2]),\r\nsubstring(s[1], 0, 1) in (\"A\",\"D\",\"E\",\"F\",\"L\",\"M\"),strcat(s[0],'_', substring(s[1], 0, 1)),\r\nsubstring(s[1], 0, 1)==\"B\",strcat(s[0],'_', substring(s[1], 0, 1)),\r\nsubstring(s[1], 0, 2)==\"GS\",strcat(s[0],'_', substring(s[1], 0, 2)),\r\nsubstring(s[1], 0, 2)in (\"HB\",\"NC\",\"NV\",\"PB\",\"ND\") and substring(s[2], 0, 1)==\"v\",strcat(s[0],'_', substring(s[1], 0, 2),'_', s[2]),\r\nsubstring(s[1], 0, 1) in(\"H\",\"G\"),strcat(s[0],'_', substring(s[1], 0, 1)),\r\nsubstring(s[1], 0, 2)in (\"HB\",\"NC\",\"NV\",\"PB\",\"ND\",\"NP\"),strcat(s[0],'_', substring(s[1], 0, 2)),\r\n                Name)\r\n| where AzureSize != Name \r\n|where  VmfamilyTarget  in ({VMFamilyFilter}) or '*' in ({VMFamilyFilter})\r\n| sort by Ram asc \r\n| join kind=leftouter hint.strategy=shuffle (VMPriceAll| where type==\"Consumption\"| project  armskuname,VMCost=unitprice,Location) on $left.AzureLocation==$right.Location and $left.AzureSize==$right.armskuname\r\n| join kind=leftouter hint.strategy=shuffle (VMPriceAll| where type==\"Consumption\"| project  armskuname,NewVMCost=unitprice,Location) on $left.AzureLocation==$right.Location and $left.Name==$right.armskuname\r\n| join kind=leftouter hint.strategy=shuffle (VMPriceAll|  where reservationterm == \"1 Year\"| project  armskuname,NewVM_RI1Y=unitprice,Location,reservationterm) on $left.AzureLocation==$right.Location and $left.Name==$right.armskuname\r\n| join kind=leftouter hint.strategy=shuffle (VMPriceAll|  where reservationterm == \"3 Years\"| project  armskuname,NewVM_RI3Y=unitprice,Location,reservationterm) on $left.AzureLocation==$right.Location and $left.Name==$right.armskuname\r\n| extend  VMCost=VMCost*730, NewVMCost=NewVMCost*730, NewVM_RI1YCost=NewVM_RI1Y/12,NewVM_RI3YCost=NewVM_RI3Y/36,CostDifference=(VMCost*730)-(NewVMCost*730)\r\n| project Computer, AzureSize, NewSize=Name,newcpu,newram,VMCost,NewVMCost,CostDifference,ResourceId,vcores,Ram;\r\ntable\r\n| summarize arg_max(CostDifference,*) by ResourceId\r\n| join kind=leftouter (table\r\n| summarize possibleSizes = makelist(pack('size', strcat(NewSize , '|',CostDifference,' | ',vcores,'|',Ram))) by ResourceId,AzureSize\r\n) on ResourceId\r\n\r\n\r\n\r\n",
               "size": 0,
               "title": "Total Monthly Saving on PayG Price by VM Size",
               "timeContext": {
-                "durationMs": 5184000000
+                "durationMs": 0
               },
               "timeContextFromParameter": "TimeRange",
               "exportFieldName": "ResourceId",
@@ -1300,11 +1274,11 @@
             "type": 3,
             "content": {
               "version": "KqlItem/1.0",
-              "query": "let workstart={PeakHourStart};\r\nlet workend={PeakHourEnd};\r\nlet timezoneoffset=4;\r\n{VMSizeList}\r\n{VMPriceAll}\r\nlet inv=VMComputer\r\n| where TimeGenerated {TimeRange}\r\n| where AzureSubscriptionId in ({subscription:subid}) or '*' in ({subscription:subid})\r\n| where tostring(split(_ResourceId,'/')[4])  in ({rg}) or '*' in ({rg})\r\n| summarize arg_max(TimeGenerated, *) by ResourceId=_ResourceId\r\n| project ResourceId , Computer , AzureSize ,Cpus , CpuSpeed ,PhysicalMemoryMB, AzureLocation\r\n| where isnotempty(AzureSize);\r\nlet cpu=InsightsMetrics\r\n    | where TimeGenerated >ago(30d)\r\n| extend hour=datetime_part(\"hour\", TimeGenerated) + timezoneoffset\r\n| where hour between (workstart..workend)\r\n| where Namespace == \"Processor\"\r\n| where Name == \"UtilizationPercentage\"\r\n| summarize (Cpu)= round(percentile(Val, 99), 2) by Computer, ResourceId=_ResourceId;\r\nlet mem= InsightsMetrics\r\n    | where TimeGenerated >ago(30d)\r\n| extend hour=datetime_part(\"hour\", TimeGenerated) + timezoneoffset\r\n| where Namespace == \"Memory\"\r\n| where Name == \"AvailableMB\"\r\n| extend MemorySize = round(todouble(parse_json(Tags).[\"vm.azm.ms/memorySizeMB\"]), 0)\r\n| extend Val=(MemorySize - Val) / MemorySize*100\r\n| summarize (Mem)= round(percentile(Val, 99), 2) by Computer, ResourceId=_ResourceId;\r\nlet iops= InsightsMetrics\r\n    | where TimeGenerated >ago(30d)\r\n| extend hour=datetime_part(\"hour\", TimeGenerated) + timezoneoffset\r\n| where Namespace == \"LogicalDisk\"\r\n| where Name == \"TransfersPerSecond\"\r\n| summarize (IOPs)= round(percentile(Val, 99), 2) by Computer, ResourceId=_ResourceId;\r\nlet table=inv\r\n| join kind= leftouter (cpu) on ResourceId\r\n| join kind= leftouter (mem) on ResourceId\r\n| join kind= leftouter (iops) on ResourceId\r\n| join kind= leftouter (vmsize) on $left.AzureSize == $right.Name\r\n| project Computer, AzureSize, Cpus, CpuSpeed, Cpu, Mem, IOPs, RAM=PhysicalMemoryMB, Disks, maxIops=Disks * 500, ResourceId, AzureLocation\r\n| extend s=split(AzureSize, '_')\r\n| extend Vmfamily=iff(array_length(s)==3,strcat(s[0],'_', substring(s[1], 0, 1),'_',s[2]),strcat(s[0],'_', substring(s[1], 0, 1)))\r\n| extend ramneed= RAM*Mem / 100 + 500\r\n| extend newram= case(ramneed < 0, RAM, ramneed < 1024, 1024, ramneed < 2048, 2048, ramneed < 3584, 3584, ramneed < 4096, 4096, ramneed < 7168, 7168, ramneed < 8192, 8192, ramneed < 14336, 14336, ramneed < 16386, 16384, ramneed < 28672, 28672, ramneed < 32768, 32768, 0)\r\n| extend cpu_resize=iff(Cpu < toint(\"45\") and Cpus != 1, \"yes\", \"no\")\r\n| extend mem_resize=iff(Mem < toint(\"50\") and newram < RAM, \"yes\", \"no\")\r\n| extend iops_resize=iff(IOPs < (maxIops*0.4), \"yes\", \"no\") \r\n| extend newcpu= toint(iff (Cpus <= 2, 2, Cpus/2))\r\n| join kind= leftouter (vmsize | project Name, vcores=toint(vcores), Ram, Disks) on $left.newcpu==$right.vcores \r\n//| where Name !startswith 'Basic' and AzureSize != Name and iff(Vmfamily !startswith \"B\", Name !contains'_B' , 1==1) \r\n| extend s1=split(Name, '_')\r\n| extend Vmfamily2=iff(array_length(s1)==3,strcat(s1[0],'_', substring(s1[1], 0, 1),'_',s1[2]),strcat(s[0],'_', substring(s1[1], 0, 1)))\r\n| where cpu_resize ==\"yes\" and mem_resize==\"yes\" and iops_resize == \"yes\" \r\n| where Ram <= RAM and Ram >= ramneed \r\n| where Name !startswith 'Basic' and Name !endswith 'Promo' and AzureSize != Name and  Vmfamily =~Vmfamily2// Name startswith strcat(\"Standard_\",Vmfamily)\r\n| sort by Ram asc \r\n| join kind=leftouter hint.strategy=shuffle (VMPriceAll| where type==\"Consumption\"| project  armskuname,VMCost=unitprice,Location) on $left.AzureLocation==$right.Location and $left.AzureSize==$right.armskuname\r\n| join kind=leftouter hint.strategy=shuffle (VMPriceAll| where type==\"Consumption\"| project  armskuname,NewVMCost=unitprice,Location) on $left.AzureLocation==$right.Location and $left.Name==$right.armskuname\r\n| join kind=leftouter hint.strategy=shuffle (VMPriceAll|  where reservationterm == \"1 Year\"| project  armskuname,NewVM_RI1Y=unitprice,Location,reservationterm) on $left.AzureLocation==$right.Location and $left.Name==$right.armskuname\r\n| join kind=leftouter hint.strategy=shuffle (VMPriceAll|  where reservationterm == \"3 Years\"| project  armskuname,NewVM_RI3Y=unitprice,Location,reservationterm) on $left.AzureLocation==$right.Location and $left.Name==$right.armskuname\r\n| extend  VMCost=VMCost*730, NewVMCost=NewVMCost*730, NewVM_RI1YCost=NewVM_RI1Y/12,NewVM_RI3YCost=NewVM_RI3Y/36\r\n|extend DiffPayg=VMCost-NewVMCost, DiffRI1=VMCost-NewVM_RI1YCost,DiffRI3=VMCost-NewVM_RI3YCost\r\n| project Computer, AzureSize, NewSize=Name,VMCost,NewVMCost,ResourceId,DiffPayg,DiffRI1,DiffRI3;\r\ntable\r\n| summarize arg_max(DiffPayg,*) by ResourceId\r\n| summarize DiffPayg=sum(DiffPayg), DiffRI1=sum(DiffRI1),DiffRI3=sum(DiffRI3) by Detail=\"CurrentVM PayG vs New\"\r\n\r\n\r\n\r\n\r\n",
+              "query": "let workstart={PeakHourStart};\r\nlet workend={PeakHourEnd};\r\nlet timezoneoffset=4;\r\n{VMSizeList}\r\n{VMPriceAll}\r\nlet inv=VMComputer\r\n| where TimeGenerated {TimeRange}\r\n| where AzureSubscriptionId in ({subscription:subid}) or '*' in ({subscription:subid})\r\n| where tostring(split(_ResourceId,'/')[4])  in ({rg}) or '*' in ({rg})\r\n| summarize arg_max(TimeGenerated, *) by ResourceId=_ResourceId\r\n| project ResourceId , Computer , AzureSize ,Cpus , CpuSpeed ,PhysicalMemoryMB, AzureLocation\r\n| where isnotempty(AzureSize);\r\nlet cpu=InsightsMetrics\r\n    | where TimeGenerated >ago(30d)\r\n| extend hour=datetime_part(\"hour\", TimeGenerated) + timezoneoffset\r\n| where hour between (workstart..workend)\r\n| where Namespace == \"Processor\"\r\n| where Name == \"UtilizationPercentage\"\r\n| summarize (Cpu)= round(percentile(Val, 99), 2) by Computer, ResourceId=_ResourceId;\r\nlet mem= InsightsMetrics\r\n    | where TimeGenerated >ago(30d)\r\n| extend hour=datetime_part(\"hour\", TimeGenerated) + timezoneoffset\r\n| where Namespace == \"Memory\"\r\n| where Name == \"AvailableMB\"\r\n| extend MemorySize = round(todouble(parse_json(Tags).[\"vm.azm.ms/memorySizeMB\"]), 0)\r\n| extend Val=(MemorySize - Val) / MemorySize*100\r\n| summarize (Mem)= round(percentile(Val, 99), 2) by Computer, ResourceId=_ResourceId;\r\nlet iops= InsightsMetrics\r\n    | where TimeGenerated >ago(30d)\r\n| extend hour=datetime_part(\"hour\", TimeGenerated) + timezoneoffset\r\n| where Namespace == \"LogicalDisk\"\r\n| where Name == \"TransfersPerSecond\"\r\n| summarize (IOPs)= round(percentile(Val, 99), 2) by Computer, ResourceId=_ResourceId;\r\nlet table=inv\r\n| join kind= leftouter (cpu) on ResourceId\r\n| join kind= leftouter (mem) on ResourceId\r\n| join kind= leftouter (iops) on ResourceId\r\n| join kind= leftouter (vmsize) on $left.AzureSize == $right.Name\r\n| project Computer, AzureSize, Cpus, CpuSpeed, Cpu, Mem, IOPs, RAM=PhysicalMemoryMB, Disks, maxIops=Disks * 500, ResourceId, AzureLocation\r\n| extend s=split(AzureSize, '_')\r\n| extend Vmfamily=iff(array_length(s)==3,strcat(s[0],'_', substring(s[1], 0, 1),'_',s[2]),strcat(s[0],'_', substring(s[1], 0, 1)))\r\n| extend ramneed= RAM*Mem / 100 + 500\r\n| extend newram= case(ramneed < 0, RAM, ramneed < 1024, 1024, ramneed < 2048, 2048, ramneed < 3584, 3584, ramneed < 4096, 4096, ramneed < 7168, 7168, ramneed < 8192, 8192, ramneed < 14336, 14336, ramneed < 16386, 16384, ramneed < 28672, 28672, ramneed < 32768, 32768, 0)\r\n| extend cpu_resize=iff(Cpu < toint(\"45\") and Cpus != 1, \"yes\", \"no\")\r\n| extend mem_resize=iff(Mem < toint(\"50\") and newram < RAM, \"yes\", \"no\")\r\n| extend iops_resize=iff(IOPs < (maxIops*0.4), \"yes\", \"no\") \r\n| extend newcpu= toint(iff (Cpus <= 2, 2, Cpus/2))\r\n| join kind= leftouter (vmsize | project Name, vcores=toint(vcores), Ram, Disks) on $left.newcpu==$right.vcores \r\n//| where Name !startswith 'Basic' and AzureSize != Name and iff(Vmfamily !startswith \"B\", Name !contains'_B' , 1==1) \r\n| extend s1=split(Name, '_')\r\n| extend Vmfamily2=iff(array_length(s1)==3,strcat(s1[0],'_', substring(s1[1], 0, 1),'_',s1[2]),strcat(s[0],'_', substring(s1[1], 0, 1)))\r\n| where cpu_resize ==\"yes\" and mem_resize==\"yes\" and iops_resize == \"yes\" \r\n| where Ram <= RAM and Ram >= ramneed \r\n| where Name !startswith  'Basic'\r\n// Calculate VM Family for filtering\r\n| extend s=split(Name, '_')\r\n| extend VmfamilyTarget=case(\r\nsubstring(s[1], 0, 1) in (\"A\",\"D\",\"E\",\"F\",\"L\",\"M\") and substring(s[2], 0, 1)==\"v\",strcat(s[0],'_', substring(s[1], 0, 1),'_', s[2]),\r\nsubstring(s[1], 0, 1) in (\"A\",\"D\",\"E\",\"F\",\"L\",\"M\"),strcat(s[0],'_', substring(s[1], 0, 1)),\r\nsubstring(s[1], 0, 1)==\"B\",strcat(s[0],'_', substring(s[1], 0, 1)),\r\nsubstring(s[1], 0, 2)==\"GS\",strcat(s[0],'_', substring(s[1], 0, 2)),\r\nsubstring(s[1], 0, 2)in (\"HB\",\"NC\",\"NV\",\"PB\",\"ND\") and substring(s[2], 0, 1)==\"v\",strcat(s[0],'_', substring(s[1], 0, 2),'_', s[2]),\r\nsubstring(s[1], 0, 1) in(\"H\",\"G\"),strcat(s[0],'_', substring(s[1], 0, 1)),\r\nsubstring(s[1], 0, 2)in (\"HB\",\"NC\",\"NV\",\"PB\",\"ND\",\"NP\"),strcat(s[0],'_', substring(s[1], 0, 2)),\r\n                Name)\r\n| where AzureSize != Name \r\n|where  VmfamilyTarget  in ({VMFamilyFilter}) or '*' in ({VMFamilyFilter})\r\n| sort by Ram asc \r\n| sort by Ram asc \r\n| join kind=leftouter hint.strategy=shuffle (VMPriceAll| where type==\"Consumption\"| project  armskuname,VMCost=unitprice,Location) on $left.AzureLocation==$right.Location and $left.AzureSize==$right.armskuname\r\n| join kind=leftouter hint.strategy=shuffle (VMPriceAll| where type==\"Consumption\"| project  armskuname,NewVMCost=unitprice,Location) on $left.AzureLocation==$right.Location and $left.Name==$right.armskuname\r\n| join kind=leftouter hint.strategy=shuffle (VMPriceAll|  where reservationterm == \"1 Year\"| project  armskuname,NewVM_RI1Y=unitprice,Location,reservationterm) on $left.AzureLocation==$right.Location and $left.Name==$right.armskuname\r\n| join kind=leftouter hint.strategy=shuffle (VMPriceAll|  where reservationterm == \"3 Years\"| project  armskuname,NewVM_RI3Y=unitprice,Location,reservationterm) on $left.AzureLocation==$right.Location and $left.Name==$right.armskuname\r\n| extend  VMCost=VMCost*730, NewVMCost=NewVMCost*730, NewVM_RI1YCost=NewVM_RI1Y/12,NewVM_RI3YCost=NewVM_RI3Y/36\r\n|extend DiffPayg=VMCost-NewVMCost, DiffRI1=VMCost-NewVM_RI1YCost,DiffRI3=VMCost-NewVM_RI3YCost\r\n| project Computer, AzureSize, NewSize=Name,VMCost,NewVMCost,ResourceId,DiffPayg,DiffRI1,DiffRI3;\r\ntable\r\n| summarize arg_max(DiffPayg,*) by ResourceId\r\n| summarize DiffPayg=sum(DiffPayg), DiffRI1=sum(DiffRI1),DiffRI3=sum(DiffRI3) by Detail=\"CurrentVM PayG vs New\"\r\n\r\n\r\n\r\n\r\n",
               "size": 0,
               "title": "Total Monthly Saving on PayG Price",
               "timeContext": {
-                "durationMs": 5184000000
+                "durationMs": 0
               },
               "timeContextFromParameter": "TimeRange",
               "exportFieldName": "ResourceId",
@@ -1524,7 +1498,7 @@
               "showAnalytics": true,
               "title": "VM Usage with Resize Options",
               "timeContext": {
-                "durationMs": 5184000000
+                "durationMs": 0
               },
               "timeContextFromParameter": "TimeRange",
               "exportedParameters": [
@@ -1548,43 +1522,6 @@
               "gridSettings": {
                 "formatters": [
                   {
-                    "columnMatch": "cpu_p95",
-                    "formatter": 0,
-                    "formatOptions": {},
-                    "numberFormat": {
-                      "unit": 0,
-                      "options": {
-                        "style": "decimal",
-                        "useGrouping": false,
-                        "maximumFractionDigits": 2
-                      }
-                    }
-                  },
-                  {
-                    "columnMatch": "mem_p95",
-                    "formatter": 0,
-                    "formatOptions": {},
-                    "numberFormat": {
-                      "unit": 0,
-                      "options": {
-                        "style": "decimal",
-                        "maximumFractionDigits": 2
-                      }
-                    }
-                  },
-                  {
-                    "columnMatch": "iops_p95",
-                    "formatter": 0,
-                    "formatOptions": {},
-                    "numberFormat": {
-                      "unit": 0,
-                      "options": {
-                        "style": "decimal",
-                        "maximumFractionDigits": 2
-                      }
-                    }
-                  },
-                  {
                     "columnMatch": "cpu_resize",
                     "formatter": 18,
                     "formatOptions": {
@@ -1663,6 +1600,40 @@
                           "text": "{0}{1}"
                         }
                       ]
+                    }
+                  },
+                  {
+                    "columnMatch": "cpu_p95",
+                    "formatter": 0,
+                    "numberFormat": {
+                      "unit": 0,
+                      "options": {
+                        "style": "decimal",
+                        "useGrouping": false,
+                        "maximumFractionDigits": 2
+                      }
+                    }
+                  },
+                  {
+                    "columnMatch": "mem_p95",
+                    "formatter": 0,
+                    "numberFormat": {
+                      "unit": 0,
+                      "options": {
+                        "style": "decimal",
+                        "maximumFractionDigits": 2
+                      }
+                    }
+                  },
+                  {
+                    "columnMatch": "iops_p95",
+                    "formatter": 0,
+                    "numberFormat": {
+                      "unit": 0,
+                      "options": {
+                        "style": "decimal",
+                        "maximumFractionDigits": 2
+                      }
                     }
                   }
                 ],
@@ -1678,6 +1649,21 @@
                     "columnId": "Cpus"
                   },
                   {
+                    "columnId": "RAM",
+                    "label": ""
+                  },
+                  {
+                    "columnId": "Cpu",
+                    "label": "%CPU"
+                  },
+                  {
+                    "columnId": "Mem",
+                    "label": "%Mem"
+                  },
+                  {
+                    "columnId": "IOPs"
+                  },
+                  {
                     "columnId": "cpu_resize"
                   },
                   {
@@ -1689,6 +1675,9 @@
                   {
                     "columnId": "newcpu",
                     "label": "Recomended CPU"
+                  },
+                  {
+                    "columnId": "newram"
                   }
                 ]
               },
@@ -1700,187 +1689,7 @@
             "type": 3,
             "content": {
               "version": "KqlItem/1.0",
-              "query": "let workstart={PeakHourStart};\r\nlet workend={PeakHourEnd};\r\nlet timezoneoffset=4;\r\n{VMSizeList}\r\nlet inv=VMComputer\r\n| where TimeGenerated {TimeRange}\r\n| where AzureSubscriptionId in ({subscription:subid}) or '*' in ({subscription:subid})\r\n| where tostring(split(_ResourceId,'/')[4])  in ({rg}) or '*' in ({rg})\r\n| summarize arg_max(TimeGenerated, *) by ResourceId=_ResourceId\r\n| project ResourceId , Computer , AzureSize ,Cpus , CpuSpeed ,PhysicalMemoryMB\r\n| where isnotempty(AzureSize);\r\nlet cpu=InsightsMetrics\r\n| where TimeGenerated {TimeRange}\r\n| extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset\r\n| where hour between (workstart..workend)\r\n| where Namespace == \"Processor\" \r\n| where Name == \"UtilizationPercentage\"\r\n| summarize (Cpu)= {AggregatesRight} by Computer, ResourceId=_ResourceId;\r\nlet mem=\r\nInsightsMetrics\r\n| where TimeGenerated {TimeRange}\r\n| extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset\r\n| where Namespace == \"Memory\" \r\n| where Name == \"AvailableMB\"\r\n| extend MemorySize = round(todouble(parse_json(Tags).[\"vm.azm.ms/memorySizeMB\"]),0)\r\n| extend Val=(MemorySize-Val)/MemorySize*100\r\n|summarize (Mem)= {AggregatesRight} by  Computer, ResourceId=_ResourceId;\r\nlet iops=\r\nInsightsMetrics\r\n| where TimeGenerated {TimeRange}\r\n| extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset\r\n| where Namespace == \"LogicalDisk\" \r\n| where Name == \"TransfersPerSecond\"\r\n|summarize (IOPs)= {AggregatesRight} by  Computer, ResourceId=_ResourceId;\r\nlet nwsent=InsightsMetrics\r\n| where TimeGenerated {TimeRange}\r\n| extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset\r\n| where Namespace == \"Network\"\r\n| where Name == \"WriteBytesPerSecond\" \r\n|summarize (nwsent)= {AggregatesRight} by  Computer, ResourceId=_ResourceId;\r\nlet nwrec=InsightsMetrics\r\n| where TimeGenerated {TimeRange}\r\n| extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset\r\n| where Namespace == \"Network\"\r\n| where Name == \"ReadBytesPerSecond\" \r\n|summarize (nwrec)= {AggregatesRight} by  Computer, ResourceId=_ResourceId;\r\ninv\r\n| join kind= leftouter (\r\n   cpu\r\n) on ResourceId\r\n| join kind= leftouter (\r\n   mem\r\n) on ResourceId\r\n| join kind= leftouter (\r\n   iops\r\n) on ResourceId\r\n| join kind= leftouter (\r\n   vmsize\r\n) on $left.AzureSize==$right.Name\r\n|project Computer, AzureSize, Cpus,CpuSpeed, Cpu, Mem, IOPs ,RAM=PhysicalMemoryMB,Disks,maxIops=Disks*500 ,ResourceId\r\n| extend VmFamily=tostring(split(AzureSize,'_')[1])\r\n| extend Fm1=substring(VmFamily,0,1) \r\n| extend Fm2=substring(VmFamily,1,1)\r\n| extend Vmfamily=iff(Fm2 matches regex \"[0-9]\", Fm1, strcat(Fm1,Fm2))\r\n|extend ramneed= RAM*Mem/100+500\r\n| extend newram= case(\r\nramneed<0,RAM,\r\nramneed<1024,1024,\r\nramneed<2048,2048,\r\nramneed<3584,3584,\r\nramneed<4096,4096,\r\nramneed<7168,7168,\r\nramneed<8192,8192,\r\nramneed<14336,14336,\r\nramneed<16386,16384,\r\nramneed<28672,28672,\r\nramneed<32768,32768,0\r\n)\r\n| extend cpu_resize=iff(Cpu<toint(\"{CPUThreshold}\") and Cpus !=1 ,\"yes\", \"no\")\r\n| extend mem_resize=iff(Mem<toint(\"{MEMThreshold}\") and newram < RAM,\"yes\", \"no\")\r\n| extend iops_resize=iff(IOPs<(maxIops*0.4),\"yes\", \"no\")\r\n| extend newcpu= toint(iff (Cpus <= 2,2, Cpus/2))\r\n| join kind= leftouter (\r\n   vmsize\r\n   | project Name,vcores=toint(vcores),Ram,Disks\r\n) on $left.newcpu==$right.vcores\r\n//| where Name !startswith  'Basic' and AzureSize != Name and iff(Vmfamily !startswith \"B\", Name !contains'_B' , 1==1) \r\n| where cpu_resize ==\"yes\" and mem_resize==\"yes\" and iops_resize == \"yes\"\r\n| where  Ram <= RAM  and Ram >= ramneed\r\n//Calculate the Family \r\n| where Name !startswith  'Basic' and AzureSize != Name and  iff(\"{usesamefamily:value}\"==\"yes\",Name startswith strcat(\"Standard_\",Vmfamily),1==1)\r\n| sort by Ram asc\r\n| summarize possibleSize = makelist(pack('size', strcat(Name , '|',vcores,'|',Ram))) by  ResourceId,AzureSize,Vmfamily, Cpus,RAM,newcpu,newram,CpuSpeed, Cpu, Mem , IOPs ,Disks ,cpu_resize, mem_resize ,iops_resize\r\n",
-              "size": 0,
-              "title": "Size Recomendations",
-              "timeContext": {
-                "durationMs": 0
-              },
-              "timeContextFromParameter": "TimeRange",
-              "exportFieldName": "ResourceId",
-              "exportParameterName": "ResourceId",
-              "showExportToExcel": true,
-              "queryType": 0,
-              "resourceType": "microsoft.operationalinsights/workspaces",
-              "crossComponentResources": [
-                "{Workspace}"
-              ],
-              "gridSettings": {
-                "formatters": [
-                  {
-                    "columnMatch": "Vmfamily",
-                    "formatter": 5,
-                    "formatOptions": {}
-                  },
-                  {
-                    "columnMatch": "CpuSpeed",
-                    "formatter": 5,
-                    "formatOptions": {}
-                  },
-                  {
-                    "columnMatch": "cpu_p95",
-                    "formatter": 5,
-                    "formatOptions": {},
-                    "numberFormat": {
-                      "unit": 0,
-                      "options": {
-                        "style": "decimal",
-                        "useGrouping": false,
-                        "maximumFractionDigits": 2
-                      }
-                    }
-                  },
-                  {
-                    "columnMatch": "mem_p95",
-                    "formatter": 5,
-                    "formatOptions": {},
-                    "numberFormat": {
-                      "unit": 0,
-                      "options": {
-                        "style": "decimal",
-                        "maximumFractionDigits": 2
-                      }
-                    }
-                  },
-                  {
-                    "columnMatch": "iops_p95",
-                    "formatter": 5,
-                    "formatOptions": {},
-                    "numberFormat": {
-                      "unit": 0,
-                      "options": {
-                        "style": "decimal",
-                        "maximumFractionDigits": 2
-                      }
-                    }
-                  },
-                  {
-                    "columnMatch": "Disks",
-                    "formatter": 5,
-                    "formatOptions": {}
-                  },
-                  {
-                    "columnMatch": "cpu_resize",
-                    "formatter": 18,
-                    "formatOptions": {
-                      "thresholdsOptions": "icons",
-                      "thresholdsGrid": [
-                        {
-                          "operator": "==",
-                          "thresholdValue": "yes",
-                          "representation": "success",
-                          "text": "{0}{1}"
-                        },
-                        {
-                          "operator": "==",
-                          "thresholdValue": "no",
-                          "representation": "2",
-                          "text": "{0}{1}"
-                        },
-                        {
-                          "operator": "Default",
-                          "thresholdValue": null,
-                          "representation": "success",
-                          "text": "{0}{1}"
-                        }
-                      ]
-                    }
-                  },
-                  {
-                    "columnMatch": "mem_resize",
-                    "formatter": 18,
-                    "formatOptions": {
-                      "thresholdsOptions": "icons",
-                      "thresholdsGrid": [
-                        {
-                          "operator": "==",
-                          "thresholdValue": "yes",
-                          "representation": "success",
-                          "text": "{0}{1}"
-                        },
-                        {
-                          "operator": "==",
-                          "thresholdValue": "no",
-                          "representation": "2",
-                          "text": "{0}{1}"
-                        },
-                        {
-                          "operator": "Default",
-                          "thresholdValue": null,
-                          "representation": "success",
-                          "text": "{0}{1}"
-                        }
-                      ]
-                    }
-                  },
-                  {
-                    "columnMatch": "iops_resize",
-                    "formatter": 18,
-                    "formatOptions": {
-                      "thresholdsOptions": "icons",
-                      "thresholdsGrid": [
-                        {
-                          "operator": "==",
-                          "thresholdValue": "yes",
-                          "representation": "success",
-                          "text": "{0}{1}"
-                        },
-                        {
-                          "operator": "==",
-                          "thresholdValue": "no",
-                          "representation": "2",
-                          "text": "{0}{1}"
-                        },
-                        {
-                          "operator": "Default",
-                          "thresholdValue": null,
-                          "representation": "success",
-                          "text": "{0}{1}"
-                        }
-                      ]
-                    }
-                  },
-                  {
-                    "columnMatch": "possibleSize",
-                    "formatter": 7,
-                    "formatOptions": {
-                      "linkTarget": "CellDetails",
-                      "linkIsContextBlade": true
-                    }
-                  }
-                ],
-                "rowLimit": 1000,
-                "sortBy": [
-                  {
-                    "itemKey": "$gen_link_ResourceId_0",
-                    "sortOrder": 2
-                  }
-                ]
-              },
-              "sortBy": [
-                {
-                  "itemKey": "$gen_link_ResourceId_0",
-                  "sortOrder": 2
-                }
-              ]
-            },
-            "name": "query - 1 - Copy"
-          },
-          {
-            "type": 3,
-            "content": {
-              "version": "KqlItem/1.0",
-              "query": "let workstart={PeakHourStart};\r\nlet workend={PeakHourEnd};\r\nlet timezoneoffset=4;\r\n{VMSizeList}\r\nlet inv=VMComputer\r\n| where TimeGenerated {TimeRange}\r\n| where AzureSubscriptionId in ({subscription:subid}) or '*' in ({subscription:subid})\r\n| where tostring(split(_ResourceId,'/')[4])  in ({rg}) or '*' in ({rg})\r\n| summarize arg_max(TimeGenerated, *) by ResourceId=_ResourceId\r\n| project ResourceId , Computer , AzureSize ,Cpus , CpuSpeed ,PhysicalMemoryMB\r\n| where isnotempty(AzureSize);\r\nlet cpu=InsightsMetrics\r\n| where TimeGenerated {TimeRange}\r\n| extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset\r\n| where hour between (workstart..workend)\r\n| where Namespace == \"Processor\" \r\n| where Name == \"UtilizationPercentage\"\r\n| summarize (Cpu)= {AggregatesRight} by Computer, ResourceId=_ResourceId;\r\nlet mem=\r\nInsightsMetrics\r\n| where TimeGenerated {TimeRange}\r\n| extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset\r\n| where Namespace == \"Memory\" \r\n| where Name == \"AvailableMB\"\r\n| extend MemorySize = round(todouble(parse_json(Tags).[\"vm.azm.ms/memorySizeMB\"]),0)\r\n| extend Val=(MemorySize-Val)/MemorySize*100\r\n|summarize (Mem)= {AggregatesRight} by  Computer, ResourceId=_ResourceId;\r\nlet iops=\r\nInsightsMetrics\r\n| where TimeGenerated {TimeRange}\r\n| extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset\r\n| where Namespace == \"LogicalDisk\" \r\n| where Name == \"TransfersPerSecond\"\r\n|summarize (IOPs)= {AggregatesRight} by  Computer, ResourceId=_ResourceId;\r\nlet nwsent=InsightsMetrics\r\n| where TimeGenerated {TimeRange}\r\n| extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset\r\n| where Namespace == \"Network\"\r\n| where Name == \"WriteBytesPerSecond\" \r\n|summarize (nwsent)= {AggregatesRight} by  Computer, ResourceId=_ResourceId;\r\nlet nwrec=InsightsMetrics\r\n| where TimeGenerated {TimeRange}\r\n| extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset\r\n| where Namespace == \"Network\"\r\n| where Name == \"ReadBytesPerSecond\" \r\n|summarize (nwrec)= {AggregatesRight} by  Computer, ResourceId=_ResourceId;\r\ninv\r\n| join kind= leftouter (\r\n   cpu\r\n) on ResourceId\r\n| join kind= leftouter (\r\n   mem\r\n) on ResourceId\r\n| join kind= leftouter (\r\n   iops\r\n) on ResourceId\r\n| join kind= leftouter (\r\n   vmsize\r\n) on $left.AzureSize==$right.Name\r\n|project Computer, AzureSize, Cpus,CpuSpeed, Cpu, Mem, IOPs ,RAM=PhysicalMemoryMB,Disks,maxIops=Disks*500 ,ResourceId\r\n| extend VmFamily=tostring(split(AzureSize,'_')[1])\r\n| extend Fm1=substring(VmFamily,0,1) \r\n| extend Fm2=substring(VmFamily,1,1)\r\n| extend Vmfamily=iff(Fm2 matches regex \"[0-9]\", Fm1, strcat(Fm1,Fm2))\r\n|extend ramneed= RAM*Mem/100+500\r\n| extend newram= case(\r\nramneed<0,RAM,\r\nramneed<1024,1024,\r\nramneed<2048,2048,\r\nramneed<3584,3584,\r\nramneed<4096,4096,\r\nramneed<7168,7168,\r\nramneed<8192,8192,\r\nramneed<14336,14336,\r\nramneed<16386,16384,\r\nramneed<28672,28672,\r\nramneed<32768,32768,0\r\n)\r\n| extend cpu_resize=iff(Cpu<toint(\"{CPUThreshold}\") and Cpus !=1 ,\"yes\", \"no\")\r\n| extend mem_resize=iff(Mem<toint(\"{MEMThreshold}\") and newram < RAM,\"yes\", \"no\")\r\n| extend iops_resize=iff(IOPs<(maxIops*0.4),\"yes\", \"no\")\r\n| extend newcpu= toint(iff (Cpus <= 2,2, Cpus/2))\r\n| join kind= leftouter (\r\n   vmsize\r\n   | project Name,vcores=toint(vcores),Ram,Disks\r\n) on $left.newcpu==$right.vcores\r\n| where cpu_resize ==\"yes\" and mem_resize==\"yes\" and iops_resize == \"yes\"\r\n| where  Ram <= RAM  and Ram >= ramneed\r\n| where Name !startswith  'Basic'\r\n// Calculate VM Family for filtering\r\n| extend s=split(Name, '_')\r\n| extend VmfamilyTarget=case(\r\nsubstring(s[1], 0, 1) in (\"A\",\"D\",\"E\",\"F\",\"L\",\"M\") and substring(s[2], 0, 1)==\"v\",strcat(s[0],'_', substring(s[1], 0, 1),'_', s[2]),\r\nsubstring(s[1], 0, 1) in (\"A\",\"D\",\"E\",\"F\",\"L\",\"M\"),strcat(s[0],'_', substring(s[1], 0, 1)),\r\nsubstring(s[1], 0, 1)==\"B\",strcat(s[0],'_', substring(s[1], 0, 1)),\r\nsubstring(s[1], 0, 2)==\"GS\",strcat(s[0],'_', substring(s[1], 0, 2)),\r\nsubstring(s[1], 0, 2)in (\"HB\",\"NC\",\"NV\",\"PB\",\"ND\") and substring(s[2], 0, 1)==\"v\",strcat(s[0],'_', substring(s[1], 0, 2),'_', s[2]),\r\nsubstring(s[1], 0, 1) in(\"H\",\"G\"),strcat(s[0],'_', substring(s[1], 0, 1)),\r\nsubstring(s[1], 0, 2)in (\"HB\",\"NC\",\"NV\",\"PB\",\"ND\",\"NP\"),strcat(s[0],'_', substring(s[1], 0, 2)),\r\n                Name)\r\n",
+              "query": "let workstart={PeakHourStart};\r\nlet workend={PeakHourEnd};\r\nlet timezoneoffset=4;\r\n{VMSizeList}\r\nlet inv=VMComputer\r\n| where TimeGenerated {TimeRange}\r\n| where AzureSubscriptionId in ({subscription:subid}) or '*' in ({subscription:subid})\r\n| where tostring(split(_ResourceId,'/')[4])  in ({rg}) or '*' in ({rg})\r\n| summarize arg_max(TimeGenerated, *) by ResourceId=_ResourceId\r\n| project ResourceId , Computer , AzureSize ,Cpus , CpuSpeed ,PhysicalMemoryMB\r\n| where isnotempty(AzureSize);\r\nlet cpu=InsightsMetrics\r\n| where TimeGenerated {TimeRange}\r\n| extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset\r\n| where hour between (workstart..workend)\r\n| where Namespace == \"Processor\" \r\n| where Name == \"UtilizationPercentage\"\r\n| summarize (Cpu)= {AggregatesRight} by Computer, ResourceId=_ResourceId;\r\nlet mem=\r\nInsightsMetrics\r\n| where TimeGenerated {TimeRange}\r\n| extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset\r\n| where Namespace == \"Memory\" \r\n| where Name == \"AvailableMB\"\r\n| extend MemorySize = round(todouble(parse_json(Tags).[\"vm.azm.ms/memorySizeMB\"]),0)\r\n| extend Val=(MemorySize-Val)/MemorySize*100\r\n|summarize (Mem)= {AggregatesRight} by  Computer, ResourceId=_ResourceId;\r\nlet iops=\r\nInsightsMetrics\r\n| where TimeGenerated {TimeRange}\r\n| extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset\r\n| where Namespace == \"LogicalDisk\" \r\n| where Name == \"TransfersPerSecond\"\r\n|summarize (IOPs)= {AggregatesRight} by  Computer, ResourceId=_ResourceId;\r\nlet nwsent=InsightsMetrics\r\n| where TimeGenerated {TimeRange}\r\n| extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset\r\n| where Namespace == \"Network\"\r\n| where Name == \"WriteBytesPerSecond\" \r\n|summarize (nwsent)= {AggregatesRight} by  Computer, ResourceId=_ResourceId;\r\nlet nwrec=InsightsMetrics\r\n| where TimeGenerated {TimeRange}\r\n| extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset\r\n| where Namespace == \"Network\"\r\n| where Name == \"ReadBytesPerSecond\" \r\n|summarize (nwrec)= {AggregatesRight} by  Computer, ResourceId=_ResourceId;\r\ninv\r\n| join kind= leftouter (\r\n   cpu\r\n) on ResourceId\r\n| join kind= leftouter (\r\n   mem\r\n) on ResourceId\r\n| join kind= leftouter (\r\n   iops\r\n) on ResourceId\r\n| join kind= leftouter (\r\n   vmsize\r\n) on $left.AzureSize==$right.Name\r\n|project Computer, AzureSize, Cpus,CpuSpeed, Cpu, Mem, IOPs ,RAM=PhysicalMemoryMB,Disks,maxIops=Disks*500 ,ResourceId\r\n| extend VmFamily=tostring(split(AzureSize,'_')[1])\r\n| extend Fm1=substring(VmFamily,0,1) \r\n| extend Fm2=substring(VmFamily,1,1)\r\n| extend Vmfamily=iff(Fm2 matches regex \"[0-9]\", Fm1, strcat(Fm1,Fm2))\r\n|extend ramneed= RAM*Mem/100+500\r\n| extend newram= case(\r\nramneed<0,RAM,\r\nramneed<1024,1024,\r\nramneed<2048,2048,\r\nramneed<3584,3584,\r\nramneed<4096,4096,\r\nramneed<7168,7168,\r\nramneed<8192,8192,\r\nramneed<14336,14336,\r\nramneed<16386,16384,\r\nramneed<28672,28672,\r\nramneed<32768,32768,0\r\n)\r\n| extend cpu_resize=iff(Cpu<toint(\"{CPUThreshold}\") and Cpus !=1 ,\"yes\", \"no\")\r\n| extend mem_resize=iff(Mem<toint(\"{MEMThreshold}\") and newram < RAM,\"yes\", \"no\")\r\n| extend iops_resize=iff(IOPs<(maxIops*0.4),\"yes\", \"no\")\r\n| extend newcpu= toint(iff (Cpus <= 2,2, Cpus/2))\r\n| join kind= leftouter (\r\n   vmsize\r\n   | project Name,vcores=toint(vcores),Ram,Disks\r\n) on $left.newcpu==$right.vcores\r\n| where cpu_resize ==\"yes\" and mem_resize==\"yes\" and iops_resize == \"yes\"\r\n| where  Ram <= RAM  and Ram >= ramneed\r\n| where Name !startswith  'Basic'\r\n// Calculate VM Family for filtering\r\n| extend s=split(Name, '_')\r\n| extend VmfamilyTarget=case(\r\nsubstring(s[1], 0, 1) in (\"A\",\"D\",\"E\",\"F\",\"L\",\"M\") and substring(s[2], 0, 1)==\"v\",strcat(s[0],'_', substring(s[1], 0, 1),'_', s[2]),\r\nsubstring(s[1], 0, 1) in (\"A\",\"D\",\"E\",\"F\",\"L\",\"M\"),strcat(s[0],'_', substring(s[1], 0, 1)),\r\nsubstring(s[1], 0, 1)==\"B\",strcat(s[0],'_', substring(s[1], 0, 1)),\r\nsubstring(s[1], 0, 2)==\"GS\",strcat(s[0],'_', substring(s[1], 0, 2)),\r\nsubstring(s[1], 0, 2)in (\"HB\",\"NC\",\"NV\",\"PB\",\"ND\") and substring(s[2], 0, 1)==\"v\",strcat(s[0],'_', substring(s[1], 0, 2),'_', s[2]),\r\nsubstring(s[1], 0, 1) in(\"H\",\"G\"),strcat(s[0],'_', substring(s[1], 0, 1)),\r\nsubstring(s[1], 0, 2)in (\"HB\",\"NC\",\"NV\",\"PB\",\"ND\",\"NP\"),strcat(s[0],'_', substring(s[1], 0, 2)),\r\n                Name)\r\n| where AzureSize != Name \r\n|where  VmfamilyTarget  in ({VMFamilyFilter}) or '*' in ({VMFamilyFilter})\r\n| sort by Ram asc \r\n| summarize possibleSize = makelist(pack('size', strcat(Name, '|', vcores, '|', Ram))) by ResourceId, AzureSize, Vmfamily, Cpus, RAM, newcpu, newram, CpuSpeed, Cpu, Mem, IOPs, Disks, cpu_resize, mem_resize, iops_resize",
               "size": 0,
               "title": "Size Recomendations with VM Fmaily Filter",
               "timeContext": {
@@ -1898,56 +1707,16 @@
               "gridSettings": {
                 "formatters": [
                   {
-                    "columnMatch": "Vmfamily",
-                    "formatter": 5,
-                    "formatOptions": {}
-                  },
-                  {
                     "columnMatch": "CpuSpeed",
-                    "formatter": 5,
-                    "formatOptions": {}
-                  },
-                  {
-                    "columnMatch": "cpu_p95",
-                    "formatter": 5,
-                    "formatOptions": {},
-                    "numberFormat": {
-                      "unit": 0,
-                      "options": {
-                        "style": "decimal",
-                        "useGrouping": false,
-                        "maximumFractionDigits": 2
-                      }
-                    }
-                  },
-                  {
-                    "columnMatch": "mem_p95",
-                    "formatter": 5,
-                    "formatOptions": {},
-                    "numberFormat": {
-                      "unit": 0,
-                      "options": {
-                        "style": "decimal",
-                        "maximumFractionDigits": 2
-                      }
-                    }
-                  },
-                  {
-                    "columnMatch": "iops_p95",
-                    "formatter": 5,
-                    "formatOptions": {},
-                    "numberFormat": {
-                      "unit": 0,
-                      "options": {
-                        "style": "decimal",
-                        "maximumFractionDigits": 2
-                      }
-                    }
+                    "formatter": 5
                   },
                   {
                     "columnMatch": "Disks",
-                    "formatter": 5,
-                    "formatOptions": {}
+                    "formatter": 5
+                  },
+                  {
+                    "columnMatch": "Vmfamily",
+                    "formatter": 5
                   },
                   {
                     "columnMatch": "cpu_resize",
@@ -2031,6 +1800,40 @@
                     }
                   },
                   {
+                    "columnMatch": "cpu_p95",
+                    "formatter": 5,
+                    "numberFormat": {
+                      "unit": 0,
+                      "options": {
+                        "style": "decimal",
+                        "useGrouping": false,
+                        "maximumFractionDigits": 2
+                      }
+                    }
+                  },
+                  {
+                    "columnMatch": "mem_p95",
+                    "formatter": 5,
+                    "numberFormat": {
+                      "unit": 0,
+                      "options": {
+                        "style": "decimal",
+                        "maximumFractionDigits": 2
+                      }
+                    }
+                  },
+                  {
+                    "columnMatch": "iops_p95",
+                    "formatter": 5,
+                    "numberFormat": {
+                      "unit": 0,
+                      "options": {
+                        "style": "decimal",
+                        "maximumFractionDigits": 2
+                      }
+                    }
+                  },
+                  {
                     "columnMatch": "possibleSize",
                     "formatter": 7,
                     "formatOptions": {
@@ -2043,21 +1846,17 @@
               },
               "sortBy": []
             },
-            "conditionalVisibility": {
-              "parameterName": "showhidden",
-              "comparison": "isNotEqualTo"
-            },
             "name": "query - 1 - Copy - Copy"
           },
           {
             "type": 3,
             "content": {
               "version": "KqlItem/1.0",
-              "query": "let workstart={PeakHourStart};\r\nlet workend={PeakHourEnd};\r\nlet timezoneoffset=4;\r\n{VMSizeList}\r\n{VMPriceAll}\r\nlet inv=VMComputer\r\n| where TimeGenerated {TimeRange}\r\n| where AzureSubscriptionId in ({subscription:subid}) or '*' in ({subscription:subid})\r\n| where tostring(split(_ResourceId,'/')[4])  in ({rg}) or '*' in ({rg})\r\n| summarize arg_max(TimeGenerated, *) by ResourceId=_ResourceId\r\n| project ResourceId , Computer , AzureSize ,Cpus , CpuSpeed ,PhysicalMemoryMB, AzureLocation\r\n| where isnotempty(AzureSize);\r\nlet cpu=InsightsMetrics\r\n    | where TimeGenerated >ago(30d)\r\n| extend hour=datetime_part(\"hour\", TimeGenerated) + timezoneoffset\r\n| where hour between (workstart..workend)\r\n| where Namespace == \"Processor\"\r\n| where Name == \"UtilizationPercentage\"\r\n| summarize (Cpu)= round(percentile(Val, 99), 2) by Computer, ResourceId=_ResourceId;\r\nlet mem= InsightsMetrics\r\n    | where TimeGenerated >ago(30d)\r\n| extend hour=datetime_part(\"hour\", TimeGenerated) + timezoneoffset\r\n| where Namespace == \"Memory\"\r\n| where Name == \"AvailableMB\"\r\n| extend MemorySize = round(todouble(parse_json(Tags).[\"vm.azm.ms/memorySizeMB\"]), 0)\r\n| extend Val=(MemorySize - Val) / MemorySize*100\r\n| summarize (Mem)= round(percentile(Val, 99), 2) by Computer, ResourceId=_ResourceId;\r\nlet iops= InsightsMetrics\r\n    | where TimeGenerated >ago(30d)\r\n| extend hour=datetime_part(\"hour\", TimeGenerated) + timezoneoffset\r\n| where Namespace == \"LogicalDisk\"\r\n| where Name == \"TransfersPerSecond\"\r\n| summarize (IOPs)= round(percentile(Val, 99), 2) by Computer, ResourceId=_ResourceId;\r\nlet table=inv\r\n| join kind= leftouter (cpu) on ResourceId\r\n| join kind= leftouter (mem) on ResourceId\r\n| join kind= leftouter (iops) on ResourceId\r\n| join kind= leftouter (vmsize) on $left.AzureSize == $right.Name\r\n| project Computer, AzureSize, Cpus, CpuSpeed, Cpu, Mem, IOPs, RAM=PhysicalMemoryMB, Disks, maxIops=Disks * 500, ResourceId,AzureLocation\r\n| extend s=split(AzureSize, '_')\r\n| extend Vmfamily=iff(array_length(s)==3,strcat(s[0],'_', substring(s[1], 0, 1),'_',s[2]),strcat(s[0],'_', substring(s[1], 0, 1)))\r\n| extend ramneed= RAM*Mem / 100 + 500\r\n| extend newram= case(ramneed < 0, RAM, ramneed < 1024, 1024, ramneed < 2048, 2048, ramneed < 3584, 3584, ramneed < 4096, 4096, ramneed < 7168, 7168, ramneed < 8192, 8192, ramneed < 14336, 14336, ramneed < 16386, 16384, ramneed < 28672, 28672, ramneed < 32768, 32768, 0)\r\n| extend cpu_resize=iff(Cpu < toint(\"45\") and Cpus != 1, \"yes\", \"no\")\r\n| extend mem_resize=iff(Mem < toint(\"50\") and newram < RAM, \"yes\", \"no\")\r\n| extend iops_resize=iff(IOPs < (maxIops*0.4), \"yes\", \"no\") \r\n| extend newcpu= toint(iff (Cpus <= 2, 2, Cpus/2))\r\n| join kind= leftouter (vmsize | project Name, vcores=toint(vcores), Ram, Disks) on $left.newcpu==$right.vcores \r\n//| where Name !startswith 'Basic' and AzureSize != Name and iff(Vmfamily !startswith \"B\", Name !contains'_B' , 1==1) \r\n| extend s1=split(Name, '_')\r\n| extend Vmfamily2=iff(array_length(s1)==3,strcat(s1[0],'_', substring(s1[1], 0, 1),'_',s1[2]),strcat(s[0],'_', substring(s1[1], 0, 1)))\r\n| where cpu_resize ==\"yes\" and mem_resize==\"yes\" and iops_resize == \"yes\" \r\n| where Ram <= RAM and Ram >= ramneed \r\n| where Name !startswith 'Basic' and Name !endswith 'Promo' and AzureSize != Name and  Vmfamily =~Vmfamily2// Name startswith strcat(\"Standard_\",Vmfamily)\r\n| sort by Ram asc \r\n| join kind=leftouter hint.strategy=shuffle (VMPriceAll| where type==\"Consumption\"| project  armskuname,VMCost=unitprice,Location) on $left.AzureLocation==$right.Location and $left.AzureSize==$right.armskuname\r\n| join kind=leftouter hint.strategy=shuffle (VMPriceAll| where type==\"Consumption\"| project  armskuname,NewVMCost=unitprice,Location) on $left.AzureLocation==$right.Location and $left.Name==$right.armskuname\r\n| join kind=leftouter hint.strategy=shuffle (VMPriceAll|  where reservationterm == \"1 Year\"| project  armskuname,NewVM_RI1Y=unitprice,Location,reservationterm) on $left.AzureLocation==$right.Location and $left.Name==$right.armskuname\r\n| join kind=leftouter hint.strategy=shuffle (VMPriceAll|  where reservationterm == \"3 Years\"| project  armskuname,NewVM_RI3Y=unitprice,Location,reservationterm) on $left.AzureLocation==$right.Location and $left.Name==$right.armskuname\r\n| extend  VMCost=VMCost*730, NewVMCost=NewVMCost*730, NewVM_RI1YCost=NewVM_RI1Y/12,NewVM_RI3YCost=NewVM_RI3Y/36\r\n|extend DiffPayg=VMCost-NewVMCost, DiffRI1=VMCost-NewVM_RI1YCost,DiffRI3=VMCost-NewVM_RI3YCost\r\n| project Computer, AzureSize, NewSize=Name,VMCost,NewVMCost,ResourceId,DiffPayg,DiffRI1,DiffRI3,vcores,Ram,NewVM_RI1YCost,NewVM_RI3YCost;\r\ntable\r\n| summarize arg_max(DiffPayg,*) by ResourceId\r\n| join kind=leftouter (table\r\n| summarize possibleSizes = makelist(pack('size', strcat(NewSize , '|',DiffPayg,' | ',vcores,'|',Ram))) by ResourceId,AzureSize\r\n) on ResourceId\r\n| project  ResourceId, CurrentSize=AzureSize, NewSize,VMCost,NewVMCost,NewVM_RI1YCost,NewVM_RI3YCost,vcores,Ram,possibleSizes,Computer;\r\n\r\n\r\n",
+              "query": "let workstart={PeakHourStart};\r\nlet workend={PeakHourEnd};\r\nlet timezoneoffset=4;\r\n{VMSizeList}\r\n{VMPriceAll}\r\nlet inv=VMComputer\r\n| where TimeGenerated {TimeRange}\r\n| where AzureSubscriptionId in ({subscription:subid}) or '*' in ({subscription:subid})\r\n| where tostring(split(_ResourceId,'/')[4])  in ({rg}) or '*' in ({rg})\r\n| summarize arg_max(TimeGenerated, *) by ResourceId=_ResourceId\r\n| project ResourceId , Computer , AzureSize ,Cpus , CpuSpeed ,PhysicalMemoryMB, AzureLocation\r\n| where isnotempty(AzureSize);\r\nlet cpu=InsightsMetrics\r\n    | where TimeGenerated >ago(30d)\r\n| extend hour=datetime_part(\"hour\", TimeGenerated) + timezoneoffset\r\n| where hour between (workstart..workend)\r\n| where Namespace == \"Processor\"\r\n| where Name == \"UtilizationPercentage\"\r\n| summarize (Cpu)= round(percentile(Val, 99), 2) by Computer, ResourceId=_ResourceId;\r\nlet mem= InsightsMetrics\r\n    | where TimeGenerated >ago(30d)\r\n| extend hour=datetime_part(\"hour\", TimeGenerated) + timezoneoffset\r\n| where Namespace == \"Memory\"\r\n| where Name == \"AvailableMB\"\r\n| extend MemorySize = round(todouble(parse_json(Tags).[\"vm.azm.ms/memorySizeMB\"]), 0)\r\n| extend Val=(MemorySize - Val) / MemorySize*100\r\n| summarize (Mem)= round(percentile(Val, 99), 2) by Computer, ResourceId=_ResourceId;\r\nlet iops= InsightsMetrics\r\n    | where TimeGenerated >ago(30d)\r\n| extend hour=datetime_part(\"hour\", TimeGenerated) + timezoneoffset\r\n| where Namespace == \"LogicalDisk\"\r\n| where Name == \"TransfersPerSecond\"\r\n| summarize (IOPs)= round(percentile(Val, 99), 2) by Computer, ResourceId=_ResourceId;\r\nlet table=inv\r\n| join kind= leftouter (cpu) on ResourceId\r\n| join kind= leftouter (mem) on ResourceId\r\n| join kind= leftouter (iops) on ResourceId\r\n| join kind= leftouter (vmsize) on $left.AzureSize == $right.Name\r\n| project Computer, AzureSize, Cpus, CpuSpeed, Cpu, Mem, IOPs, RAM=PhysicalMemoryMB, Disks, maxIops=Disks * 500, ResourceId,AzureLocation\r\n| extend s=split(AzureSize, '_')\r\n| extend Vmfamily=iff(array_length(s)==3,strcat(s[0],'_', substring(s[1], 0, 1),'_',s[2]),strcat(s[0],'_', substring(s[1], 0, 1)))\r\n| extend ramneed= RAM*Mem / 100 + 500\r\n| extend newram= case(ramneed < 0, RAM, ramneed < 1024, 1024, ramneed < 2048, 2048, ramneed < 3584, 3584, ramneed < 4096, 4096, ramneed < 7168, 7168, ramneed < 8192, 8192, ramneed < 14336, 14336, ramneed < 16386, 16384, ramneed < 28672, 28672, ramneed < 32768, 32768, 0)\r\n| extend cpu_resize=iff(Cpu < toint(\"45\") and Cpus != 1, \"yes\", \"no\")\r\n| extend mem_resize=iff(Mem < toint(\"50\") and newram < RAM, \"yes\", \"no\")\r\n| extend iops_resize=iff(IOPs < (maxIops*0.4), \"yes\", \"no\") \r\n| extend newcpu= toint(iff (Cpus <= 2, 2, Cpus/2))\r\n| join kind= leftouter (vmsize | project Name, vcores=toint(vcores), Ram, Disks) on $left.newcpu==$right.vcores \r\n//| where Name !startswith 'Basic' and AzureSize != Name and iff(Vmfamily !startswith \"B\", Name !contains'_B' , 1==1) \r\n| extend s1=split(Name, '_')\r\n| extend Vmfamily2=iff(array_length(s1)==3,strcat(s1[0],'_', substring(s1[1], 0, 1),'_',s1[2]),strcat(s[0],'_', substring(s1[1], 0, 1)))\r\n| where cpu_resize ==\"yes\" and mem_resize==\"yes\" and iops_resize == \"yes\" \r\n| where Ram <= RAM and Ram >= ramneed \r\n| where Name !startswith 'Basic'\r\n// Calculate VM Family for filtering\r\n| extend s=split(Name, '_')\r\n| extend VmfamilyTarget=case(\r\nsubstring(s[1], 0, 1) in (\"A\",\"D\",\"E\",\"F\",\"L\",\"M\") and substring(s[2], 0, 1)==\"v\",strcat(s[0],'_', substring(s[1], 0, 1),'_', s[2]),\r\nsubstring(s[1], 0, 1) in (\"A\",\"D\",\"E\",\"F\",\"L\",\"M\"),strcat(s[0],'_', substring(s[1], 0, 1)),\r\nsubstring(s[1], 0, 1)==\"B\",strcat(s[0],'_', substring(s[1], 0, 1)),\r\nsubstring(s[1], 0, 2)==\"GS\",strcat(s[0],'_', substring(s[1], 0, 2)),\r\nsubstring(s[1], 0, 2)in (\"HB\",\"NC\",\"NV\",\"PB\",\"ND\") and substring(s[2], 0, 1)==\"v\",strcat(s[0],'_', substring(s[1], 0, 2),'_', s[2]),\r\nsubstring(s[1], 0, 1) in(\"H\",\"G\"),strcat(s[0],'_', substring(s[1], 0, 1)),\r\nsubstring(s[1], 0, 2)in (\"HB\",\"NC\",\"NV\",\"PB\",\"ND\",\"NP\"),strcat(s[0],'_', substring(s[1], 0, 2)),\r\n                Name)\r\n| where AzureSize != Name \r\n|where  VmfamilyTarget  in ({VMFamilyFilter}) or '*' in ({VMFamilyFilter})\r\n| sort by Ram asc \r\n| join kind=leftouter hint.strategy=shuffle (VMPriceAll| where type==\"Consumption\"| project  armskuname,VMCost=unitprice,Location) on $left.AzureLocation==$right.Location and $left.AzureSize==$right.armskuname\r\n| join kind=leftouter hint.strategy=shuffle (VMPriceAll| where type==\"Consumption\"| project  armskuname,NewVMCost=unitprice,Location) on $left.AzureLocation==$right.Location and $left.Name==$right.armskuname\r\n| join kind=leftouter hint.strategy=shuffle (VMPriceAll|  where reservationterm == \"1 Year\"| project  armskuname,NewVM_RI1Y=unitprice,Location,reservationterm) on $left.AzureLocation==$right.Location and $left.Name==$right.armskuname\r\n| join kind=leftouter hint.strategy=shuffle (VMPriceAll|  where reservationterm == \"3 Years\"| project  armskuname,NewVM_RI3Y=unitprice,Location,reservationterm) on $left.AzureLocation==$right.Location and $left.Name==$right.armskuname\r\n| extend  VMCost=VMCost*730, NewVMCost=NewVMCost*730, NewVM_RI1YCost=NewVM_RI1Y/12,NewVM_RI3YCost=NewVM_RI3Y/36\r\n|extend DiffPayg=VMCost-NewVMCost, DiffRI1=VMCost-NewVM_RI1YCost,DiffRI3=VMCost-NewVM_RI3YCost\r\n| project Computer, AzureSize, NewSize=Name,VMCost,NewVMCost,ResourceId,DiffPayg,DiffRI1,DiffRI3,vcores,Ram,NewVM_RI1YCost,NewVM_RI3YCost;\r\ntable\r\n| summarize arg_max(DiffPayg,*) by ResourceId\r\n| join kind=leftouter (table\r\n| summarize possibleSizes = makelist(pack('size', strcat(NewSize , '|',DiffPayg,' | ',vcores,'|',Ram))) by ResourceId,AzureSize\r\n) on ResourceId\r\n| project  ResourceId, CurrentSize=AzureSize, NewSize,VMCost,NewVMCost,NewVM_RI1YCost,NewVM_RI3YCost,vcores,Ram,possibleSizes,Computer;\r\n\r\n\r\n",
               "size": 0,
               "title": "Size Recomendations with PayG, 1 Year RI, 3 Year RI",
               "timeContext": {
-                "durationMs": 5184000000
+                "durationMs": 0
               },
               "timeContextFromParameter": "TimeRange",
               "exportedParameters": [
@@ -3278,29 +3077,20 @@
                   "version": "KqlParameterItem/1.0",
                   "name": "Usagequerynew",
                   "type": 1,
-                  "value": "let workstart=8; let workend=17; let timezoneoffset=4; let cpu=InsightsMetrics | where TimeGenerated > ago(60d) | extend subid=tostring(split(_ResourceId, '/')[2]) | where subid in ('2de20a16-20c6-41af-82cd-bceb39195d1c','d1d8779d-38d7-4f06-91db-9cbc8de0176f') or '*' in ('2de20a16-20c6-41af-82cd-bceb39195d1c','d1d8779d-38d7-4f06-91db-9cbc8de0176f') | where tostring(split(_ResourceId,'/')[4])  in ('*') or '*' in ('*') | extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset | where hour between (workstart..workend) | where Namespace == \"Processor\"  | where Name == \"UtilizationPercentage\" | summarize (Cpu)=round(percentile(Val, 99), 2) by Computer, ResourceId=_ResourceId; let mem= InsightsMetrics | where TimeGenerated > ago(60d) | extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset | where Namespace == \"Memory\"  | where Name == \"AvailableMB\" | extend MemorySize = round(todouble(parse_json(Tags).[\"vm.azm.ms/memorySizeMB\"]),0) | extend Val=(MemorySize-Val)/MemorySize*100 |summarize (Mem)=round(percentile(Val, 99), 2) by  Computer; let iops= InsightsMetrics | where TimeGenerated > ago(60d) | extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset | where Namespace == \"LogicalDisk\"  | where Name == \"TransfersPerSecond\" |summarize (IOPs)=round(percentile(Val, 99), 2) by  Computer;let iolatency= InsightsMetrics | where TimeGenerated > ago(60d) | extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset | where Namespace == \"LogicalDisk\"  | where Name == \"TransferLatencyMs\"|summarize (IOLatency)=round(percentile(Val, 99), 2) by  Computer; let nwsent=InsightsMetrics | where TimeGenerated > ago(60d) | extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset | where Namespace == \"Network\" | where Name == \"WriteBytesPerSecond\"  |summarize (nwsent)=round(percentile(Val, 99), 2) by  Computer; let nwrec=InsightsMetrics | where TimeGenerated > ago(60d) | extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset | where Namespace == \"Network\" | where Name == \"ReadBytesPerSecond\"  |summarize (nwrec)=round(percentile(Val, 99), 2) by  Computer; let boot=Syslog | where Facility ==\"daemon\" | where SyslogMessage startswith \"Startup finished\"  | where ProcessID == 1  |summarize bootcount=count() by Computer |union isfuzzy=true (Event | where TimeGenerated > ago(60d) | where EventLog == \"System\"  | where EventID == 1074  |summarize bootcount=count() by Computer); let logons=SecurityEvent | where EventID == 4624 | where LogonTypeName  ==\"10 - RemoteInteractive\"  | where Account !contains \"Font Driver Host\"  and  Account !contains \"Window Manager\" | summarize ['SSH/RDP']=count() by Computer |union  isfuzzy=true (Syslog | where Facility == \"auth\" | where SyslogMessage startswith \"Accepted password for\" or SyslogMessage startswith \"Accepted publickey for\" | summarize ['SSH/RDP']=count() by Computer); let vmcon=VMConnection | where Direction == \"inbound\"  | where SourceIp <> \"127.0.0.1\"  | summarize InboundCon=sum(LinksEstablished+LinksTerminated+LinksLive) by Computer;let VMtrf=VMConnection | summarize ['Nw Sent Total']=format_bytes(sum(BytesSent)),  ['Nw Rec Total']=format_bytes(sum(BytesReceived)) by Computer; cpu | join kind= leftouter (    mem ) on Computer | join kind= leftouter (    nwsent ) on Computer | join kind= leftouter (    nwrec ) on Computer | join kind= leftouter (    boot ) on Computer | join kind= leftouter (    logons ) on Computer | join kind= leftouter (    iops ) on Computer | join kind= leftouter (    iolatency ) on Computer | join kind= leftouter (    vmcon ) on Computer| join kind= leftouter (    VMtrf) on Computer  |project ResourceId,Computer , ['SSH/RDP'] , bootcount ,  Cpu , Mem,IOPs,IOLatency,['Nw_Sent/sec']=format_bytes(nwsent), ['Nw_Rec/sec']=format_bytes(nwrec),InboundCon  ,['Nw Sent Total'],['Nw Rec Total']\t\t\t          ",
+                  "value": "let workstart=8; let workend=17; let timezoneoffset=4; let cpu=InsightsMetrics | where TimeGenerated > ago(7d) | extend subid=tostring(split(_ResourceId, '/')[2]) | where subid in ('6785ea1f-ac40-4244-a9ce-94b12fd832ca','8c3c936a-c09b-4de3-830b-3f5f244d72e9','8c2c7b23-848d-40fe-b817-690d79ad9dfd','7fd08dcc-a653-4b0f-8f8c-4dac889fdda4','00edfbf3-f815-41d1-9e7c-d61e5522b8bf','9472dc54-45db-406b-9c01-bba9fa0cbb3c','5733bcb3-7fde-4caf-8629-41dc15e3b352','ebb79bc0-aa86-44a7-8111-cabbe0c43993','0ba674a6-9fde-43b4-8370-a7e16fdf0641','2f0675ce-dbad-46c5-8663-3c0e4740222b','66ee64da-2532-4d9a-a36b-d745327d20d9','45f9252d-e27e-4ed8-ab4e-dc5054de13fa','35ad74f4-0b37-44a7-ba94-91b6ec6026cd','0745e7d2-1e06-4d9e-9b9b-f42442b8b92f','71578c6b-75ba-4865-8f52-3e66d70389fd','e93d3ee6-fac1-412f-92d6-bfb379e81af2','d1d8779d-38d7-4f06-91db-9cbc8de0176f','8a6e61f6-4dae-4242-b835-83b8aafcbbed','bac420ed-c6fc-4a05-8ac1-8c0c52da1d6e','02d68940-61e6-42d0-81d1-8396b7451114','30ec953a-f038-4636-b9b6-4ff8ba87b572','2de20a16-20c6-41af-82cd-bceb39195d1c','5c92a61a-9066-465a-9a6d-4b0b062ca7a5','6ab6e3d7-e20c-4d3b-91a6-01f70404be60','cf814bf2-d425-4b7f-bba2-e815cef7cba7','eec2de82-6ab2-4a84-ae5f-57e9a10bf661','9ec1d932-0f3f-486c-acc6-e7d78b358f9b') or '*' in ('6785ea1f-ac40-4244-a9ce-94b12fd832ca','8c3c936a-c09b-4de3-830b-3f5f244d72e9','8c2c7b23-848d-40fe-b817-690d79ad9dfd','7fd08dcc-a653-4b0f-8f8c-4dac889fdda4','00edfbf3-f815-41d1-9e7c-d61e5522b8bf','9472dc54-45db-406b-9c01-bba9fa0cbb3c','5733bcb3-7fde-4caf-8629-41dc15e3b352','ebb79bc0-aa86-44a7-8111-cabbe0c43993','0ba674a6-9fde-43b4-8370-a7e16fdf0641','2f0675ce-dbad-46c5-8663-3c0e4740222b','66ee64da-2532-4d9a-a36b-d745327d20d9','45f9252d-e27e-4ed8-ab4e-dc5054de13fa','35ad74f4-0b37-44a7-ba94-91b6ec6026cd','0745e7d2-1e06-4d9e-9b9b-f42442b8b92f','71578c6b-75ba-4865-8f52-3e66d70389fd','e93d3ee6-fac1-412f-92d6-bfb379e81af2','d1d8779d-38d7-4f06-91db-9cbc8de0176f','8a6e61f6-4dae-4242-b835-83b8aafcbbed','bac420ed-c6fc-4a05-8ac1-8c0c52da1d6e','02d68940-61e6-42d0-81d1-8396b7451114','30ec953a-f038-4636-b9b6-4ff8ba87b572','2de20a16-20c6-41af-82cd-bceb39195d1c','5c92a61a-9066-465a-9a6d-4b0b062ca7a5','6ab6e3d7-e20c-4d3b-91a6-01f70404be60','cf814bf2-d425-4b7f-bba2-e815cef7cba7','eec2de82-6ab2-4a84-ae5f-57e9a10bf661','9ec1d932-0f3f-486c-acc6-e7d78b358f9b') | where tostring(split(_ResourceId,'/')[4])  in ('*') or '*' in ('*') | extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset | where hour between (workstart..workend) | where Namespace == \"Processor\"  | where Name == \"UtilizationPercentage\" | summarize (Cpu)=round(percentile(Val, 99), 2) by Computer, ResourceId=_ResourceId; let mem= InsightsMetrics | where TimeGenerated > ago(7d) | extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset | where Namespace == \"Memory\"  | where Name == \"AvailableMB\" | extend MemorySize = round(todouble(parse_json(Tags).[\"vm.azm.ms/memorySizeMB\"]),0) | extend Val=(MemorySize-Val)/MemorySize*100 |summarize (Mem)=round(percentile(Val, 99), 2) by  Computer; let iops= InsightsMetrics | where TimeGenerated > ago(7d) | extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset | where Namespace == \"LogicalDisk\"  | where Name == \"TransfersPerSecond\" |summarize (IOPs)=round(percentile(Val, 99), 2) by  Computer;let iolatency= InsightsMetrics | where TimeGenerated > ago(7d) | extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset | where Namespace == \"LogicalDisk\"  | where Name == \"TransferLatencyMs\"|summarize (IOLatency)=round(percentile(Val, 99), 2) by  Computer; let nwsent=InsightsMetrics | where TimeGenerated > ago(7d) | extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset | where Namespace == \"Network\" | where Name == \"WriteBytesPerSecond\"  |summarize (nwsent)=round(percentile(Val, 99), 2) by  Computer; let nwrec=InsightsMetrics | where TimeGenerated > ago(7d) | extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset | where Namespace == \"Network\" | where Name == \"ReadBytesPerSecond\"  |summarize (nwrec)=round(percentile(Val, 99), 2) by  Computer; let boot=Syslog | where Facility ==\"daemon\" | where SyslogMessage startswith \"Startup finished\"  | where ProcessID == 1  |summarize bootcount=count() by Computer |union isfuzzy=true (Event | where TimeGenerated > ago(7d) | where EventLog == \"System\"  | where EventID == 1074  |summarize bootcount=count() by Computer); let logons=SecurityEvent | where EventID == 4624 | where LogonTypeName  ==\"10 - RemoteInteractive\"  | where Account !contains \"Font Driver Host\"  and  Account !contains \"Window Manager\" | summarize ['SSH/RDP']=count() by Computer |union  isfuzzy=true (Syslog | where Facility == \"auth\" | where SyslogMessage startswith \"Accepted password for\" or SyslogMessage startswith \"Accepted publickey for\" | summarize ['SSH/RDP']=count() by Computer); let vmcon=VMConnection | where Direction == \"inbound\"  | where SourceIp <> \"127.0.0.1\"  | summarize InboundCon=sum(LinksEstablished+LinksTerminated+LinksLive) by Computer;let VMtrf=VMConnection | summarize ['Nw Sent Total']=format_bytes(sum(BytesSent)),  ['Nw Rec Total']=format_bytes(sum(BytesReceived)) by Computer; cpu | join kind= leftouter (    mem ) on Computer | join kind= leftouter (    nwsent ) on Computer | join kind= leftouter (    nwrec ) on Computer | join kind= leftouter (    boot ) on Computer | join kind= leftouter (    logons ) on Computer | join kind= leftouter (    iops ) on Computer | join kind= leftouter (    iolatency ) on Computer | join kind= leftouter (    vmcon ) on Computer| join kind= leftouter (    VMtrf) on Computer  |project ResourceId,Computer , ['SSH/RDP'] , bootcount ,  Cpu , Mem,IOPs,IOLatency,['Nw_Sent/sec']=format_bytes(nwsent), ['Nw_Rec/sec']=format_bytes(nwrec),InboundCon  ,['Nw Sent Total'],['Nw Rec Total']\t\t\t          ",
                   "isHiddenWhenLocked": true,
                   "criteriaData": [
                     {
                       "criteriaContext": {
-                        "leftOperand": "isSecurityEnabled",
-                        "operator": "isNotNull",
+                        "operator": "Default",
                         "rightValType": "param",
                         "resultValType": "static",
                         "resultVal": "let workstart={PeakHourStart}; let workend={PeakHourEnd}; let timezoneoffset=4; let cpu=InsightsMetrics | where TimeGenerated {TimeRange} | extend subid=tostring(split(_ResourceId, '/')[2]) | where subid in ({subscription:subid}) or '*' in ({subscription:subid}) | where tostring(split(_ResourceId,'/')[4])  in ({rg}) or '*' in ({rg}) | extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset | where hour between (workstart..workend) | where Namespace == \"Processor\"  | where Name == \"UtilizationPercentage\" | summarize (Cpu)={AggregatesRight} by Computer, ResourceId=_ResourceId; let mem= InsightsMetrics | where TimeGenerated {TimeRange} | extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset | where Namespace == \"Memory\"  | where Name == \"AvailableMB\" | extend MemorySize = round(todouble(parse_json(Tags).[\"vm.azm.ms/memorySizeMB\"]),0) | extend Val=(MemorySize-Val)/MemorySize*100 |summarize (Mem)={AggregatesRight} by  Computer; let iops= InsightsMetrics | where TimeGenerated {TimeRange} | extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset | where Namespace == \"LogicalDisk\"  | where Name == \"TransfersPerSecond\" |summarize (IOPs)={AggregatesRight} by  Computer;let iolatency= InsightsMetrics | where TimeGenerated {TimeRange} | extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset | where Namespace == \"LogicalDisk\"  | where Name == \"TransferLatencyMs\"|summarize (IOLatency)={AggregatesRight} by  Computer; let nwsent=InsightsMetrics | where TimeGenerated {TimeRange} | extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset | where Namespace == \"Network\" | where Name == \"WriteBytesPerSecond\"  |summarize (nwsent)={AggregatesRight} by  Computer; let nwrec=InsightsMetrics | where TimeGenerated {TimeRange} | extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset | where Namespace == \"Network\" | where Name == \"ReadBytesPerSecond\"  |summarize (nwrec)={AggregatesRight} by  Computer; let boot=Syslog | where Facility ==\"daemon\" | where SyslogMessage startswith \"Startup finished\"  | where ProcessID == 1  |summarize bootcount=count() by Computer |union isfuzzy=true (Event | where TimeGenerated {TimeRange} | where EventLog == \"System\"  | where EventID == 1074  |summarize bootcount=count() by Computer); let logons=SecurityEvent | where EventID == 4624 | where LogonTypeName  ==\"10 - RemoteInteractive\"  | where Account !contains \"Font Driver Host\"  and  Account !contains \"Window Manager\" | summarize ['SSH/RDP']=count() by Computer |union  isfuzzy=true (Syslog | where Facility == \"auth\" | where SyslogMessage startswith \"Accepted password for\" or SyslogMessage startswith \"Accepted publickey for\" | summarize ['SSH/RDP']=count() by Computer); let vmcon=VMConnection | where Direction == \"inbound\"  | where SourceIp <> \"127.0.0.1\"  | summarize InboundCon=sum(LinksEstablished+LinksTerminated+LinksLive) by Computer;let VMtrf=VMConnection | summarize ['Nw Sent Total']=format_bytes(sum(BytesSent)),  ['Nw Rec Total']=format_bytes(sum(BytesReceived)) by Computer; cpu | join kind= leftouter (    mem ) on Computer | join kind= leftouter (    nwsent ) on Computer | join kind= leftouter (    nwrec ) on Computer | join kind= leftouter (    boot ) on Computer | join kind= leftouter (    logons ) on Computer | join kind= leftouter (    iops ) on Computer | join kind= leftouter (    iolatency ) on Computer | join kind= leftouter (    vmcon ) on Computer| join kind= leftouter (    VMtrf) on Computer  |project ResourceId,Computer , ['SSH/RDP'] , bootcount ,  Cpu , Mem,IOPs,IOLatency,['Nw_Sent/sec']=format_bytes(nwsent), ['Nw_Rec/sec']=format_bytes(nwrec),InboundCon  ,['Nw Sent Total'],['Nw Rec Total']\t\t\t          "
                       }
-                    },
-                    {
-                      "criteriaContext": {
-                        "operator": "Default",
-                        "rightValType": "param",
-                        "resultValType": "expression",
-                        "resultVal": "let workstart={PeakHourStart}; let workend={PeakHourEnd}; let timezoneoffset=4; let cpu=InsightsMetrics | where TimeGenerated {TimeRange} | extend subid=tostring(split(_ResourceId, '/')[2]) | where subid in ({subscription:subid}) or '*' in ({subscription:subid}) | where tostring(split(_ResourceId,'/')[4])  in ({rg}) or '*' in ({rg}) | extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset | where hour between (workstart..workend) | where Namespace == \"Processor\"  | where Name == \"UtilizationPercentage\" | summarize (Cpu)={AggregatesRight} by Computer, ResourceId=_ResourceId; let mem= InsightsMetrics | where TimeGenerated {TimeRange} | extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset | where Namespace == \"Memory\"  | where Name == \"AvailableMB\" | extend MemorySize = round(todouble(parse_json(Tags).[\"vm.azm.ms/memorySizeMB\"]),0) | extend Val=(MemorySize-Val)/MemorySize*100 |summarize (Mem)={AggregatesRight} by  Computer; let iops= InsightsMetrics | where TimeGenerated {TimeRange} | extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset | where Namespace == \"LogicalDisk\"  | where Name == \"TransfersPerSecond\" |summarize (IOPs)={AggregatesRight} by  Computer; let iolatency= InsightsMetrics | where TimeGenerated {TimeRange} | extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset | where Namespace == \"LogicalDisk\"  | where Name == \"TransferLatencyMs\"|summarize (IOLatency)={AggregatesRight} by  Computer;let nwsent=InsightsMetrics | where TimeGenerated {TimeRange} | extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset | where Namespace == \"Network\" | where Name == \"WriteBytesPerSecond\"  |summarize (nwsent)={AggregatesRight} by  Computer; let nwrec=InsightsMetrics | where TimeGenerated {TimeRange} | extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset | where Namespace == \"Network\" | where Name == \"ReadBytesPerSecond\"  |summarize (nwrec)={AggregatesRight} by  Computer; let boot=Syslog | where Facility ==\"daemon\" | where SyslogMessage startswith \"Startup finished\"  | where ProcessID == 1  |summarize bootcount=count() by Computer |union isfuzzy=true (Event | where TimeGenerated {TimeRange} | where EventLog == \"System\"  | where EventID == 1074  |summarize bootcount=count() by Computer); let logons=Syslog | where Facility == \"auth\" | where SyslogMessage startswith \"Accepted password for\" or SyslogMessage startswith \"Accepted publickey for\" | summarize ['SSH/RDP']=count() by Computer; let vmcon=VMConnection | where Direction == \"inbound\"  | where SourceIp <> \"127.0.0.1\"  | summarize InboundCon=sum(LinksEstablished+LinksTerminated+LinksLive) by Computer;let VMtrf=VMConnection | summarize ['Nw Sent Total']=format_bytes(sum(BytesSent)),  ['Nw Rec Total']=format_bytes(sum(BytesReceived)) by Computer; cpu | join kind= leftouter (    mem ) on Computer | join kind= leftouter (    nwsent ) on Computer | join kind= leftouter (    nwrec ) on Computer | join kind= leftouter (    boot ) on Computer | join kind= leftouter (    logons ) on Computer | join kind= leftouter (    iops ) on Computer| join kind= leftouter (    iolatency ) on Computer  | join kind= leftouter (    vmcon ) on Computer | join kind= leftouter (    VMtrf) on Computer |project ResourceId,Computer , ['SSH/RDP'] , bootcount ,  Cpu ,Mem,IOPs,IOLatency,Nw_Sent=format_bytes(nwsent), Nw_Rec=format_bytes(nwrec),InboundCon,['Nw Sent Total'],['Nw Rec Total']"
-                      }
                     }
                   ],
                   "timeContext": {
-                    "durationMs": 2592000000
+                    "durationMs": 5184000000
                   },
                   "timeContextFromParameter": "TimeRange"
                 }
@@ -3319,7 +3109,7 @@
               "size": 2,
               "title": "VM Usage Indicators",
               "timeContext": {
-                "durationMs": 604800000
+                "durationMs": 0
               },
               "timeContextFromParameter": "TimeRange",
               "exportedParameters": [
