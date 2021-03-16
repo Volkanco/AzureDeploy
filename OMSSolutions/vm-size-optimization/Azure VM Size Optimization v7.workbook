@@ -106,7 +106,7 @@
             ],
             "value": [
               "/subscriptions/2de20a16-20c6-41af-82cd-bceb39195d1c/resourceGroups/rg-shared-sc-weu/providers/microsoft.operationalinsights/workspaces/la-prod-sc-weu",
-              "/subscriptions/d1d8779d-38d7-4f06-91db-9cbc8de0176f/resourceGroups/soc/providers/Microsoft.OperationalInsights/workspaces/cybersecuritysoc"
+              "/subscriptions/2de20a16-20c6-41af-82cd-bceb39195d1c/resourceGroups/rg-shared-sc-weu/providers/Microsoft.OperationalInsights/workspaces/la-prod-sc-weu"
             ],
             "typeSettings": {
               "resourceTypeFilter": {
@@ -419,23 +419,6 @@
                   "label": "MEM Threshold"
                 },
                 {
-                  "id": "c923ca77-5306-425d-8718-288033fc6e14",
-                  "version": "KqlParameterItem/1.0",
-                  "name": "usesamefamily1",
-                  "label": "Size Recommendation Scope",
-                  "type": 2,
-                  "value": "yes",
-                  "typeSettings": {
-                    "additionalResourceOptions": [],
-                    "showDefault": false
-                  },
-                  "jsonData": "[\r\n    { \"value\":\"yes\", \"label\": \"Same Family Only\", \"selected\":false },\r\n    { \"value\":\"no\", \"label\": \"All VM Sizes\", \"selected\":true},\r\n     { \"value\":\"selected\", \"label\": \"Selected Families Only\", \"selected\":false}\r\n]",
-                  "timeContext": {
-                    "durationMs": 0
-                  },
-                  "timeContextFromParameter": "TimeRange"
-                },
-                {
                   "id": "78da93cb-59be-4500-b2ab-cd35b7c3b4f4",
                   "version": "KqlParameterItem/1.0",
                   "name": "VMSizeList",
@@ -514,7 +497,6 @@
                   "resourceType": "microsoft.operationalinsights/workspaces"
                 },
                 {
-                  "id": "c923ca77-5306-425d-8718-288033fc6e14",
                   "version": "KqlParameterItem/1.0",
                   "name": "usesamefamily",
                   "type": 2,
@@ -527,7 +509,8 @@
                   "timeContext": {
                     "durationMs": 0
                   },
-                  "timeContextFromParameter": "TimeRange"
+                  "timeContextFromParameter": "TimeRange",
+                  "id": "fcfad418-49e5-4831-9ff2-ec60eff5cbb8"
                 }
               ],
               "style": "pills",
@@ -565,7 +548,15 @@
                     "Standard_E_v3",
                     "Standard_E_v4",
                     "Standard_F",
-                    "Standard_F_v2"
+                    "Standard_F_v2",
+                    "Standard_G",
+                    "Standard_GS",
+                    "Standard_M",
+                    "Standard_M_v2",
+                    "Standard_H",
+                    "Standard_HB_v2",
+                    "Standard_L",
+                    "Standard_L_v2"
                   ],
                   "typeSettings": {
                     "additionalResourceOptions": [
@@ -599,7 +590,7 @@
               "size": 1,
               "title": "Resize Possible VMs",
               "timeContext": {
-                "durationMs": 0
+                "durationMs": 5184000000
               },
               "timeContextFromParameter": "TimeRange",
               "queryType": 0,
@@ -759,11 +750,11 @@
             "type": 3,
             "content": {
               "version": "KqlItem/1.0",
-              "query": "let workstart={PeakHourStart};\r\nlet workend={PeakHourEnd};\r\nlet timezoneoffset=4;\r\n{VMSizeList}\r\n{VMPriceAll}\r\nlet inv=VMComputer\r\n| where TimeGenerated {TimeRange}\r\n| where AzureSubscriptionId in ({subscription:subid}) or '*' in ({subscription:subid})\r\n| where tostring(split(_ResourceId,'/')[4])  in ({rg}) or '*' in ({rg})\r\n| summarize arg_max(TimeGenerated, *) by ResourceId=_ResourceId\r\n| project ResourceId , Computer , AzureSize ,Cpus , CpuSpeed ,PhysicalMemoryMB, AzureLocation\r\n| where isnotempty(AzureSize);\r\nlet cpu=InsightsMetrics\r\n    | where TimeGenerated >ago(30d)\r\n| extend hour=datetime_part(\"hour\", TimeGenerated) + timezoneoffset\r\n| where hour between (workstart..workend)\r\n| where Namespace == \"Processor\"\r\n| where Name == \"UtilizationPercentage\"\r\n| summarize (Cpu)= round(percentile(Val, 99), 2) by Computer, ResourceId=_ResourceId;\r\nlet mem= InsightsMetrics\r\n    | where TimeGenerated >ago(30d)\r\n| extend hour=datetime_part(\"hour\", TimeGenerated) + timezoneoffset\r\n| where Namespace == \"Memory\"\r\n| where Name == \"AvailableMB\"\r\n| extend MemorySize = round(todouble(parse_json(Tags).[\"vm.azm.ms/memorySizeMB\"]), 0)\r\n| extend Val=(MemorySize - Val) / MemorySize*100\r\n| summarize (Mem)= round(percentile(Val, 99), 2) by Computer, ResourceId=_ResourceId;\r\nlet iops= InsightsMetrics\r\n    | where TimeGenerated >ago(30d)\r\n| extend hour=datetime_part(\"hour\", TimeGenerated) + timezoneoffset\r\n| where Namespace == \"LogicalDisk\"\r\n| where Name == \"TransfersPerSecond\"\r\n| summarize (IOPs)= round(percentile(Val, 99), 2) by Computer, ResourceId=_ResourceId;\r\nlet table=inv\r\n| join kind= leftouter (cpu) on ResourceId\r\n| join kind= leftouter (mem) on ResourceId\r\n| join kind= leftouter (iops) on ResourceId\r\n| join kind= fullouter (vmsize) on $left.AzureSize == $right.Name\r\n| project Computer, AzureSize, Cpus, CpuSpeed, Cpu, Mem, IOPs, PhysicalMemoryMB, Disks, maxIops=Disks * 500, ResourceId,AzureLocation\r\n| extend minMemoryReq= PhysicalMemoryMB*Mem / 100 + 500\r\n| extend newram= case(minMemoryReq < 0, PhysicalMemoryMB, minMemoryReq < 512, 512, minMemoryReq < 768, 768, minMemoryReq < 1024, 1024, minMemoryReq < 1792, 1792, minMemoryReq < 2048, 2048, minMemoryReq < 3584, 3584, minMemoryReq < 4096, 4096, minMemoryReq < 7168, 7168, minMemoryReq < 8192, 8192, minMemoryReq < 14336, 14336, minMemoryReq < 16384, 16384, minMemoryReq < 28672, 28672, minMemoryReq < 32768, 32768, minMemoryReq < 49152, 49152, minMemoryReq < 57344, 57344, minMemoryReq < 65536, 65536, minMemoryReq < 81920, 81920, minMemoryReq < 98304, 98304, minMemoryReq < 114688, 114688, minMemoryReq < 131072, 131072, minMemoryReq < 143360, 143360, minMemoryReq < 147456, 147456, minMemoryReq < 163840, 163840, minMemoryReq < 196608, 196608, minMemoryReq < 224000, 224000, minMemoryReq < 229376, 229376, minMemoryReq < 262144, 262144, minMemoryReq < 393216, 393216, minMemoryReq < 442368, 442368, minMemoryReq < 448000, 448000, minMemoryReq < 458752, 458752, minMemoryReq < 466944, 466944, minMemoryReq < 516096, 516096, minMemoryReq < 524288, 524288, minMemoryReq < 896000, 896000, minMemoryReq < 1024000, 1024000, minMemoryReq < 1048576, 1048576, minMemoryReq < 1792000, 1792000, minMemoryReq < 1835008, 1835008, minMemoryReq < \r\n2048000, 2048000, minMemoryReq < 2097152, 2097152, minMemoryReq < 2918400, 2918400, minMemoryReq < 3891200, 3891200, minMemoryReq < 3985408, 3985408, minMemoryReq < 4194304, 4194304, minMemoryReq < 5836800, 5836800, 0)\r\n| extend cpu_resize=iff(Cpu < toint(\"{CPUThreshold}\") and Cpus != 1, \"yes\", \"no\")\r\n| extend mem_resize=iff(Mem < toint(\"{MEMThreshold}\") and newram < PhysicalMemoryMB, \"yes\", \"no\")\r\n| extend iops_resize=iff(IOPs < (maxIops*0.4), \"yes\", \"no\") \r\n| extend newcpu= toint(iff (Cpus <= 2, 2, Cpus/2))\r\n| where cpu_resize ==\"yes\" and mem_resize==\"yes\" and iops_resize == \"yes\" ;\r\nlet finaltable=table\r\n| join kind= leftouter (vmsize | project Name, vcores=toint(vcores), Ram, Disks) on $left.newcpu==$right.vcores \r\n| where Ram <= PhysicalMemoryMB and Ram >= minMemoryReq \r\n| where Name !startswith 'Basic'\r\n// Calculate VM Family for filtering\r\n| extend s=split(Name, '_')\r\n| extend VmfamilyTarget=case(\r\nsubstring(s[1], 0, 1) in (\"A\",\"D\",\"E\",\"F\",\"L\",\"M\") and substring(s[2], 0, 1)==\"v\",strcat(s[0],'_', substring(s[1], 0, 1),'_', s[2]),\r\nsubstring(s[1], 0, 1) in (\"A\",\"D\",\"E\",\"F\",\"L\",\"M\"),strcat(s[0],'_', substring(s[1], 0, 1)),\r\nsubstring(s[1], 0, 1)==\"B\",strcat(s[0],'_', substring(s[1], 0, 1)),\r\nsubstring(s[1], 0, 2)==\"GS\",strcat(s[0],'_', substring(s[1], 0, 2)),\r\nsubstring(s[1], 0, 2)in (\"HB\",\"NC\",\"NV\",\"PB\",\"ND\") and substring(s[2], 0, 1)==\"v\",strcat(s[0],'_', substring(s[1], 0, 2),'_', s[2]),\r\nsubstring(s[1], 0, 1) in(\"H\",\"G\"),strcat(s[0],'_', substring(s[1], 0, 1)),\r\nsubstring(s[1], 0, 2)in (\"HB\",\"NC\",\"NV\",\"PB\",\"ND\",\"NP\"),strcat(s[0],'_', substring(s[1], 0, 2)),\r\n                Name)\r\n| extend y=split(AzureSize, '_')\r\n| extend VmfamilyCurrent=case(\r\nsubstring(y[1], 0, 1) in (\"A\",\"D\",\"E\",\"F\",\"L\",\"M\") and substring(y[2], 0, 1)==\"v\",strcat(y[0],'_', substring(y[1], 0, 1),'_', y[2]),\r\nsubstring(y[1], 0, 1) in (\"A\",\"D\",\"E\",\"F\",\"L\",\"M\"),strcat(y[0],'_', substring(y[1], 0, 1)),\r\nsubstring(y[1], 0, 1)==\"B\",strcat(y[0],'_', substring(y[1], 0, 1)),\r\nsubstring(y[1], 0, 2)==\"GS\",strcat(y[0],'_', substring(y[1], 0, 2)),\r\nsubstring(y[1], 0, 2)in (\"HB\",\"NC\",\"NV\",\"PB\",\"ND\") and substring(y[2], 0, 1)==\"v\",strcat(y[0],'_', substring(y[1], 0, 2),'_', y[2]),\r\nsubstring(y[1], 0, 1) in(\"H\",\"G\"),strcat(y[0],'_', substring(y[1], 0, 1)),\r\nsubstring(y[1], 0, 2)in (\"HB\",\"NC\",\"NV\",\"PB\",\"ND\",\"NP\"),strcat(y[0],'_', substring(y[1], 0, 2)),\r\n                AzureSize)\r\n| where AzureSize != Name  and   iff(\"{usesamefamily:value}\"==\"same\",VmfamilyTarget == VmfamilyCurrent,VmfamilyTarget  in ({VMFamilyFilter}) or '*' in ({VMFamilyFilter}))\r\n| sort by Ram asc \r\n| join kind=leftouter hint.strategy=shuffle (VMPriceAll| where type==\"Consumption\"| project  armskuname,VMCost=unitprice,Location) on $left.AzureLocation==$right.Location and $left.AzureSize==$right.armskuname\r\n| join kind=leftouter hint.strategy=shuffle (VMPriceAll| where type==\"Consumption\"| project  armskuname,NewVMCost=unitprice,Location) on $left.AzureLocation==$right.Location and $left.Name==$right.armskuname\r\n| join kind=leftouter hint.strategy=shuffle (VMPriceAll|  where reservationterm == \"1 Year\"| project  armskuname,NewVM_RI1Y=unitprice,Location,reservationterm) on $left.AzureLocation==$right.Location and $left.Name==$right.armskuname\r\n| join kind=leftouter hint.strategy=shuffle (VMPriceAll|  where reservationterm == \"3 Years\"| project  armskuname,NewVM_RI3Y=unitprice,Location,reservationterm) on $left.AzureLocation==$right.Location and $left.Name==$right.armskuname\r\n| extend  VMCost=VMCost*730, NewVMCost=NewVMCost*730, NewVM_RI1YCost=NewVM_RI1Y/12,NewVM_RI3YCost=NewVM_RI3Y/36\r\n|extend DiffPayg=VMCost-NewVMCost, DiffRI1=VMCost-NewVM_RI1YCost,DiffRI3=VMCost-NewVM_RI3YCost\r\n| where NewVMCost < VMCost\r\n| project Computer, AzureSize, NewSize=Name,VMCost,NewVMCost,ResourceId,DiffPayg,DiffRI1,DiffRI3,vcores,Ram,NewVM_RI1YCost,NewVM_RI3YCost;\r\nfinaltable\r\n| summarize arg_max(DiffPayg,*) by ResourceId\r\n| join kind=leftouter (finaltable\r\n|sort by ResourceId,NewVMCost asc\r\n| summarize possibleSizes = makelist(pack('size', strcat(NewSize , '|',NewVMCost,' | ',vcores,'|',Ram))) by ResourceId,AzureSize\r\n) on ResourceId\r\n\r\n\r\n\r\n",
+              "query": "let workstart={PeakHourStart};\r\nlet workend={PeakHourEnd};\r\nlet timezoneoffset=4;\r\n{VMSizeList}\r\n{VMPriceAll}\r\nlet inv=VMComputer\r\n| where TimeGenerated {TimeRange}\r\n| where AzureSubscriptionId in ({subscription:subid}) or '*' in ({subscription:subid})\r\n| where tostring(split(_ResourceId,'/')[4])  in ({rg}) or '*' in ({rg})\r\n| summarize arg_max(TimeGenerated, *) by ResourceId=_ResourceId\r\n| project ResourceId , Computer , AzureSize ,Cpus , CpuSpeed ,PhysicalMemoryMB, AzureLocation\r\n| where isnotempty(AzureSize);\r\nlet cpu=InsightsMetrics\r\n    | where TimeGenerated >ago(30d)\r\n| extend hour=datetime_part(\"hour\", TimeGenerated) + timezoneoffset\r\n| where hour between (workstart..workend)\r\n| where Namespace == \"Processor\"\r\n| where Name == \"UtilizationPercentage\"\r\n| summarize (Cpu)= round(percentile(Val, 99), 2) by Computer, ResourceId=_ResourceId;\r\nlet mem= InsightsMetrics\r\n    | where TimeGenerated >ago(30d)\r\n| extend hour=datetime_part(\"hour\", TimeGenerated) + timezoneoffset\r\n| where Namespace == \"Memory\"\r\n| where Name == \"AvailableMB\"\r\n| extend MemorySize = round(todouble(parse_json(Tags).[\"vm.azm.ms/memorySizeMB\"]), 0)\r\n| extend Val=(MemorySize - Val) / MemorySize*100\r\n| summarize (Mem)= round(percentile(Val, 99), 2) by Computer, ResourceId=_ResourceId;\r\nlet iops= InsightsMetrics\r\n    | where TimeGenerated >ago(30d)\r\n| extend hour=datetime_part(\"hour\", TimeGenerated) + timezoneoffset\r\n| where Namespace == \"LogicalDisk\"\r\n| where Name == \"TransfersPerSecond\"\r\n| summarize (IOPs)= round(percentile(Val, 99), 2) by Computer, ResourceId=_ResourceId;\r\nlet table=inv\r\n| join kind= leftouter (cpu) on ResourceId\r\n| join kind= leftouter (mem) on ResourceId\r\n| join kind= leftouter (iops) on ResourceId\r\n| join kind= fullouter (vmsize) on $left.AzureSize == $right.Name\r\n| project Computer, AzureSize, Cpus, CpuSpeed, Cpu, Mem, IOPs, PhysicalMemoryMB, Disks, maxIops=Disks * 500, ResourceId,AzureLocation\r\n| extend minMemoryReq= PhysicalMemoryMB*Mem / 100 + 500\r\n| extend newram= case(minMemoryReq < 0, PhysicalMemoryMB, minMemoryReq < 512, 512, minMemoryReq < 768, 768, minMemoryReq < 1024, 1024, minMemoryReq < 1792, 1792, minMemoryReq < 2048, 2048, minMemoryReq < 3584, 3584, minMemoryReq < 4096, 4096, minMemoryReq < 7168, 7168, minMemoryReq < 8192, 8192, minMemoryReq < 14336, 14336, minMemoryReq < 16384, 16384, minMemoryReq < 28672, 28672, minMemoryReq < 32768, 32768, minMemoryReq < 49152, 49152, minMemoryReq < 57344, 57344, minMemoryReq < 65536, 65536, minMemoryReq < 81920, 81920, minMemoryReq < 98304, 98304, minMemoryReq < 114688, 114688, minMemoryReq < 131072, 131072, minMemoryReq < 143360, 143360, minMemoryReq < 147456, 147456, minMemoryReq < 163840, 163840, minMemoryReq < 196608, 196608, minMemoryReq < 224000, 224000, minMemoryReq < 229376, 229376, minMemoryReq < 262144, 262144, minMemoryReq < 393216, 393216, minMemoryReq < 442368, 442368, minMemoryReq < 448000, 448000, minMemoryReq < 458752, 458752, minMemoryReq < 466944, 466944, minMemoryReq < 516096, 516096, minMemoryReq < 524288, 524288, minMemoryReq < 896000, 896000, minMemoryReq < 1024000, 1024000, minMemoryReq < 1048576, 1048576, minMemoryReq < 1792000, 1792000, minMemoryReq < 1835008, 1835008, minMemoryReq < \r\n2048000, 2048000, minMemoryReq < 2097152, 2097152, minMemoryReq < 2918400, 2918400, minMemoryReq < 3891200, 3891200, minMemoryReq < 3985408, 3985408, minMemoryReq < 4194304, 4194304, minMemoryReq < 5836800, 5836800, 0)\r\n| extend cpu_resize=iff(Cpu < toint(\"{CPUThreshold}\") and Cpus != 1, \"yes\", \"no\")\r\n| extend mem_resize=iff(Mem < toint(\"{MEMThreshold}\") and newram < PhysicalMemoryMB, \"yes\", \"no\")\r\n| extend iops_resize=iff(IOPs < (maxIops*0.4), \"yes\", \"no\") \r\n| extend newcpu= toint(iff (Cpus <= 2, 2, Cpus/2))\r\n| where cpu_resize ==\"yes\" and mem_resize==\"yes\" and iops_resize == \"yes\" ;\r\nlet finaltable=table\r\n| join kind= leftouter (vmsize | project Name, vcores=toint(vcores), Ram, Disks) on $left.newcpu==$right.vcores \r\n| where Ram <= PhysicalMemoryMB and Ram >= minMemoryReq \r\n| where Name !startswith 'Basic'\r\n// Calculate VM Family for filtering\r\n| extend s=split(Name, '_')\r\n| extend VmfamilyTarget=case(\r\nsubstring(s[1], 0, 1) in (\"A\",\"D\",\"E\",\"F\",\"L\",\"M\") and substring(s[2], 0, 1)==\"v\",strcat(s[0],'_', substring(s[1], 0, 1),'_', s[2]),\r\nsubstring(s[1], 0, 1) in (\"A\",\"D\",\"E\",\"F\",\"L\",\"M\"),strcat(s[0],'_', substring(s[1], 0, 1)),\r\nsubstring(s[1], 0, 1)==\"B\",strcat(s[0],'_', substring(s[1], 0, 1)),\r\nsubstring(s[1], 0, 2)==\"GS\",strcat(s[0],'_', substring(s[1], 0, 2)),\r\nsubstring(s[1], 0, 2)in (\"HB\",\"NC\",\"NV\",\"PB\",\"ND\") and substring(s[2], 0, 1)==\"v\",strcat(s[0],'_', substring(s[1], 0, 2),'_', s[2]),\r\nsubstring(s[1], 0, 1) in(\"H\",\"G\"),strcat(s[0],'_', substring(s[1], 0, 1)),\r\nsubstring(s[1], 0, 2)in (\"HB\",\"NC\",\"NV\",\"PB\",\"ND\",\"NP\"),strcat(s[0],'_', substring(s[1], 0, 2)),\r\n                Name)\r\n| extend y=split(AzureSize, '_')\r\n| extend VmfamilyCurrent=case(\r\nsubstring(y[1], 0, 1) in (\"A\",\"D\",\"E\",\"F\",\"L\",\"M\") and substring(y[2], 0, 1)==\"v\",strcat(y[0],'_', substring(y[1], 0, 1),'_', y[2]),\r\nsubstring(y[1], 0, 1) in (\"A\",\"D\",\"E\",\"F\",\"L\",\"M\"),strcat(y[0],'_', substring(y[1], 0, 1)),\r\nsubstring(y[1], 0, 1)==\"B\",strcat(y[0],'_', substring(y[1], 0, 1)),\r\nsubstring(y[1], 0, 2)==\"GS\",strcat(y[0],'_', substring(y[1], 0, 2)),\r\nsubstring(y[1], 0, 2)in (\"HB\",\"NC\",\"NV\",\"PB\",\"ND\") and substring(y[2], 0, 1)==\"v\",strcat(y[0],'_', substring(y[1], 0, 2),'_', y[2]),\r\nsubstring(y[1], 0, 1) in(\"H\",\"G\"),strcat(y[0],'_', substring(y[1], 0, 1)),\r\nsubstring(y[1], 0, 2)in (\"HB\",\"NC\",\"NV\",\"PB\",\"ND\",\"NP\"),strcat(y[0],'_', substring(y[1], 0, 2)),\r\n                AzureSize)\r\n| where AzureSize != Name  and   iff(\"{usesamefamily:value}\"==\"same\",VmfamilyTarget == VmfamilyCurrent,VmfamilyTarget  in ({VMFamilyFilter}) or '*' in ({VMFamilyFilter}))\r\n| sort by Ram asc \r\n| join kind=leftouter hint.strategy=shuffle (VMPriceAll| where type==\"Consumption\"| project  armskuname,VMCost=unitprice,Location) on $left.AzureLocation==$right.Location and $left.AzureSize==$right.armskuname\r\n| join kind=leftouter hint.strategy=shuffle (VMPriceAll| where type==\"Consumption\"| project  armskuname,NewVMCost=unitprice,Location) on $left.AzureLocation==$right.Location and $left.Name==$right.armskuname\r\n| join kind=leftouter hint.strategy=shuffle (VMPriceAll|  where reservationterm == \"1 Year\"| project  armskuname,NewVM_RI1Y=unitprice,Location,reservationterm) on $left.AzureLocation==$right.Location and $left.Name==$right.armskuname\r\n| join kind=leftouter hint.strategy=shuffle (VMPriceAll|  where reservationterm == \"3 Years\"| project  armskuname,NewVM_RI3Y=unitprice,Location,reservationterm) on $left.AzureLocation==$right.Location and $left.Name==$right.armskuname\r\n| extend  VMCost=VMCost*730, NewVMCost=NewVMCost*730, NewVM_RI1YCost=NewVM_RI1Y/12,NewVM_RI3YCost=NewVM_RI3Y/36\r\n|extend DiffPayg=VMCost-NewVMCost, DiffRI1=VMCost-NewVM_RI1YCost,DiffRI3=VMCost-NewVM_RI3YCost\r\n| where NewVMCost < VMCost\r\n| project Computer, AzureSize, NewSize=Name,VMCost,NewVMCost,ResourceId,CostDifference=DiffPayg,DiffRI1,DiffRI3,vcores,Ram,NewVM_RI1YCost,NewVM_RI3YCost;\r\nfinaltable\r\n| summarize arg_max(CostDifference,*) by ResourceId\r\n| join kind=leftouter (finaltable\r\n|sort by ResourceId,NewVMCost asc\r\n| summarize possibleSizes = makelist(pack('size', strcat(NewSize , '|',NewVMCost,' | ',vcores,'|',Ram))) by ResourceId,AzureSize\r\n) on ResourceId\r\n",
               "size": 0,
               "title": "Total Monthly Saving on PayG Price by VM Size",
               "timeContext": {
-                "durationMs": 0
+                "durationMs": 5184000000
               },
               "timeContextFromParameter": "TimeRange",
               "exportFieldName": "ResourceId",
@@ -1202,7 +1193,7 @@
               "size": 0,
               "title": "Total Monthly Saving on PayG Price",
               "timeContext": {
-                "durationMs": 0
+                "durationMs": 5184000000
               },
               "timeContextFromParameter": "TimeRange",
               "exportFieldName": "ResourceId",
@@ -1417,12 +1408,12 @@
             "type": 3,
             "content": {
               "version": "KqlItem/1.0",
-              "query": "let workstart={PeakHourStart};\r\nlet workend={PeakHourEnd};\r\nlet timezoneoffset=4;\r\n{VMSizeList}\r\nlet inv=VMComputer\r\n| where TimeGenerated {TimeRange}\r\n| where AzureSubscriptionId in ({subscription:subid}) or '*' in ({subscription:subid})\r\n| where tostring(split(_ResourceId,'/')[4])  in ({rg}) or '*' in ({rg})\r\n| summarize arg_max(TimeGenerated, *) by ResourceId=_ResourceId\r\n| project ResourceId , Computer , AzureSize ,Cpus , CpuSpeed ,PhysicalMemoryMB\r\n| where isnotempty(AzureSize);\r\nlet cpu=InsightsMetrics\r\n| where TimeGenerated {TimeRange}\r\n| extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset\r\n| where hour between (workstart..workend)\r\n| where Namespace == \"Processor\" \r\n| where Name == \"UtilizationPercentage\"\r\n| summarize (Cpu)= {AggregatesRight} by Computer, ResourceId=_ResourceId;\r\nlet mem=\r\nInsightsMetrics\r\n| where TimeGenerated {TimeRange}\r\n| extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset\r\n| where Namespace == \"Memory\" \r\n| where Name == \"AvailableMB\"\r\n| extend MemorySize = round(todouble(parse_json(Tags).[\"vm.azm.ms/memorySizeMB\"]),0)\r\n| extend Val=(MemorySize-Val)/MemorySize*100\r\n|summarize (Mem)= {AggregatesRight} by  Computer, ResourceId=_ResourceId;\r\nlet iops=\r\nInsightsMetrics\r\n| where TimeGenerated {TimeRange}\r\n| extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset\r\n| where Namespace == \"LogicalDisk\" \r\n| where Name == \"TransfersPerSecond\"\r\n|summarize (IOPs)= {AggregatesRight} by  Computer, ResourceId=_ResourceId;\r\nlet nwsent=InsightsMetrics\r\n| where TimeGenerated {TimeRange}\r\n| extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset\r\n| where Namespace == \"Network\"\r\n| where Name == \"WriteBytesPerSecond\" \r\n|summarize (nwsent)= {AggregatesRight} by  Computer, ResourceId=_ResourceId;\r\nlet nwrec=InsightsMetrics\r\n| where TimeGenerated {TimeRange}\r\n| extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset\r\n| where Namespace == \"Network\"\r\n| where Name == \"ReadBytesPerSecond\" \r\n|summarize (nwrec)= {AggregatesRight} by  Computer, ResourceId=_ResourceId;\r\ninv\r\n| join kind= leftouter (\r\n   cpu\r\n) on ResourceId\r\n| join kind= leftouter (\r\n   mem\r\n) on ResourceId\r\n| join kind= leftouter (\r\n   iops\r\n) on ResourceId\r\n| join kind= leftouter (\r\n   vmsize\r\n) on $left.AzureSize==$right.Name\r\n|project Computer, AzureSize, Cpus,CpuSpeed, Cpu, Mem, IOPs ,PhysicalMemoryMB,Disks,maxIops=Disks*500 ,ResourceId\r\n| extend VmFamily=tostring(split(AzureSize,'_')[1])\r\n| extend Fm1=substring(VmFamily,0,1) \r\n| extend Fm2=substring(VmFamily,1,1)\r\n| extend Vmfamily=iff(Fm2 matches regex \"[0-9]\", Fm1, strcat(Fm1,Fm2))\r\n| extend minMemoryReq= PhysicalMemoryMB*Mem / 100 + 500\r\n| extend newram= case(minMemoryReq < 0, PhysicalMemoryMB, minMemoryReq < 512, 512, minMemoryReq < 768, 768, minMemoryReq < 1024, 1024, minMemoryReq < 1792, 1792, minMemoryReq < 2048, 2048, minMemoryReq < 3584, 3584, minMemoryReq < 4096, 4096, minMemoryReq < 7168, 7168, minMemoryReq < 8192, 8192, minMemoryReq < 14336, 14336, minMemoryReq < 16384, 16384, minMemoryReq < 28672, 28672, minMemoryReq < 32768, 32768, minMemoryReq < 49152, 49152, minMemoryReq < 57344, 57344, minMemoryReq < 65536, 65536, minMemoryReq < 81920, 81920, minMemoryReq < 98304, 98304, minMemoryReq < 114688, 114688, minMemoryReq < 131072, 131072, minMemoryReq < 143360, 143360, minMemoryReq < 147456, 147456, minMemoryReq < 163840, 163840, minMemoryReq < 196608, 196608, minMemoryReq < 224000, 224000, minMemoryReq < 229376, 229376, minMemoryReq < 262144, 262144, minMemoryReq < 393216, 393216, minMemoryReq < 442368, 442368, minMemoryReq < 448000, 448000, minMemoryReq < 458752, 458752, minMemoryReq < 466944, 466944, minMemoryReq < 516096, 516096, minMemoryReq < 524288, 524288, minMemoryReq < 896000, 896000, minMemoryReq < 1024000, 1024000, minMemoryReq < 1048576, 1048576, minMemoryReq < 1792000, 1792000, minMemoryReq < 1835008, 1835008, minMemoryReq < \r\n2048000, 2048000, minMemoryReq < 2097152, 2097152, minMemoryReq < 2918400, 2918400, minMemoryReq < 3891200, 3891200, minMemoryReq < 3985408, 3985408, minMemoryReq < 4194304, 4194304, minMemoryReq < 5836800, 5836800, 0)\r\n| extend cpu_resize=iff(Cpu<toint(\"{CPUThreshold}\") and Cpus !=1 ,\"yes\", \"no\")\r\n| extend mem_resize=iff(Mem<toint(\"{MEMThreshold}\") and newram < PhysicalMemoryMB,\"yes\", \"no\")\r\n| extend iops_resize=iff(IOPs<(maxIops*0.4),\"yes\", \"no\")\r\n| extend newcpu= toint(iff (Cpus <= 2,2, Cpus/2))\r\n| extend  CanResize=iff(cpu_resize ==\"yes\" and mem_resize==\"yes\" and iops_resize == \"yes\" , \"yes\",\"no\")\r\n| project ResourceId, AzureSize, Cpus,MemMB=PhysicalMemoryMB, Cpu, Mem, IOPs, cpu_resize, mem_resize, iops_resize,newcpu,newram\r\n\r\n\r\n\r\n",
-              "size": 1,
+              "query": "let workstart={PeakHourStart};\r\nlet workend={PeakHourEnd};\r\nlet timezoneoffset=4;\r\n{VMSizeList}\r\nlet inv=VMComputer\r\n| where TimeGenerated {TimeRange}\r\n| where AzureSubscriptionId in ({subscription:subid}) or '*' in ({subscription:subid})\r\n| where tostring(split(_ResourceId,'/')[4])  in ({rg}) or '*' in ({rg})\r\n| summarize arg_max(TimeGenerated, *) by ResourceId=_ResourceId\r\n| project ResourceId , Computer , AzureSize ,Cpus , CpuSpeed ,PhysicalMemoryMB\r\n| where isnotempty(AzureSize);\r\nlet cpu=InsightsMetrics\r\n| where TimeGenerated {TimeRange}\r\n| extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset\r\n| where hour between (workstart..workend)\r\n| where Namespace == \"Processor\" \r\n| where Name == \"UtilizationPercentage\"\r\n| summarize (Cpu)= {AggregatesRight} by Computer, ResourceId=_ResourceId;\r\nlet mem=\r\nInsightsMetrics\r\n| where TimeGenerated {TimeRange}\r\n| extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset\r\n| where Namespace == \"Memory\" \r\n| where Name == \"AvailableMB\"\r\n| extend MemorySize = round(todouble(parse_json(Tags).[\"vm.azm.ms/memorySizeMB\"]),0)\r\n| extend Val=(MemorySize-Val)/MemorySize*100\r\n|summarize (Mem)= {AggregatesRight} by  Computer, ResourceId=_ResourceId;\r\nlet iops=\r\nInsightsMetrics\r\n| where TimeGenerated {TimeRange}\r\n| extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset\r\n| where Namespace == \"LogicalDisk\" \r\n| where Name == \"TransfersPerSecond\"\r\n|summarize (IOPs)= {AggregatesRight} by  Computer, ResourceId=_ResourceId;\r\nlet nwsent=InsightsMetrics\r\n| where TimeGenerated {TimeRange}\r\n| extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset\r\n| where Namespace == \"Network\"\r\n| where Name == \"WriteBytesPerSecond\" \r\n|summarize (nwsent)= {AggregatesRight} by  Computer, ResourceId=_ResourceId;\r\nlet nwrec=InsightsMetrics\r\n| where TimeGenerated {TimeRange}\r\n| extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset\r\n| where Namespace == \"Network\"\r\n| where Name == \"ReadBytesPerSecond\" \r\n|summarize (nwrec)= {AggregatesRight} by  Computer, ResourceId=_ResourceId;\r\ninv\r\n| join kind= leftouter (\r\n   cpu\r\n) on ResourceId\r\n| join kind= leftouter (\r\n   mem\r\n) on ResourceId\r\n| join kind= leftouter (\r\n   iops\r\n) on ResourceId\r\n| join kind= leftouter (\r\n   vmsize\r\n) on $left.AzureSize==$right.Name\r\n|project Computer, AzureSize, Cpus,CpuSpeed, Cpu, Mem, IOPs ,PhysicalMemoryMB,Disks,maxIops=Disks*500 ,ResourceId\r\n| extend VmFamily=tostring(split(AzureSize,'_')[1])\r\n| extend Fm1=substring(VmFamily,0,1) \r\n| extend Fm2=substring(VmFamily,1,1)\r\n| extend Vmfamily=iff(Fm2 matches regex \"[0-9]\", Fm1, strcat(Fm1,Fm2))\r\n| extend minMemoryReq= PhysicalMemoryMB*Mem / 100 + 500\r\n| extend newram= case(minMemoryReq < 0, PhysicalMemoryMB, minMemoryReq < 512, 512, minMemoryReq < 768, 768, minMemoryReq < 1024, 1024, minMemoryReq < 1792, 1792, minMemoryReq < 2048, 2048, minMemoryReq < 3584, 3584, minMemoryReq < 4096, 4096, minMemoryReq < 7168, 7168, minMemoryReq < 8192, 8192, minMemoryReq < 14336, 14336, minMemoryReq < 16384, 16384, minMemoryReq < 28672, 28672, minMemoryReq < 32768, 32768, minMemoryReq < 49152, 49152, minMemoryReq < 57344, 57344, minMemoryReq < 65536, 65536, minMemoryReq < 81920, 81920, minMemoryReq < 98304, 98304, minMemoryReq < 114688, 114688, minMemoryReq < 131072, 131072, minMemoryReq < 143360, 143360, minMemoryReq < 147456, 147456, minMemoryReq < 163840, 163840, minMemoryReq < 196608, 196608, minMemoryReq < 224000, 224000, minMemoryReq < 229376, 229376, minMemoryReq < 262144, 262144, minMemoryReq < 393216, 393216, minMemoryReq < 442368, 442368, minMemoryReq < 448000, 448000, minMemoryReq < 458752, 458752, minMemoryReq < 466944, 466944, minMemoryReq < 516096, 516096, minMemoryReq < 524288, 524288, minMemoryReq < 896000, 896000, minMemoryReq < 1024000, 1024000, minMemoryReq < 1048576, 1048576, minMemoryReq < 1792000, 1792000, minMemoryReq < 1835008, 1835008, minMemoryReq < \r\n2048000, 2048000, minMemoryReq < 2097152, 2097152, minMemoryReq < 2918400, 2918400, minMemoryReq < 3891200, 3891200, minMemoryReq < 3985408, 3985408, minMemoryReq < 4194304, 4194304, minMemoryReq < 5836800, 5836800, 0)\r\n| extend cpu_resize=iff(Cpu<toint(\"{CPUThreshold}\") and Cpus !=1 ,\"yes\", \"no\")\r\n| extend mem_resize=iff(Mem<toint(\"{MEMThreshold}\") and newram < PhysicalMemoryMB,\"yes\", \"no\")\r\n| extend iops_resize=iff(IOPs<(maxIops*0.4),\"yes\", \"no\")\r\n| extend newcpu= toint(iff (Cpus <= 2,2, Cpus/2))\r\n| extend  CanResize=iff(cpu_resize ==\"yes\" and mem_resize==\"yes\" and iops_resize == \"yes\" , \"yes\",\"no\")\r\n| project ResourceId, AzureSize, Cpus,MemMB=PhysicalMemoryMB, Cpu, Mem, IOPs, cpu_resize, mem_resize, iops_resize,newcpu,newram, Computer\r\n\r\n\r\n\r\n",
+              "size": 2,
               "showAnalytics": true,
               "title": "VM Usage with Resize Options",
               "timeContext": {
-                "durationMs": 0
+                "durationMs": 5184000000
               },
               "timeContextFromParameter": "TimeRange",
               "exportedParameters": [
@@ -1606,475 +1597,9 @@
             "name": "query - 1 - Copy"
           },
           {
-            "type": 3,
-            "content": {
-              "version": "KqlItem/1.0",
-              "query": "let workstart={PeakHourStart};\r\nlet workend={PeakHourEnd};\r\nlet timezoneoffset=4;\r\n{VMSizeList}\r\nlet inv=VMComputer\r\n| where TimeGenerated {TimeRange}\r\n| where AzureSubscriptionId in ({subscription:subid}) or '*' in ({subscription:subid})\r\n| where tostring(split(_ResourceId,'/')[4])  in ({rg}) or '*' in ({rg})\r\n| summarize arg_max(TimeGenerated, *) by ResourceId=_ResourceId\r\n| project ResourceId , Computer , AzureSize ,Cpus , CpuSpeed ,PhysicalMemoryMB\r\n| where isnotempty(AzureSize);\r\nlet cpu=InsightsMetrics\r\n| where TimeGenerated {TimeRange}\r\n| extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset\r\n| where hour between (workstart..workend)\r\n| where Namespace == \"Processor\" \r\n| where Name == \"UtilizationPercentage\"\r\n| summarize (Cpu)= {AggregatesRight} by Computer, ResourceId=_ResourceId;\r\nlet mem=\r\nInsightsMetrics\r\n| where TimeGenerated {TimeRange}\r\n| extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset\r\n| where Namespace == \"Memory\" \r\n| where Name == \"AvailableMB\"\r\n| extend MemorySize = round(todouble(parse_json(Tags).[\"vm.azm.ms/memorySizeMB\"]),0)\r\n| extend Val=(MemorySize-Val)/MemorySize*100\r\n|summarize (Mem)= {AggregatesRight} by  Computer, ResourceId=_ResourceId;\r\nlet iops=\r\nInsightsMetrics\r\n| where TimeGenerated {TimeRange}\r\n| extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset\r\n| where Namespace == \"LogicalDisk\" \r\n| where Name == \"TransfersPerSecond\"\r\n|summarize (IOPs)= {AggregatesRight} by  Computer, ResourceId=_ResourceId;\r\nlet nwsent=InsightsMetrics\r\n| where TimeGenerated {TimeRange}\r\n| extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset\r\n| where Namespace == \"Network\"\r\n| where Name == \"WriteBytesPerSecond\" \r\n|summarize (nwsent)= {AggregatesRight} by  Computer, ResourceId=_ResourceId;\r\nlet nwrec=InsightsMetrics\r\n| where TimeGenerated {TimeRange}\r\n| extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset\r\n| where Namespace == \"Network\"\r\n| where Name == \"ReadBytesPerSecond\" \r\n|summarize (nwrec)= {AggregatesRight} by  Computer, ResourceId=_ResourceId;\r\nlet table=inv\r\n| join kind= leftouter (\r\n   cpu\r\n) on ResourceId\r\n| join kind= leftouter (\r\n   mem\r\n) on ResourceId\r\n| join kind= leftouter (\r\n   iops\r\n) on ResourceId\r\n| join kind= leftouter (\r\n   vmsize\r\n) on $left.AzureSize==$right.Name\r\n|project Computer, AzureSize, Cpus,CpuSpeed, Cpu, Mem, IOPs ,PhysicalMemoryMB,Disks,maxIops=Disks*500 ,ResourceId\r\n| extend minMemoryReq= PhysicalMemoryMB*Mem / 100 + 500\r\n| extend newram= case(minMemoryReq < 0, PhysicalMemoryMB, minMemoryReq < 512, 512, minMemoryReq < 768, 768, minMemoryReq < 1024, 1024, minMemoryReq < 1792, 1792, minMemoryReq < 2048, 2048, minMemoryReq < 3584, 3584, minMemoryReq < 4096, 4096, minMemoryReq < 7168, 7168, minMemoryReq < 8192, 8192, minMemoryReq < 14336, 14336, minMemoryReq < 16384, 16384, minMemoryReq < 28672, 28672, minMemoryReq < 32768, 32768, minMemoryReq < 49152, 49152, minMemoryReq < 57344, 57344, minMemoryReq < 65536, 65536, minMemoryReq < 81920, 81920, minMemoryReq < 98304, 98304, minMemoryReq < 114688, 114688, minMemoryReq < 131072, 131072, minMemoryReq < 143360, 143360, minMemoryReq < 147456, 147456, minMemoryReq < 163840, 163840, minMemoryReq < 196608, 196608, minMemoryReq < 224000, 224000, minMemoryReq < 229376, 229376, minMemoryReq < 262144, 262144, minMemoryReq < 393216, 393216, minMemoryReq < 442368, 442368, minMemoryReq < 448000, 448000, minMemoryReq < 458752, 458752, minMemoryReq < 466944, 466944, minMemoryReq < 516096, 516096, minMemoryReq < 524288, 524288, minMemoryReq < 896000, 896000, minMemoryReq < 1024000, 1024000, minMemoryReq < 1048576, 1048576, minMemoryReq < 1792000, 1792000, minMemoryReq < 1835008, 1835008, minMemoryReq < \r\n2048000, 2048000, minMemoryReq < 2097152, 2097152, minMemoryReq < 2918400, 2918400, minMemoryReq < 3891200, 3891200, minMemoryReq < 3985408, 3985408, minMemoryReq < 4194304, 4194304, minMemoryReq < 5836800, 5836800, 0)\r\n| extend cpu_resize=iff(Cpu < toint(\"{CPUThreshold}\") and Cpus != 1, \"yes\", \"no\")\r\n| extend mem_resize=iff(Mem < toint(\"{MEMThreshold}\") and newram < PhysicalMemoryMB, \"yes\", \"no\")\r\n| extend iops_resize=iff(IOPs < (maxIops*0.4), \"yes\", \"no\") \r\n| extend newcpu= toint(iff (Cpus <= 2, 2, Cpus/2))\r\n| where cpu_resize ==\"yes\" and mem_resize==\"yes\" and iops_resize == \"yes\" ;\r\ntable\r\n| join kind= leftouter (\r\n   vmsize\r\n   | project Name,vcores=toint(vcores),Ram,Disks\r\n) on $left.newcpu==$right.vcores\r\n| where  Ram <= PhysicalMemoryMB  and Ram >= minMemoryReq\r\n| where Name !startswith  'Basic'\r\n// Calculate VM Family for filtering\r\n| extend s=split(Name, '_')\r\n| extend VmfamilyTarget=case(\r\nsubstring(s[1], 0, 1) in (\"A\",\"D\",\"E\",\"F\",\"L\",\"M\") and substring(s[2], 0, 1)==\"v\",strcat(s[0],'_', substring(s[1], 0, 1),'_', s[2]),\r\nsubstring(s[1], 0, 1) in (\"A\",\"D\",\"E\",\"F\",\"L\",\"M\"),strcat(s[0],'_', substring(s[1], 0, 1)),\r\nsubstring(s[1], 0, 1)==\"B\",strcat(s[0],'_', substring(s[1], 0, 1)),\r\nsubstring(s[1], 0, 2)==\"GS\",strcat(s[0],'_', substring(s[1], 0, 2)),\r\nsubstring(s[1], 0, 2)in (\"HB\",\"NC\",\"NV\",\"PB\",\"ND\") and substring(s[2], 0, 1)==\"v\",strcat(s[0],'_', substring(s[1], 0, 2),'_', s[2]),\r\nsubstring(s[1], 0, 1) in(\"H\",\"G\"),strcat(s[0],'_', substring(s[1], 0, 1)),\r\nsubstring(s[1], 0, 2)in (\"HB\",\"NC\",\"NV\",\"PB\",\"ND\",\"NP\"),strcat(s[0],'_', substring(s[1], 0, 2)),\r\n                Name)\r\n| extend y=split(AzureSize, '_')\r\n| extend VmfamilyCurrent=case(\r\nsubstring(y[1], 0, 1) in (\"A\",\"D\",\"E\",\"F\",\"L\",\"M\") and substring(y[2], 0, 1)==\"v\",strcat(y[0],'_', substring(y[1], 0, 1),'_', y[2]),\r\nsubstring(y[1], 0, 1) in (\"A\",\"D\",\"E\",\"F\",\"L\",\"M\"),strcat(y[0],'_', substring(y[1], 0, 1)),\r\nsubstring(y[1], 0, 1)==\"B\",strcat(y[0],'_', substring(y[1], 0, 1)),\r\nsubstring(y[1], 0, 2)==\"GS\",strcat(y[0],'_', substring(y[1], 0, 2)),\r\nsubstring(y[1], 0, 2)in (\"HB\",\"NC\",\"NV\",\"PB\",\"ND\") and substring(y[2], 0, 1)==\"v\",strcat(y[0],'_', substring(y[1], 0, 2),'_', y[2]),\r\nsubstring(y[1], 0, 1) in(\"H\",\"G\"),strcat(y[0],'_', substring(y[1], 0, 1)),\r\nsubstring(y[1], 0, 2)in (\"HB\",\"NC\",\"NV\",\"PB\",\"ND\",\"NP\"),strcat(y[0],'_', substring(y[1], 0, 2)),\r\n                AzureSize)\r\n| where AzureSize != Name  and   iff(\"{usesamefamily:value}\"==\"same\",VmfamilyTarget == VmfamilyCurrent,VmfamilyTarget  in ({VMFamilyFilter}) or '*' in ({VMFamilyFilter}))\r\n| sort by Ram asc \r\n| summarize possibleSize = makelist(pack('size', strcat(Name, '|', vcores, '|', Ram))) by ResourceId, AzureSize, Vmfamily=VmfamilyCurrent, Cpus, PhysicalMemoryMB, newcpu, newram, CpuSpeed, Cpu, Mem, IOPs, Disks, cpu_resize, mem_resize, iops_resize",
-              "size": 0,
-              "title": "Size Recomendations with VM Fmaily Filter",
-              "timeContext": {
-                "durationMs": 0
-              },
-              "timeContextFromParameter": "TimeRange",
-              "exportFieldName": "ResourceId",
-              "exportParameterName": "ResourceId",
-              "showExportToExcel": true,
-              "queryType": 0,
-              "resourceType": "microsoft.operationalinsights/workspaces",
-              "crossComponentResources": [
-                "{Workspace}"
-              ],
-              "gridSettings": {
-                "formatters": [
-                  {
-                    "columnMatch": "Vmfamily",
-                    "formatter": 5
-                  },
-                  {
-                    "columnMatch": "CpuSpeed",
-                    "formatter": 5
-                  },
-                  {
-                    "columnMatch": "Disks",
-                    "formatter": 5
-                  },
-                  {
-                    "columnMatch": "cpu_resize",
-                    "formatter": 18,
-                    "formatOptions": {
-                      "thresholdsOptions": "icons",
-                      "thresholdsGrid": [
-                        {
-                          "operator": "==",
-                          "thresholdValue": "yes",
-                          "representation": "success",
-                          "text": "{0}{1}"
-                        },
-                        {
-                          "operator": "==",
-                          "thresholdValue": "no",
-                          "representation": "2",
-                          "text": "{0}{1}"
-                        },
-                        {
-                          "operator": "Default",
-                          "thresholdValue": null,
-                          "representation": "success",
-                          "text": "{0}{1}"
-                        }
-                      ]
-                    }
-                  },
-                  {
-                    "columnMatch": "mem_resize",
-                    "formatter": 18,
-                    "formatOptions": {
-                      "thresholdsOptions": "icons",
-                      "thresholdsGrid": [
-                        {
-                          "operator": "==",
-                          "thresholdValue": "yes",
-                          "representation": "success",
-                          "text": "{0}{1}"
-                        },
-                        {
-                          "operator": "==",
-                          "thresholdValue": "no",
-                          "representation": "2",
-                          "text": "{0}{1}"
-                        },
-                        {
-                          "operator": "Default",
-                          "thresholdValue": null,
-                          "representation": "success",
-                          "text": "{0}{1}"
-                        }
-                      ]
-                    }
-                  },
-                  {
-                    "columnMatch": "iops_resize",
-                    "formatter": 18,
-                    "formatOptions": {
-                      "thresholdsOptions": "icons",
-                      "thresholdsGrid": [
-                        {
-                          "operator": "==",
-                          "thresholdValue": "yes",
-                          "representation": "success",
-                          "text": "{0}{1}"
-                        },
-                        {
-                          "operator": "==",
-                          "thresholdValue": "no",
-                          "representation": "2",
-                          "text": "{0}{1}"
-                        },
-                        {
-                          "operator": "Default",
-                          "thresholdValue": null,
-                          "representation": "success",
-                          "text": "{0}{1}"
-                        }
-                      ]
-                    }
-                  },
-                  {
-                    "columnMatch": "possibleSize",
-                    "formatter": 7,
-                    "formatOptions": {
-                      "linkTarget": "CellDetails",
-                      "linkIsContextBlade": true
-                    }
-                  },
-                  {
-                    "columnMatch": "cpu_p95",
-                    "formatter": 5,
-                    "numberFormat": {
-                      "unit": 0,
-                      "options": {
-                        "style": "decimal",
-                        "useGrouping": false,
-                        "maximumFractionDigits": 2
-                      }
-                    }
-                  },
-                  {
-                    "columnMatch": "mem_p95",
-                    "formatter": 5,
-                    "numberFormat": {
-                      "unit": 0,
-                      "options": {
-                        "style": "decimal",
-                        "maximumFractionDigits": 2
-                      }
-                    }
-                  },
-                  {
-                    "columnMatch": "iops_p95",
-                    "formatter": 5,
-                    "numberFormat": {
-                      "unit": 0,
-                      "options": {
-                        "style": "decimal",
-                        "maximumFractionDigits": 2
-                      }
-                    }
-                  }
-                ],
-                "rowLimit": 1000,
-                "labelSettings": [
-                  {
-                    "columnId": "ResourceId"
-                  },
-                  {
-                    "columnId": "AzureSize"
-                  },
-                  {
-                    "columnId": "Vmfamily"
-                  },
-                  {
-                    "columnId": "Cpus"
-                  },
-                  {
-                    "columnId": "PhysicalMemoryMB",
-                    "label": "MemMB"
-                  },
-                  {
-                    "columnId": "newcpu"
-                  },
-                  {
-                    "columnId": "newram"
-                  },
-                  {
-                    "columnId": "CpuSpeed"
-                  },
-                  {
-                    "columnId": "Cpu",
-                    "label": "%CPU"
-                  },
-                  {
-                    "columnId": "Mem",
-                    "label": "%MEM"
-                  },
-                  {
-                    "columnId": "IOPs"
-                  },
-                  {
-                    "columnId": "Disks"
-                  },
-                  {
-                    "columnId": "cpu_resize"
-                  },
-                  {
-                    "columnId": "mem_resize"
-                  },
-                  {
-                    "columnId": "iops_resize"
-                  },
-                  {
-                    "columnId": "possibleSize"
-                  }
-                ]
-              },
-              "sortBy": []
-            },
-            "name": "query - 1 - Copy - Copy - Copy"
-          },
-          {
-            "type": 3,
-            "content": {
-              "version": "KqlItem/1.0",
-              "query": "let workstart={PeakHourStart};\r\nlet workend={PeakHourEnd};\r\nlet timezoneoffset=4;\r\n{VMSizeList}\r\n{VMPriceAll}\r\nlet inv=VMComputer\r\n| where TimeGenerated {TimeRange}\r\n| where AzureSubscriptionId in ({subscription:subid}) or '*' in ({subscription:subid})\r\n| where tostring(split(_ResourceId,'/')[4])  in ({rg}) or '*' in ({rg})\r\n| summarize arg_max(TimeGenerated, *) by ResourceId=_ResourceId\r\n| project ResourceId , Computer , AzureSize ,Cpus , CpuSpeed ,PhysicalMemoryMB, AzureLocation\r\n| where isnotempty(AzureSize);\r\nlet cpu=InsightsMetrics\r\n    | where TimeGenerated >ago(30d)\r\n| extend hour=datetime_part(\"hour\", TimeGenerated) + timezoneoffset\r\n| where hour between (workstart..workend)\r\n| where Namespace == \"Processor\"\r\n| where Name == \"UtilizationPercentage\"\r\n| summarize (Cpu)= round(percentile(Val, 99), 2) by Computer, ResourceId=_ResourceId;\r\nlet mem= InsightsMetrics\r\n    | where TimeGenerated >ago(30d)\r\n| extend hour=datetime_part(\"hour\", TimeGenerated) + timezoneoffset\r\n| where Namespace == \"Memory\"\r\n| where Name == \"AvailableMB\"\r\n| extend MemorySize = round(todouble(parse_json(Tags).[\"vm.azm.ms/memorySizeMB\"]), 0)\r\n| extend Val=(MemorySize - Val) / MemorySize*100\r\n| summarize (Mem)= round(percentile(Val, 99), 2) by Computer, ResourceId=_ResourceId;\r\nlet iops= InsightsMetrics\r\n    | where TimeGenerated >ago(30d)\r\n| extend hour=datetime_part(\"hour\", TimeGenerated) + timezoneoffset\r\n| where Namespace == \"LogicalDisk\"\r\n| where Name == \"TransfersPerSecond\"\r\n| summarize (IOPs)= round(percentile(Val, 99), 2) by Computer, ResourceId=_ResourceId;\r\nlet table=inv\r\n| join kind= leftouter (cpu) on ResourceId\r\n| join kind= leftouter (mem) on ResourceId\r\n| join kind= leftouter (iops) on ResourceId\r\n| join kind= fullouter (vmsize) on $left.AzureSize == $right.Name\r\n| project Computer, AzureSize, Cpus, CpuSpeed, Cpu, Mem, IOPs, PhysicalMemoryMB, Disks, maxIops=Disks * 500, ResourceId,AzureLocation\r\n| extend minMemoryReq= PhysicalMemoryMB*Mem / 100 + 500\r\n| extend newram= case(minMemoryReq < 0, PhysicalMemoryMB, minMemoryReq < 512, 512, minMemoryReq < 768, 768, minMemoryReq < 1024, 1024, minMemoryReq < 1792, 1792, minMemoryReq < 2048, 2048, minMemoryReq < 3584, 3584, minMemoryReq < 4096, 4096, minMemoryReq < 7168, 7168, minMemoryReq < 8192, 8192, minMemoryReq < 14336, 14336, minMemoryReq < 16384, 16384, minMemoryReq < 28672, 28672, minMemoryReq < 32768, 32768, minMemoryReq < 49152, 49152, minMemoryReq < 57344, 57344, minMemoryReq < 65536, 65536, minMemoryReq < 81920, 81920, minMemoryReq < 98304, 98304, minMemoryReq < 114688, 114688, minMemoryReq < 131072, 131072, minMemoryReq < 143360, 143360, minMemoryReq < 147456, 147456, minMemoryReq < 163840, 163840, minMemoryReq < 196608, 196608, minMemoryReq < 224000, 224000, minMemoryReq < 229376, 229376, minMemoryReq < 262144, 262144, minMemoryReq < 393216, 393216, minMemoryReq < 442368, 442368, minMemoryReq < 448000, 448000, minMemoryReq < 458752, 458752, minMemoryReq < 466944, 466944, minMemoryReq < 516096, 516096, minMemoryReq < 524288, 524288, minMemoryReq < 896000, 896000, minMemoryReq < 1024000, 1024000, minMemoryReq < 1048576, 1048576, minMemoryReq < 1792000, 1792000, minMemoryReq < 1835008, 1835008, minMemoryReq < \r\n2048000, 2048000, minMemoryReq < 2097152, 2097152, minMemoryReq < 2918400, 2918400, minMemoryReq < 3891200, 3891200, minMemoryReq < 3985408, 3985408, minMemoryReq < 4194304, 4194304, minMemoryReq < 5836800, 5836800, 0)\r\n| extend cpu_resize=iff(Cpu < toint(\"{CPUThreshold}\") and Cpus != 1, \"yes\", \"no\")\r\n| extend mem_resize=iff(Mem < toint(\"{MEMThreshold}\") and newram < PhysicalMemoryMB, \"yes\", \"no\")\r\n| extend iops_resize=iff(IOPs < (maxIops*0.4), \"yes\", \"no\") \r\n| extend newcpu= toint(iff (Cpus <= 2, 2, Cpus/2))\r\n| where cpu_resize ==\"yes\" and mem_resize==\"yes\" and iops_resize == \"yes\" ;\r\nlet finaltable=table\r\n| join kind= leftouter (vmsize | project Name, vcores=toint(vcores), Ram, Disks) on $left.newcpu==$right.vcores \r\n| where Ram <= PhysicalMemoryMB and Ram >= minMemoryReq \r\n| where Name !startswith 'Basic'\r\n// Calculate VM Family for filtering\r\n| extend s=split(Name, '_')\r\n| extend VmfamilyTarget=case(\r\nsubstring(s[1], 0, 1) in (\"A\",\"D\",\"E\",\"F\",\"L\",\"M\") and substring(s[2], 0, 1)==\"v\",strcat(s[0],'_', substring(s[1], 0, 1),'_', s[2]),\r\nsubstring(s[1], 0, 1) in (\"A\",\"D\",\"E\",\"F\",\"L\",\"M\"),strcat(s[0],'_', substring(s[1], 0, 1)),\r\nsubstring(s[1], 0, 1)==\"B\",strcat(s[0],'_', substring(s[1], 0, 1)),\r\nsubstring(s[1], 0, 2)==\"GS\",strcat(s[0],'_', substring(s[1], 0, 2)),\r\nsubstring(s[1], 0, 2)in (\"HB\",\"NC\",\"NV\",\"PB\",\"ND\") and substring(s[2], 0, 1)==\"v\",strcat(s[0],'_', substring(s[1], 0, 2),'_', s[2]),\r\nsubstring(s[1], 0, 1) in(\"H\",\"G\"),strcat(s[0],'_', substring(s[1], 0, 1)),\r\nsubstring(s[1], 0, 2)in (\"HB\",\"NC\",\"NV\",\"PB\",\"ND\",\"NP\"),strcat(s[0],'_', substring(s[1], 0, 2)),\r\n                Name)\r\n| extend y=split(AzureSize, '_')\r\n| extend VmfamilyCurrent=case(\r\nsubstring(y[1], 0, 1) in (\"A\",\"D\",\"E\",\"F\",\"L\",\"M\") and substring(y[2], 0, 1)==\"v\",strcat(y[0],'_', substring(y[1], 0, 1),'_', y[2]),\r\nsubstring(y[1], 0, 1) in (\"A\",\"D\",\"E\",\"F\",\"L\",\"M\"),strcat(y[0],'_', substring(y[1], 0, 1)),\r\nsubstring(y[1], 0, 1)==\"B\",strcat(y[0],'_', substring(y[1], 0, 1)),\r\nsubstring(y[1], 0, 2)==\"GS\",strcat(y[0],'_', substring(y[1], 0, 2)),\r\nsubstring(y[1], 0, 2)in (\"HB\",\"NC\",\"NV\",\"PB\",\"ND\") and substring(y[2], 0, 1)==\"v\",strcat(y[0],'_', substring(y[1], 0, 2),'_', y[2]),\r\nsubstring(y[1], 0, 1) in(\"H\",\"G\"),strcat(y[0],'_', substring(y[1], 0, 1)),\r\nsubstring(y[1], 0, 2)in (\"HB\",\"NC\",\"NV\",\"PB\",\"ND\",\"NP\"),strcat(y[0],'_', substring(y[1], 0, 2)),\r\n                AzureSize)\r\n| where AzureSize != Name  and   iff(\"{usesamefamily:value}\"==\"same\",VmfamilyTarget == VmfamilyCurrent,VmfamilyTarget  in ({VMFamilyFilter}) or '*' in ({VMFamilyFilter}))\r\n| sort by Ram asc \r\n| join kind=leftouter hint.strategy=shuffle (VMPriceAll| where type==\"Consumption\"| project  armskuname,VMCost=unitprice,Location) on $left.AzureLocation==$right.Location and $left.AzureSize==$right.armskuname\r\n| join kind=leftouter hint.strategy=shuffle (VMPriceAll| where type==\"Consumption\"| project  armskuname,NewVMCost=unitprice,Location) on $left.AzureLocation==$right.Location and $left.Name==$right.armskuname\r\n| join kind=leftouter hint.strategy=shuffle (VMPriceAll|  where reservationterm == \"1 Year\"| project  armskuname,NewVM_RI1Y=unitprice,Location,reservationterm) on $left.AzureLocation==$right.Location and $left.Name==$right.armskuname\r\n| join kind=leftouter hint.strategy=shuffle (VMPriceAll|  where reservationterm == \"3 Years\"| project  armskuname,NewVM_RI3Y=unitprice,Location,reservationterm) on $left.AzureLocation==$right.Location and $left.Name==$right.armskuname\r\n| extend  VMCost=VMCost*730, NewVMCost=NewVMCost*730, NewVM_RI1YCost=NewVM_RI1Y/12,NewVM_RI3YCost=NewVM_RI3Y/36\r\n|extend DiffPayg=VMCost-NewVMCost, DiffRI1=VMCost-NewVM_RI1YCost,DiffRI3=VMCost-NewVM_RI3YCost\r\n| where NewVMCost < VMCost\r\n| project Computer, AzureSize, NewSize=Name,VMCost,NewVMCost,ResourceId,DiffPayg,DiffRI1,DiffRI3,vcores,Ram,NewVM_RI1YCost,NewVM_RI3YCost;\r\nfinaltable\r\n| summarize arg_max(DiffPayg,*) by ResourceId\r\n| join kind=leftouter (finaltable\r\n|sort by ResourceId,NewVMCost asc\r\n| summarize possibleSizes = makelist(pack('size', strcat(NewSize , '|',NewVMCost,' | ',vcores,'|',Ram))) by ResourceId,AzureSize\r\n) on ResourceId\r\n| project  ResourceId, CurrentSize=AzureSize, NewSize,VMCost,NewVMCost,NewVM_RI1YCost,NewVM_RI3YCost,vcores,Ram,possibleSizes,Computer;\r\n\r\n\r\n",
-              "size": 0,
-              "title": "Size Recomendations with PayG, 1 Year RI, 3 Year RI",
-              "timeContext": {
-                "durationMs": 0
-              },
-              "timeContextFromParameter": "TimeRange",
-              "exportedParameters": [
-                {
-                  "fieldName": "ResourceId",
-                  "parameterName": "ResourceId"
-                },
-                {
-                  "fieldName": "Computer",
-                  "parameterName": "Computer",
-                  "parameterType": 1
-                }
-              ],
-              "showExportToExcel": true,
-              "queryType": 0,
-              "resourceType": "microsoft.operationalinsights/workspaces",
-              "crossComponentResources": [
-                "{Workspace}"
-              ],
-              "gridSettings": {
-                "formatters": [
-                  {
-                    "columnMatch": "VMCost",
-                    "formatter": 0,
-                    "numberFormat": {
-                      "unit": 0,
-                      "options": {
-                        "currency": "USD",
-                        "style": "currency",
-                        "useGrouping": false
-                      }
-                    }
-                  },
-                  {
-                    "columnMatch": "NewVMCost",
-                    "formatter": 0,
-                    "numberFormat": {
-                      "unit": 0,
-                      "options": {
-                        "currency": "USD",
-                        "style": "currency"
-                      }
-                    }
-                  },
-                  {
-                    "columnMatch": "NewVM_RI1YCost",
-                    "formatter": 0,
-                    "numberFormat": {
-                      "unit": 0,
-                      "options": {
-                        "currency": "USD",
-                        "style": "currency"
-                      }
-                    }
-                  },
-                  {
-                    "columnMatch": "NewVM_RI3YCost",
-                    "formatter": 0,
-                    "numberFormat": {
-                      "unit": 0,
-                      "options": {
-                        "currency": "USD",
-                        "style": "currency"
-                      }
-                    }
-                  },
-                  {
-                    "columnMatch": "possibleSize",
-                    "formatter": 7,
-                    "formatOptions": {
-                      "linkTarget": "CellDetails",
-                      "linkIsContextBlade": true
-                    }
-                  },
-                  {
-                    "columnMatch": "CostDifference",
-                    "formatter": 0,
-                    "numberFormat": {
-                      "unit": 0,
-                      "options": {
-                        "currency": "USD",
-                        "style": "currency",
-                        "useGrouping": false,
-                        "maximumFractionDigits": 2
-                      }
-                    }
-                  },
-                  {
-                    "columnMatch": "ResourceId1",
-                    "formatter": 5
-                  },
-                  {
-                    "columnMatch": "AzureSize1",
-                    "formatter": 5
-                  },
-                  {
-                    "columnMatch": "Vmfamily",
-                    "formatter": 5
-                  },
-                  {
-                    "columnMatch": "CpuSpeed",
-                    "formatter": 5
-                  },
-                  {
-                    "columnMatch": "cpu_p95",
-                    "formatter": 5,
-                    "numberFormat": {
-                      "unit": 0,
-                      "options": {
-                        "style": "decimal",
-                        "useGrouping": false,
-                        "maximumFractionDigits": 2
-                      }
-                    }
-                  },
-                  {
-                    "columnMatch": "mem_p95",
-                    "formatter": 5,
-                    "numberFormat": {
-                      "unit": 0,
-                      "options": {
-                        "style": "decimal",
-                        "maximumFractionDigits": 2
-                      }
-                    }
-                  },
-                  {
-                    "columnMatch": "iops_p95",
-                    "formatter": 5,
-                    "numberFormat": {
-                      "unit": 0,
-                      "options": {
-                        "style": "decimal",
-                        "maximumFractionDigits": 2
-                      }
-                    }
-                  },
-                  {
-                    "columnMatch": "Disks",
-                    "formatter": 5
-                  },
-                  {
-                    "columnMatch": "cpu_resize",
-                    "formatter": 18,
-                    "formatOptions": {
-                      "thresholdsOptions": "icons",
-                      "thresholdsGrid": [
-                        {
-                          "operator": "==",
-                          "thresholdValue": "yes",
-                          "representation": "success",
-                          "text": "{0}{1}"
-                        },
-                        {
-                          "operator": "==",
-                          "thresholdValue": "no",
-                          "representation": "2",
-                          "text": "{0}{1}"
-                        },
-                        {
-                          "operator": "Default",
-                          "thresholdValue": null,
-                          "representation": "success",
-                          "text": "{0}{1}"
-                        }
-                      ]
-                    }
-                  },
-                  {
-                    "columnMatch": "mem_resize",
-                    "formatter": 18,
-                    "formatOptions": {
-                      "thresholdsOptions": "icons",
-                      "thresholdsGrid": [
-                        {
-                          "operator": "==",
-                          "thresholdValue": "yes",
-                          "representation": "success",
-                          "text": "{0}{1}"
-                        },
-                        {
-                          "operator": "==",
-                          "thresholdValue": "no",
-                          "representation": "2",
-                          "text": "{0}{1}"
-                        },
-                        {
-                          "operator": "Default",
-                          "thresholdValue": null,
-                          "representation": "success",
-                          "text": "{0}{1}"
-                        }
-                      ]
-                    }
-                  },
-                  {
-                    "columnMatch": "iops_resize",
-                    "formatter": 18,
-                    "formatOptions": {
-                      "thresholdsOptions": "icons",
-                      "thresholdsGrid": [
-                        {
-                          "operator": "==",
-                          "thresholdValue": "yes",
-                          "representation": "success",
-                          "text": "{0}{1}"
-                        },
-                        {
-                          "operator": "==",
-                          "thresholdValue": "no",
-                          "representation": "2",
-                          "text": "{0}{1}"
-                        },
-                        {
-                          "operator": "Default",
-                          "thresholdValue": null,
-                          "representation": "success",
-                          "text": "{0}{1}"
-                        }
-                      ]
-                    }
-                  }
-                ],
-                "rowLimit": 1500,
-                "filter": true,
-                "sortBy": [
-                  {
-                    "itemKey": "Computer",
-                    "sortOrder": 2
-                  }
-                ]
-              },
-              "sortBy": [
-                {
-                  "itemKey": "Computer",
-                  "sortOrder": 2
-                }
-              ]
-            },
-            "name": "query - 1 - Copy - Copy - Copy - Copy"
-          },
-          {
             "type": 1,
             "content": {
-              "json": "**Selected Performance Aggregation : {Aggregates:label}   for Computer  : {Computer}**\r\n",
+              "json": "**Selected a Server to See Performance History! **\r\n\r\n\r\nPerformance Aggregation : {Aggregates:label}   for Computer  : {Computer}**\r\n",
               "style": "info"
             },
             "name": "text - 21"
@@ -2983,6 +2508,472 @@
               }
             ],
             "name": "query - 5 - Copy - Copy - Copy"
+          },
+          {
+            "type": 3,
+            "content": {
+              "version": "KqlItem/1.0",
+              "query": "let workstart={PeakHourStart};\r\nlet workend={PeakHourEnd};\r\nlet timezoneoffset=4;\r\n{VMSizeList}\r\nlet inv=VMComputer\r\n| where TimeGenerated {TimeRange}\r\n| where AzureSubscriptionId in ({subscription:subid}) or '*' in ({subscription:subid})\r\n| where tostring(split(_ResourceId,'/')[4])  in ({rg}) or '*' in ({rg})\r\n| summarize arg_max(TimeGenerated, *) by ResourceId=_ResourceId\r\n| project ResourceId , Computer , AzureSize ,Cpus , CpuSpeed ,PhysicalMemoryMB\r\n| where isnotempty(AzureSize);\r\nlet cpu=InsightsMetrics\r\n| where TimeGenerated {TimeRange}\r\n| extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset\r\n| where hour between (workstart..workend)\r\n| where Namespace == \"Processor\" \r\n| where Name == \"UtilizationPercentage\"\r\n| summarize (Cpu)= {AggregatesRight} by Computer, ResourceId=_ResourceId;\r\nlet mem=\r\nInsightsMetrics\r\n| where TimeGenerated {TimeRange}\r\n| extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset\r\n| where Namespace == \"Memory\" \r\n| where Name == \"AvailableMB\"\r\n| extend MemorySize = round(todouble(parse_json(Tags).[\"vm.azm.ms/memorySizeMB\"]),0)\r\n| extend Val=(MemorySize-Val)/MemorySize*100\r\n|summarize (Mem)= {AggregatesRight} by  Computer, ResourceId=_ResourceId;\r\nlet iops=\r\nInsightsMetrics\r\n| where TimeGenerated {TimeRange}\r\n| extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset\r\n| where Namespace == \"LogicalDisk\" \r\n| where Name == \"TransfersPerSecond\"\r\n|summarize (IOPs)= {AggregatesRight} by  Computer, ResourceId=_ResourceId;\r\nlet nwsent=InsightsMetrics\r\n| where TimeGenerated {TimeRange}\r\n| extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset\r\n| where Namespace == \"Network\"\r\n| where Name == \"WriteBytesPerSecond\" \r\n|summarize (nwsent)= {AggregatesRight} by  Computer, ResourceId=_ResourceId;\r\nlet nwrec=InsightsMetrics\r\n| where TimeGenerated {TimeRange}\r\n| extend hour=datetime_part(\"hour\", TimeGenerated)+timezoneoffset\r\n| where Namespace == \"Network\"\r\n| where Name == \"ReadBytesPerSecond\" \r\n|summarize (nwrec)= {AggregatesRight} by  Computer, ResourceId=_ResourceId;\r\nlet table=inv\r\n| join kind= leftouter (\r\n   cpu\r\n) on ResourceId\r\n| join kind= leftouter (\r\n   mem\r\n) on ResourceId\r\n| join kind= leftouter (\r\n   iops\r\n) on ResourceId\r\n| join kind= leftouter (\r\n   vmsize\r\n) on $left.AzureSize==$right.Name\r\n|project Computer, AzureSize, Cpus,CpuSpeed, Cpu, Mem, IOPs ,PhysicalMemoryMB,Disks,maxIops=Disks*500 ,ResourceId\r\n| extend minMemoryReq= PhysicalMemoryMB*Mem / 100 + 500\r\n| extend newram= case(minMemoryReq < 0, PhysicalMemoryMB, minMemoryReq < 512, 512, minMemoryReq < 768, 768, minMemoryReq < 1024, 1024, minMemoryReq < 1792, 1792, minMemoryReq < 2048, 2048, minMemoryReq < 3584, 3584, minMemoryReq < 4096, 4096, minMemoryReq < 7168, 7168, minMemoryReq < 8192, 8192, minMemoryReq < 14336, 14336, minMemoryReq < 16384, 16384, minMemoryReq < 28672, 28672, minMemoryReq < 32768, 32768, minMemoryReq < 49152, 49152, minMemoryReq < 57344, 57344, minMemoryReq < 65536, 65536, minMemoryReq < 81920, 81920, minMemoryReq < 98304, 98304, minMemoryReq < 114688, 114688, minMemoryReq < 131072, 131072, minMemoryReq < 143360, 143360, minMemoryReq < 147456, 147456, minMemoryReq < 163840, 163840, minMemoryReq < 196608, 196608, minMemoryReq < 224000, 224000, minMemoryReq < 229376, 229376, minMemoryReq < 262144, 262144, minMemoryReq < 393216, 393216, minMemoryReq < 442368, 442368, minMemoryReq < 448000, 448000, minMemoryReq < 458752, 458752, minMemoryReq < 466944, 466944, minMemoryReq < 516096, 516096, minMemoryReq < 524288, 524288, minMemoryReq < 896000, 896000, minMemoryReq < 1024000, 1024000, minMemoryReq < 1048576, 1048576, minMemoryReq < 1792000, 1792000, minMemoryReq < 1835008, 1835008, minMemoryReq < \r\n2048000, 2048000, minMemoryReq < 2097152, 2097152, minMemoryReq < 2918400, 2918400, minMemoryReq < 3891200, 3891200, minMemoryReq < 3985408, 3985408, minMemoryReq < 4194304, 4194304, minMemoryReq < 5836800, 5836800, 0)\r\n| extend cpu_resize=iff(Cpu < toint(\"{CPUThreshold}\") and Cpus != 1, \"yes\", \"no\")\r\n| extend mem_resize=iff(Mem < toint(\"{MEMThreshold}\") and newram < PhysicalMemoryMB, \"yes\", \"no\")\r\n| extend iops_resize=iff(IOPs < (maxIops*0.4), \"yes\", \"no\") \r\n| extend newcpu= toint(iff (Cpus <= 2, 2, Cpus/2))\r\n| where cpu_resize ==\"yes\" and mem_resize==\"yes\" and iops_resize == \"yes\" ;\r\ntable\r\n| join kind= leftouter (\r\n   vmsize\r\n   | project Name,vcores=toint(vcores),Ram,Disks\r\n) on $left.newcpu==$right.vcores\r\n| where  Ram <= PhysicalMemoryMB  and Ram >= minMemoryReq\r\n| where Name !startswith  'Basic'\r\n// Calculate VM Family for filtering\r\n| extend s=split(Name, '_')\r\n| extend VmfamilyTarget=case(\r\nsubstring(s[1], 0, 1) in (\"A\",\"D\",\"E\",\"F\",\"L\",\"M\") and substring(s[2], 0, 1)==\"v\",strcat(s[0],'_', substring(s[1], 0, 1),'_', s[2]),\r\nsubstring(s[1], 0, 1) in (\"A\",\"D\",\"E\",\"F\",\"L\",\"M\"),strcat(s[0],'_', substring(s[1], 0, 1)),\r\nsubstring(s[1], 0, 1)==\"B\",strcat(s[0],'_', substring(s[1], 0, 1)),\r\nsubstring(s[1], 0, 2)==\"GS\",strcat(s[0],'_', substring(s[1], 0, 2)),\r\nsubstring(s[1], 0, 2)in (\"HB\",\"NC\",\"NV\",\"PB\",\"ND\") and substring(s[2], 0, 1)==\"v\",strcat(s[0],'_', substring(s[1], 0, 2),'_', s[2]),\r\nsubstring(s[1], 0, 1) in(\"H\",\"G\"),strcat(s[0],'_', substring(s[1], 0, 1)),\r\nsubstring(s[1], 0, 2)in (\"HB\",\"NC\",\"NV\",\"PB\",\"ND\",\"NP\"),strcat(s[0],'_', substring(s[1], 0, 2)),\r\n                Name)\r\n| extend y=split(AzureSize, '_')\r\n| extend VmfamilyCurrent=case(\r\nsubstring(y[1], 0, 1) in (\"A\",\"D\",\"E\",\"F\",\"L\",\"M\") and substring(y[2], 0, 1)==\"v\",strcat(y[0],'_', substring(y[1], 0, 1),'_', y[2]),\r\nsubstring(y[1], 0, 1) in (\"A\",\"D\",\"E\",\"F\",\"L\",\"M\"),strcat(y[0],'_', substring(y[1], 0, 1)),\r\nsubstring(y[1], 0, 1)==\"B\",strcat(y[0],'_', substring(y[1], 0, 1)),\r\nsubstring(y[1], 0, 2)==\"GS\",strcat(y[0],'_', substring(y[1], 0, 2)),\r\nsubstring(y[1], 0, 2)in (\"HB\",\"NC\",\"NV\",\"PB\",\"ND\") and substring(y[2], 0, 1)==\"v\",strcat(y[0],'_', substring(y[1], 0, 2),'_', y[2]),\r\nsubstring(y[1], 0, 1) in(\"H\",\"G\"),strcat(y[0],'_', substring(y[1], 0, 1)),\r\nsubstring(y[1], 0, 2)in (\"HB\",\"NC\",\"NV\",\"PB\",\"ND\",\"NP\"),strcat(y[0],'_', substring(y[1], 0, 2)),\r\n                AzureSize)\r\n| where AzureSize != Name  and   iff(\"{usesamefamily:value}\"==\"same\",VmfamilyTarget == VmfamilyCurrent,VmfamilyTarget  in ({VMFamilyFilter}) or '*' in ({VMFamilyFilter}))\r\n| sort by Ram asc \r\n| summarize possibleSize = makelist(pack('size', strcat(Name, '|', vcores, '|', Ram))) by ResourceId, AzureSize, Vmfamily=VmfamilyCurrent, Cpus, PhysicalMemoryMB, newcpu, newram, CpuSpeed, Cpu, Mem, IOPs, Disks, cpu_resize, mem_resize, iops_resize",
+              "size": 0,
+              "title": "Size Recomendations with VM Fmaily Filter",
+              "timeContext": {
+                "durationMs": 5184000000
+              },
+              "timeContextFromParameter": "TimeRange",
+              "exportFieldName": "ResourceId",
+              "exportParameterName": "ResourceId",
+              "showExportToExcel": true,
+              "queryType": 0,
+              "resourceType": "microsoft.operationalinsights/workspaces",
+              "crossComponentResources": [
+                "{Workspace}"
+              ],
+              "gridSettings": {
+                "formatters": [
+                  {
+                    "columnMatch": "Vmfamily",
+                    "formatter": 5
+                  },
+                  {
+                    "columnMatch": "CpuSpeed",
+                    "formatter": 5
+                  },
+                  {
+                    "columnMatch": "Disks",
+                    "formatter": 5
+                  },
+                  {
+                    "columnMatch": "cpu_resize",
+                    "formatter": 18,
+                    "formatOptions": {
+                      "thresholdsOptions": "icons",
+                      "thresholdsGrid": [
+                        {
+                          "operator": "==",
+                          "thresholdValue": "yes",
+                          "representation": "success",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "==",
+                          "thresholdValue": "no",
+                          "representation": "2",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "Default",
+                          "thresholdValue": null,
+                          "representation": "success",
+                          "text": "{0}{1}"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "columnMatch": "mem_resize",
+                    "formatter": 18,
+                    "formatOptions": {
+                      "thresholdsOptions": "icons",
+                      "thresholdsGrid": [
+                        {
+                          "operator": "==",
+                          "thresholdValue": "yes",
+                          "representation": "success",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "==",
+                          "thresholdValue": "no",
+                          "representation": "2",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "Default",
+                          "thresholdValue": null,
+                          "representation": "success",
+                          "text": "{0}{1}"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "columnMatch": "iops_resize",
+                    "formatter": 18,
+                    "formatOptions": {
+                      "thresholdsOptions": "icons",
+                      "thresholdsGrid": [
+                        {
+                          "operator": "==",
+                          "thresholdValue": "yes",
+                          "representation": "success",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "==",
+                          "thresholdValue": "no",
+                          "representation": "2",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "Default",
+                          "thresholdValue": null,
+                          "representation": "success",
+                          "text": "{0}{1}"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "columnMatch": "possibleSize",
+                    "formatter": 7,
+                    "formatOptions": {
+                      "linkTarget": "CellDetails",
+                      "linkIsContextBlade": true
+                    }
+                  },
+                  {
+                    "columnMatch": "cpu_p95",
+                    "formatter": 5,
+                    "numberFormat": {
+                      "unit": 0,
+                      "options": {
+                        "style": "decimal",
+                        "useGrouping": false,
+                        "maximumFractionDigits": 2
+                      }
+                    }
+                  },
+                  {
+                    "columnMatch": "mem_p95",
+                    "formatter": 5,
+                    "numberFormat": {
+                      "unit": 0,
+                      "options": {
+                        "style": "decimal",
+                        "maximumFractionDigits": 2
+                      }
+                    }
+                  },
+                  {
+                    "columnMatch": "iops_p95",
+                    "formatter": 5,
+                    "numberFormat": {
+                      "unit": 0,
+                      "options": {
+                        "style": "decimal",
+                        "maximumFractionDigits": 2
+                      }
+                    }
+                  }
+                ],
+                "rowLimit": 1000,
+                "labelSettings": [
+                  {
+                    "columnId": "ResourceId"
+                  },
+                  {
+                    "columnId": "AzureSize"
+                  },
+                  {
+                    "columnId": "Vmfamily"
+                  },
+                  {
+                    "columnId": "Cpus"
+                  },
+                  {
+                    "columnId": "PhysicalMemoryMB",
+                    "label": "MemMB"
+                  },
+                  {
+                    "columnId": "newcpu"
+                  },
+                  {
+                    "columnId": "newram"
+                  },
+                  {
+                    "columnId": "CpuSpeed"
+                  },
+                  {
+                    "columnId": "Cpu",
+                    "label": "%CPU"
+                  },
+                  {
+                    "columnId": "Mem",
+                    "label": "%MEM"
+                  },
+                  {
+                    "columnId": "IOPs"
+                  },
+                  {
+                    "columnId": "Disks"
+                  },
+                  {
+                    "columnId": "cpu_resize"
+                  },
+                  {
+                    "columnId": "mem_resize"
+                  },
+                  {
+                    "columnId": "iops_resize"
+                  },
+                  {
+                    "columnId": "possibleSize"
+                  }
+                ]
+              },
+              "sortBy": []
+            },
+            "name": "query - 1 - Copy - Copy - Copy"
+          },
+          {
+            "type": 3,
+            "content": {
+              "version": "KqlItem/1.0",
+              "query": "let workstart={PeakHourStart};\r\nlet workend={PeakHourEnd};\r\nlet timezoneoffset=4;\r\n{VMSizeList}\r\n{VMPriceAll}\r\nlet inv=VMComputer\r\n| where TimeGenerated {TimeRange}\r\n| where AzureSubscriptionId in ({subscription:subid}) or '*' in ({subscription:subid})\r\n| where tostring(split(_ResourceId,'/')[4])  in ({rg}) or '*' in ({rg})\r\n| summarize arg_max(TimeGenerated, *) by ResourceId=_ResourceId\r\n| project ResourceId , Computer , AzureSize ,Cpus , CpuSpeed ,PhysicalMemoryMB, AzureLocation\r\n| where isnotempty(AzureSize);\r\nlet cpu=InsightsMetrics\r\n    | where TimeGenerated >ago(30d)\r\n| extend hour=datetime_part(\"hour\", TimeGenerated) + timezoneoffset\r\n| where hour between (workstart..workend)\r\n| where Namespace == \"Processor\"\r\n| where Name == \"UtilizationPercentage\"\r\n| summarize (Cpu)= round(percentile(Val, 99), 2) by Computer, ResourceId=_ResourceId;\r\nlet mem= InsightsMetrics\r\n    | where TimeGenerated >ago(30d)\r\n| extend hour=datetime_part(\"hour\", TimeGenerated) + timezoneoffset\r\n| where Namespace == \"Memory\"\r\n| where Name == \"AvailableMB\"\r\n| extend MemorySize = round(todouble(parse_json(Tags).[\"vm.azm.ms/memorySizeMB\"]), 0)\r\n| extend Val=(MemorySize - Val) / MemorySize*100\r\n| summarize (Mem)= round(percentile(Val, 99), 2) by Computer, ResourceId=_ResourceId;\r\nlet iops= InsightsMetrics\r\n    | where TimeGenerated >ago(30d)\r\n| extend hour=datetime_part(\"hour\", TimeGenerated) + timezoneoffset\r\n| where Namespace == \"LogicalDisk\"\r\n| where Name == \"TransfersPerSecond\"\r\n| summarize (IOPs)= round(percentile(Val, 99), 2) by Computer, ResourceId=_ResourceId;\r\nlet table=inv\r\n| join kind= leftouter (cpu) on ResourceId\r\n| join kind= leftouter (mem) on ResourceId\r\n| join kind= leftouter (iops) on ResourceId\r\n| join kind= fullouter (vmsize) on $left.AzureSize == $right.Name\r\n| project Computer, AzureSize, Cpus, CpuSpeed, Cpu, Mem, IOPs, PhysicalMemoryMB, Disks, maxIops=Disks * 500, ResourceId,AzureLocation\r\n| extend minMemoryReq= PhysicalMemoryMB*Mem / 100 + 500\r\n| extend newram= case(minMemoryReq < 0, PhysicalMemoryMB, minMemoryReq < 512, 512, minMemoryReq < 768, 768, minMemoryReq < 1024, 1024, minMemoryReq < 1792, 1792, minMemoryReq < 2048, 2048, minMemoryReq < 3584, 3584, minMemoryReq < 4096, 4096, minMemoryReq < 7168, 7168, minMemoryReq < 8192, 8192, minMemoryReq < 14336, 14336, minMemoryReq < 16384, 16384, minMemoryReq < 28672, 28672, minMemoryReq < 32768, 32768, minMemoryReq < 49152, 49152, minMemoryReq < 57344, 57344, minMemoryReq < 65536, 65536, minMemoryReq < 81920, 81920, minMemoryReq < 98304, 98304, minMemoryReq < 114688, 114688, minMemoryReq < 131072, 131072, minMemoryReq < 143360, 143360, minMemoryReq < 147456, 147456, minMemoryReq < 163840, 163840, minMemoryReq < 196608, 196608, minMemoryReq < 224000, 224000, minMemoryReq < 229376, 229376, minMemoryReq < 262144, 262144, minMemoryReq < 393216, 393216, minMemoryReq < 442368, 442368, minMemoryReq < 448000, 448000, minMemoryReq < 458752, 458752, minMemoryReq < 466944, 466944, minMemoryReq < 516096, 516096, minMemoryReq < 524288, 524288, minMemoryReq < 896000, 896000, minMemoryReq < 1024000, 1024000, minMemoryReq < 1048576, 1048576, minMemoryReq < 1792000, 1792000, minMemoryReq < 1835008, 1835008, minMemoryReq < \r\n2048000, 2048000, minMemoryReq < 2097152, 2097152, minMemoryReq < 2918400, 2918400, minMemoryReq < 3891200, 3891200, minMemoryReq < 3985408, 3985408, minMemoryReq < 4194304, 4194304, minMemoryReq < 5836800, 5836800, 0)\r\n| extend cpu_resize=iff(Cpu < toint(\"{CPUThreshold}\") and Cpus != 1, \"yes\", \"no\")\r\n| extend mem_resize=iff(Mem < toint(\"{MEMThreshold}\") and newram < PhysicalMemoryMB, \"yes\", \"no\")\r\n| extend iops_resize=iff(IOPs < (maxIops*0.4), \"yes\", \"no\") \r\n| extend newcpu= toint(iff (Cpus <= 2, 2, Cpus/2))\r\n| where cpu_resize ==\"yes\" and mem_resize==\"yes\" and iops_resize == \"yes\" ;\r\nlet finaltable=table\r\n| join kind= leftouter (vmsize | project Name, vcores=toint(vcores), Ram, Disks) on $left.newcpu==$right.vcores \r\n| where Ram <= PhysicalMemoryMB and Ram >= minMemoryReq \r\n| where Name !startswith 'Basic'\r\n// Calculate VM Family for filtering\r\n| extend s=split(Name, '_')\r\n| extend VmfamilyTarget=case(\r\nsubstring(s[1], 0, 1) in (\"A\",\"D\",\"E\",\"F\",\"L\",\"M\") and substring(s[2], 0, 1)==\"v\",strcat(s[0],'_', substring(s[1], 0, 1),'_', s[2]),\r\nsubstring(s[1], 0, 1) in (\"A\",\"D\",\"E\",\"F\",\"L\",\"M\"),strcat(s[0],'_', substring(s[1], 0, 1)),\r\nsubstring(s[1], 0, 1)==\"B\",strcat(s[0],'_', substring(s[1], 0, 1)),\r\nsubstring(s[1], 0, 2)==\"GS\",strcat(s[0],'_', substring(s[1], 0, 2)),\r\nsubstring(s[1], 0, 2)in (\"HB\",\"NC\",\"NV\",\"PB\",\"ND\") and substring(s[2], 0, 1)==\"v\",strcat(s[0],'_', substring(s[1], 0, 2),'_', s[2]),\r\nsubstring(s[1], 0, 1) in(\"H\",\"G\"),strcat(s[0],'_', substring(s[1], 0, 1)),\r\nsubstring(s[1], 0, 2)in (\"HB\",\"NC\",\"NV\",\"PB\",\"ND\",\"NP\"),strcat(s[0],'_', substring(s[1], 0, 2)),\r\n                Name)\r\n| extend y=split(AzureSize, '_')\r\n| extend VmfamilyCurrent=case(\r\nsubstring(y[1], 0, 1) in (\"A\",\"D\",\"E\",\"F\",\"L\",\"M\") and substring(y[2], 0, 1)==\"v\",strcat(y[0],'_', substring(y[1], 0, 1),'_', y[2]),\r\nsubstring(y[1], 0, 1) in (\"A\",\"D\",\"E\",\"F\",\"L\",\"M\"),strcat(y[0],'_', substring(y[1], 0, 1)),\r\nsubstring(y[1], 0, 1)==\"B\",strcat(y[0],'_', substring(y[1], 0, 1)),\r\nsubstring(y[1], 0, 2)==\"GS\",strcat(y[0],'_', substring(y[1], 0, 2)),\r\nsubstring(y[1], 0, 2)in (\"HB\",\"NC\",\"NV\",\"PB\",\"ND\") and substring(y[2], 0, 1)==\"v\",strcat(y[0],'_', substring(y[1], 0, 2),'_', y[2]),\r\nsubstring(y[1], 0, 1) in(\"H\",\"G\"),strcat(y[0],'_', substring(y[1], 0, 1)),\r\nsubstring(y[1], 0, 2)in (\"HB\",\"NC\",\"NV\",\"PB\",\"ND\",\"NP\"),strcat(y[0],'_', substring(y[1], 0, 2)),\r\n                AzureSize)\r\n| where AzureSize != Name  and   iff(\"{usesamefamily:value}\"==\"same\",VmfamilyTarget == VmfamilyCurrent,VmfamilyTarget  in ({VMFamilyFilter}) or '*' in ({VMFamilyFilter}))\r\n| sort by Ram asc \r\n| join kind=leftouter hint.strategy=shuffle (VMPriceAll| where type==\"Consumption\"| project  armskuname,VMCost=unitprice,Location) on $left.AzureLocation==$right.Location and $left.AzureSize==$right.armskuname\r\n| join kind=leftouter hint.strategy=shuffle (VMPriceAll| where type==\"Consumption\"| project  armskuname,NewVMCost=unitprice,Location) on $left.AzureLocation==$right.Location and $left.Name==$right.armskuname\r\n| join kind=leftouter hint.strategy=shuffle (VMPriceAll|  where reservationterm == \"1 Year\"| project  armskuname,NewVM_RI1Y=unitprice,Location,reservationterm) on $left.AzureLocation==$right.Location and $left.Name==$right.armskuname\r\n| join kind=leftouter hint.strategy=shuffle (VMPriceAll|  where reservationterm == \"3 Years\"| project  armskuname,NewVM_RI3Y=unitprice,Location,reservationterm) on $left.AzureLocation==$right.Location and $left.Name==$right.armskuname\r\n| extend  VMCost=VMCost*730, NewVMCost=NewVMCost*730, NewVM_RI1YCost=NewVM_RI1Y/12,NewVM_RI3YCost=NewVM_RI3Y/36\r\n|extend DiffPayg=VMCost-NewVMCost, DiffRI1=VMCost-NewVM_RI1YCost,DiffRI3=VMCost-NewVM_RI3YCost\r\n| where NewVMCost < VMCost\r\n| project Computer, AzureSize, NewSize=Name,VMCost,NewVMCost,ResourceId,DiffPayg,DiffRI1,DiffRI3,vcores,Ram,NewVM_RI1YCost,NewVM_RI3YCost;\r\nfinaltable\r\n| summarize arg_max(DiffPayg,*) by ResourceId\r\n| join kind=leftouter (finaltable\r\n|sort by ResourceId,NewVMCost asc\r\n| summarize possibleSizes = makelist(pack('size', strcat(NewSize , '|',NewVMCost,' | ',vcores,'|',Ram))) by ResourceId,AzureSize\r\n) on ResourceId\r\n| project  ResourceId, CurrentSize=AzureSize, NewSize,VMCost,NewVMCost,NewVM_RI1YCost,NewVM_RI3YCost,vcores,Ram,possibleSizes,Computer;\r\n\r\n\r\n",
+              "size": 0,
+              "title": "Size Recomendations with PayG, 1 Year RI, 3 Year RI",
+              "timeContext": {
+                "durationMs": 5184000000
+              },
+              "timeContextFromParameter": "TimeRange",
+              "exportedParameters": [
+                {
+                  "fieldName": "ResourceId",
+                  "parameterName": "ResourceId"
+                },
+                {
+                  "fieldName": "Computer",
+                  "parameterName": "Computer",
+                  "parameterType": 1
+                }
+              ],
+              "showExportToExcel": true,
+              "queryType": 0,
+              "resourceType": "microsoft.operationalinsights/workspaces",
+              "crossComponentResources": [
+                "{Workspace}"
+              ],
+              "gridSettings": {
+                "formatters": [
+                  {
+                    "columnMatch": "VMCost",
+                    "formatter": 0,
+                    "numberFormat": {
+                      "unit": 0,
+                      "options": {
+                        "currency": "USD",
+                        "style": "currency",
+                        "useGrouping": false
+                      }
+                    }
+                  },
+                  {
+                    "columnMatch": "NewVMCost",
+                    "formatter": 0,
+                    "numberFormat": {
+                      "unit": 0,
+                      "options": {
+                        "currency": "USD",
+                        "style": "currency"
+                      }
+                    }
+                  },
+                  {
+                    "columnMatch": "NewVM_RI1YCost",
+                    "formatter": 0,
+                    "numberFormat": {
+                      "unit": 0,
+                      "options": {
+                        "currency": "USD",
+                        "style": "currency"
+                      }
+                    }
+                  },
+                  {
+                    "columnMatch": "NewVM_RI3YCost",
+                    "formatter": 0,
+                    "numberFormat": {
+                      "unit": 0,
+                      "options": {
+                        "currency": "USD",
+                        "style": "currency"
+                      }
+                    }
+                  },
+                  {
+                    "columnMatch": "possibleSize",
+                    "formatter": 7,
+                    "formatOptions": {
+                      "linkTarget": "CellDetails",
+                      "linkIsContextBlade": true
+                    }
+                  },
+                  {
+                    "columnMatch": "CostDifference",
+                    "formatter": 0,
+                    "numberFormat": {
+                      "unit": 0,
+                      "options": {
+                        "currency": "USD",
+                        "style": "currency",
+                        "useGrouping": false,
+                        "maximumFractionDigits": 2
+                      }
+                    }
+                  },
+                  {
+                    "columnMatch": "ResourceId1",
+                    "formatter": 5
+                  },
+                  {
+                    "columnMatch": "AzureSize1",
+                    "formatter": 5
+                  },
+                  {
+                    "columnMatch": "Vmfamily",
+                    "formatter": 5
+                  },
+                  {
+                    "columnMatch": "CpuSpeed",
+                    "formatter": 5
+                  },
+                  {
+                    "columnMatch": "cpu_p95",
+                    "formatter": 5,
+                    "numberFormat": {
+                      "unit": 0,
+                      "options": {
+                        "style": "decimal",
+                        "useGrouping": false,
+                        "maximumFractionDigits": 2
+                      }
+                    }
+                  },
+                  {
+                    "columnMatch": "mem_p95",
+                    "formatter": 5,
+                    "numberFormat": {
+                      "unit": 0,
+                      "options": {
+                        "style": "decimal",
+                        "maximumFractionDigits": 2
+                      }
+                    }
+                  },
+                  {
+                    "columnMatch": "iops_p95",
+                    "formatter": 5,
+                    "numberFormat": {
+                      "unit": 0,
+                      "options": {
+                        "style": "decimal",
+                        "maximumFractionDigits": 2
+                      }
+                    }
+                  },
+                  {
+                    "columnMatch": "Disks",
+                    "formatter": 5
+                  },
+                  {
+                    "columnMatch": "cpu_resize",
+                    "formatter": 18,
+                    "formatOptions": {
+                      "thresholdsOptions": "icons",
+                      "thresholdsGrid": [
+                        {
+                          "operator": "==",
+                          "thresholdValue": "yes",
+                          "representation": "success",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "==",
+                          "thresholdValue": "no",
+                          "representation": "2",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "Default",
+                          "thresholdValue": null,
+                          "representation": "success",
+                          "text": "{0}{1}"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "columnMatch": "mem_resize",
+                    "formatter": 18,
+                    "formatOptions": {
+                      "thresholdsOptions": "icons",
+                      "thresholdsGrid": [
+                        {
+                          "operator": "==",
+                          "thresholdValue": "yes",
+                          "representation": "success",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "==",
+                          "thresholdValue": "no",
+                          "representation": "2",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "Default",
+                          "thresholdValue": null,
+                          "representation": "success",
+                          "text": "{0}{1}"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "columnMatch": "iops_resize",
+                    "formatter": 18,
+                    "formatOptions": {
+                      "thresholdsOptions": "icons",
+                      "thresholdsGrid": [
+                        {
+                          "operator": "==",
+                          "thresholdValue": "yes",
+                          "representation": "success",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "==",
+                          "thresholdValue": "no",
+                          "representation": "2",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "Default",
+                          "thresholdValue": null,
+                          "representation": "success",
+                          "text": "{0}{1}"
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "rowLimit": 1500,
+                "filter": true,
+                "sortBy": [
+                  {
+                    "itemKey": "Computer",
+                    "sortOrder": 2
+                  }
+                ]
+              },
+              "sortBy": [
+                {
+                  "itemKey": "Computer",
+                  "sortOrder": 2
+                }
+              ]
+            },
+            "name": "query - 1 - Copy - Copy - Copy - Copy"
           }
         ]
       },
