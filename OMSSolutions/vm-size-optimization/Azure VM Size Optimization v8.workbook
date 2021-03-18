@@ -347,7 +347,7 @@
           {
             "type": 1,
             "content": {
-              "json": "Rules\r\n\r\n* No Single Core VM\r\n* No Basic SKU VM\r\n\r\n** Update CPU and Memory Thresholds to find which VMs can be resized. **\r\n\r\n** Select VMSize Family **\r\n** Select VM Pricing Cloud or Local Cached Pricing **",
+              "json": "### Rules\r\n\r\n* No Single Core VM\r\n* No Basic SKU VM\r\n\r\n** Update CPU and Memory Thresholds to find which VMs can be resized. **\r\n\r\n** Select VMSize Family **\r\n** Select VM Pricing Cloud or Local Cached Pricing **",
               "style": "warning"
             },
             "name": "text - 11 - Copy"
@@ -2854,6 +2854,14 @@
               "sortBy": []
             },
             "name": "query - 1 - Copy - Copy - Copy"
+          },
+          {
+            "type": 1,
+            "content": {
+              "json": "## VMs hosting Database workloads and VMs require high disk throughput should be evaluated individually \r\n\r\n## For these VMs check Bandwidth Consumed / IOPS Consumed Metrics to see if smaller VM size  will be able to support the storage load !",
+              "style": "warning"
+            },
+            "name": "text - 31"
           },
           {
             "type": 3,
