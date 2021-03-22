@@ -236,6 +236,14 @@
             "linkLabel": "Unused Disks and Public IPs",
             "subTarget": "6",
             "style": "link"
+          },
+          {
+            "id": "4ef4e466-ff9f-4874-b76f-9b1702753a7b",
+            "cellValue": "tab",
+            "linkTarget": "parameter",
+            "linkLabel": "Azure SQL & MySQL Workloads",
+            "subTarget": "7",
+            "style": "link"
           }
         ]
       },
@@ -720,7 +728,7 @@
               "size": 1,
               "title": "Resize Possible VMs",
               "timeContext": {
-                "durationMs": 0
+                "durationMs": 604800000
               },
               "timeContextFromParameter": "TimeRange",
               "queryType": 0,
@@ -2318,7 +2326,7 @@
               "aggregation": 3,
               "title": "%CPU History",
               "timeContext": {
-                "durationMs": 604800000
+                "durationMs": 0
               },
               "timeContextFromParameter": "TimeRange",
               "showExportToExcel": true,
@@ -2871,7 +2879,7 @@
               "size": 0,
               "title": "Size Recomendations with PayG, 1 Year RI, 3 Year RI",
               "timeContext": {
-                "durationMs": 0
+                "durationMs": 604800000
               },
               "timeContextFromParameter": "TimeRange",
               "exportedParameters": [
@@ -3129,7 +3137,7 @@
               "size": 2,
               "title": "Cost Optimization for VMs with High Utilization ",
               "timeContext": {
-                "durationMs": 0
+                "durationMs": 604800000
               },
               "timeContextFromParameter": "TimeRange",
               "exportedParameters": [
@@ -3368,7 +3376,7 @@
               "size": 0,
               "title": "Size Recomendations with PayG, 1 Year RI, 3 Year RI",
               "timeContext": {
-                "durationMs": 0
+                "durationMs": 604800000
               },
               "timeContextFromParameter": "TimeRange",
               "exportedParameters": [
@@ -3938,7 +3946,7 @@
               "size": 2,
               "title": "VM Bandwidth Usage %",
               "timeContext": {
-                "durationMs": 604800000
+                "durationMs": 0
               },
               "timeContextFromParameter": "TimeRange",
               "exportedParameters": [
@@ -4619,6 +4627,506 @@
               "json": "###  Select a Vm to see Bw and IOPS Profile for :\r\n{resid}"
             },
             "name": "text - 12"
+          },
+          {
+            "type": 3,
+            "content": {
+              "version": "KqlItem/1.0",
+              "query": "\r\nAzureMetrics\r\n| where TimeGenerated {TimeRange} \r\n| where ResourceProvider == \"MICROSOFT.COMPUTE\"\r\n| extend subid=tostring(split(_ResourceId, '/')[2]) \r\n| where subid in ({subscription:subid}) or '*' in ({subscription:subid}) \r\n| where tostring(split(_ResourceId,'/')[4])  in ({rg}) or '*' in ({rg}) \r\n| where MetricName  =~\"Data Disk Bandwidth Consumed Percentage\"\t\r\n| summarize [\"%Bw Avg\"]=round(avg(Average),1),[\"%Bw Max\"]=max(Average) by MetricName, ResourceId\r\n| join kind=leftouter hint.strategy= shuffle (\r\nAzureMetrics\r\n| where TimeGenerated {TimeRange} \r\n| where ResourceProvider == \"MICROSOFT.COMPUTE\"\r\n| where MetricName  =~\"Data Disk Bandwidth Consumed Percentage\"\t\r\n| extend CachedBW=case(Maximum >= 90 , '90-100', Maximum >=80 ,\"80-89\",\"0-79\")\r\n| summarize r2=countif(CachedBW==\"0-79\"),r3=countif(CachedBW==\"80-89\"),r4=countif(CachedBW==\"90-100\"),Total=count() by ResourceId\r\n| project  [\"BW <80%\"]=todouble(r2)*100/Total,[\"BW 80-89%\"]=round(todouble(r3)*100/Total,1),[\"BW 90-100%\"]=todouble(r4)*100/Total , ResourceId\r\n) on ResourceId\r\n| join kind=leftouter hint.strategy= shuffle (\r\nAzureMetrics\r\n| where ResourceProvider == \"MICROSOFT.COMPUTE\"\r\n| extend subid=tostring(split(_ResourceId, '/')[2]) \r\n| where subid in ({subscription:subid}) or '*' in ({subscription:subid}) \r\n| where tostring(split(_ResourceId,'/')[4])  in ({rg}) or '*' in ({rg}) \r\n| where MetricName  =~\"Data Disk IOPS Consumed Percentage\"\t\r\n| summarize [\"%IOPs Avg\"]=round(avg(Average),1),[\"%IOPs Max\"]=max(Average) by MetricName, ResourceId ) on ResourceId\r\n| join kind=leftouter hint.strategy= shuffle (\r\nAzureMetrics\r\n| where TimeGenerated {TimeRange} \r\n| where ResourceProvider == \"MICROSOFT.COMPUTE\"\r\n| where MetricName  =~\"Data Disk IOPS Consumed Percentage\"\t\r\n| extend CachedBW=case(Maximum >= 90 , '90-100', Maximum >=80 ,\"80-89\",\"0-79\")\r\n| summarize r2=countif(CachedBW==\"0-79\"),r3=countif(CachedBW==\"80-89\"),r4=countif(CachedBW==\"90-100\"),Total=count() by ResourceId\r\n| project  [\"IOPS <80%\"]=todouble(r2)*100/Total,[\"IOPS 80-89%\"]=round(todouble(r3)*100/Total,1),[\"IOPS 90-100%\"]=todouble(r4)*100/Total , ResourceId\r\n) on ResourceId\r\n|extend rg=tostring(split(ResourceId,'/')[4])\r\n| project ResourceId , ['%Bw Avg'], ['%Bw Max'], ['BW <80%'], ['BW 80-89%'], ['BW 90-100%'] , ['%IOPs Avg'], ['%IOPs Max'], ['IOPS <80%'], ['IOPS 80-89%'], ['IOPS 90-100%'], rg\r\n",
+              "size": 2,
+              "title": "Data Disk Bandwidth and IOPS Usage",
+              "timeContext": {
+                "durationMs": 604800000
+              },
+              "timeContextFromParameter": "TimeRange",
+              "exportedParameters": [
+                {
+                  "fieldName": "ResourceId",
+                  "parameterName": "resid",
+                  "parameterType": 1
+                },
+                {
+                  "fieldName": "vm",
+                  "parameterName": "vm",
+                  "parameterType": 1
+                }
+              ],
+              "showExportToExcel": true,
+              "queryType": 0,
+              "resourceType": "microsoft.operationalinsights/workspaces",
+              "crossComponentResources": [
+                "{Workspace}"
+              ],
+              "visualization": "table",
+              "gridSettings": {
+                "formatters": [
+                  {
+                    "columnMatch": "%Bw Avg",
+                    "formatter": 4,
+                    "formatOptions": {
+                      "palette": "blue"
+                    }
+                  },
+                  {
+                    "columnMatch": "%Bw Max",
+                    "formatter": 4,
+                    "formatOptions": {
+                      "palette": "orange"
+                    }
+                  },
+                  {
+                    "columnMatch": "BW <80%",
+                    "formatter": 18,
+                    "formatOptions": {
+                      "thresholdsOptions": "icons",
+                      "thresholdsGrid": [
+                        {
+                          "operator": ">=",
+                          "thresholdValue": "99",
+                          "representation": "success",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "<",
+                          "thresholdValue": "99",
+                          "representation": "Important",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "Default",
+                          "thresholdValue": null,
+                          "representation": "success",
+                          "text": "{0}{1}"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "columnMatch": "BW 80-89%",
+                    "formatter": 18,
+                    "formatOptions": {
+                      "thresholdsOptions": "icons",
+                      "thresholdsGrid": [
+                        {
+                          "operator": ">",
+                          "thresholdValue": "0",
+                          "representation": "2",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "is Empty",
+                          "representation": "Blank",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "Default",
+                          "thresholdValue": null,
+                          "representation": "Blank",
+                          "text": "{0}{1}"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "columnMatch": "BW 90-100%",
+                    "formatter": 18,
+                    "formatOptions": {
+                      "thresholdsOptions": "icons",
+                      "thresholdsGrid": [
+                        {
+                          "operator": ">",
+                          "thresholdValue": "0",
+                          "representation": "4",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "Default",
+                          "thresholdValue": null,
+                          "representation": "Blank",
+                          "text": "{0}{1}"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "columnMatch": "%IOPs Avg",
+                    "formatter": 4,
+                    "formatOptions": {
+                      "palette": "yellow"
+                    }
+                  },
+                  {
+                    "columnMatch": "%IOPs Max",
+                    "formatter": 4,
+                    "formatOptions": {
+                      "palette": "purple"
+                    }
+                  },
+                  {
+                    "columnMatch": "IOPS <80%",
+                    "formatter": 18,
+                    "formatOptions": {
+                      "thresholdsOptions": "icons",
+                      "thresholdsGrid": [
+                        {
+                          "operator": ">=",
+                          "thresholdValue": "99",
+                          "representation": "success",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "<",
+                          "thresholdValue": "99",
+                          "representation": "Important",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "Default",
+                          "thresholdValue": null,
+                          "representation": "success",
+                          "text": "{0}{1}"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "columnMatch": "IOPS 80-89%",
+                    "formatter": 18,
+                    "formatOptions": {
+                      "thresholdsOptions": "icons",
+                      "thresholdsGrid": [
+                        {
+                          "operator": ">",
+                          "thresholdValue": "0",
+                          "representation": "2",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "Default",
+                          "thresholdValue": null,
+                          "representation": "Blank",
+                          "text": "{0}{1}"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "columnMatch": "IOPS 90-100%",
+                    "formatter": 18,
+                    "formatOptions": {
+                      "thresholdsOptions": "icons",
+                      "thresholdsGrid": [
+                        {
+                          "operator": ">",
+                          "thresholdValue": "99",
+                          "representation": "4",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "Default",
+                          "thresholdValue": null,
+                          "representation": "Blank",
+                          "text": "{0}{1}"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "columnMatch": "Cached %Bw Avg",
+                    "formatter": 4,
+                    "formatOptions": {
+                      "palette": "blue"
+                    }
+                  },
+                  {
+                    "columnMatch": "Cached <80%",
+                    "formatter": 18,
+                    "formatOptions": {
+                      "thresholdsOptions": "icons",
+                      "thresholdsGrid": [
+                        {
+                          "operator": ">=",
+                          "thresholdValue": "99",
+                          "representation": "success",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "<",
+                          "thresholdValue": "99",
+                          "representation": "Important",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "Default",
+                          "thresholdValue": null,
+                          "representation": "success",
+                          "text": "{0}{1}"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "columnMatch": "Cached 80-89%",
+                    "formatter": 18,
+                    "formatOptions": {
+                      "thresholdsOptions": "icons",
+                      "thresholdsGrid": [
+                        {
+                          "operator": ">",
+                          "thresholdValue": "0",
+                          "representation": "2",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "Default",
+                          "thresholdValue": null,
+                          "representation": "Blank",
+                          "text": "{0}{1}"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "columnMatch": "Cached 90-100%",
+                    "formatter": 18,
+                    "formatOptions": {
+                      "thresholdsOptions": "icons",
+                      "thresholdsGrid": [
+                        {
+                          "operator": ">",
+                          "thresholdValue": "0",
+                          "representation": "4",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "Default",
+                          "thresholdValue": null,
+                          "representation": "Blank",
+                          "text": "{0}{1}"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "columnMatch": "Uncached $ Bw Avg",
+                    "formatter": 4,
+                    "formatOptions": {
+                      "palette": "orange"
+                    }
+                  },
+                  {
+                    "columnMatch": "Uncached <80%",
+                    "formatter": 18,
+                    "formatOptions": {
+                      "thresholdsOptions": "icons",
+                      "thresholdsGrid": [
+                        {
+                          "operator": ">=",
+                          "thresholdValue": "99",
+                          "representation": "success",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "<",
+                          "thresholdValue": "99",
+                          "representation": "Important",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "Default",
+                          "thresholdValue": null,
+                          "representation": "success",
+                          "text": "{0}{1}"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "columnMatch": "Uncached 80-89%",
+                    "formatter": 18,
+                    "formatOptions": {
+                      "thresholdsOptions": "icons",
+                      "thresholdsGrid": [
+                        {
+                          "operator": ">",
+                          "thresholdValue": "0",
+                          "representation": "2",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "Default",
+                          "thresholdValue": null,
+                          "representation": "Blank",
+                          "text": "{0}{1}"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "columnMatch": "Uncached 90-100%",
+                    "formatter": 18,
+                    "formatOptions": {
+                      "thresholdsOptions": "icons",
+                      "thresholdsGrid": [
+                        {
+                          "operator": ">",
+                          "thresholdValue": "0",
+                          "representation": "4",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "Default",
+                          "thresholdValue": null,
+                          "representation": "Blank",
+                          "text": "{0}{1}"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "columnMatch": "Cached % 0-79",
+                    "formatter": 18,
+                    "formatOptions": {
+                      "thresholdsOptions": "icons",
+                      "thresholdsGrid": [
+                        {
+                          "operator": ">=",
+                          "thresholdValue": "99",
+                          "representation": "success",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "<",
+                          "thresholdValue": "99",
+                          "representation": "Important",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "Default",
+                          "thresholdValue": null,
+                          "representation": "success",
+                          "text": "{0}{1}"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "columnMatch": "Cached % 80-89",
+                    "formatter": 18,
+                    "formatOptions": {
+                      "thresholdsOptions": "icons",
+                      "thresholdsGrid": [
+                        {
+                          "operator": ">",
+                          "thresholdValue": "0",
+                          "representation": "2",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "Default",
+                          "thresholdValue": null,
+                          "representation": "Blank",
+                          "text": "{0}{1}"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "columnMatch": "Cached % 90-100",
+                    "formatter": 18,
+                    "formatOptions": {
+                      "thresholdsOptions": "icons",
+                      "thresholdsGrid": [
+                        {
+                          "operator": ">",
+                          "thresholdValue": "0",
+                          "representation": "4",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "Default",
+                          "thresholdValue": null,
+                          "representation": "Blank",
+                          "text": "{0}{1}"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "columnMatch": "Uncached % 0-79",
+                    "formatter": 18,
+                    "formatOptions": {
+                      "thresholdsOptions": "icons",
+                      "thresholdsGrid": [
+                        {
+                          "operator": ">=",
+                          "thresholdValue": "99",
+                          "representation": "success",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "<",
+                          "thresholdValue": "99",
+                          "representation": "Important",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "Default",
+                          "thresholdValue": null,
+                          "representation": "success",
+                          "text": "{0}{1}"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "columnMatch": "Uncached % 80-89",
+                    "formatter": 18,
+                    "formatOptions": {
+                      "thresholdsOptions": "icons",
+                      "thresholdsGrid": [
+                        {
+                          "operator": ">",
+                          "thresholdValue": "0",
+                          "representation": "2",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "Default",
+                          "thresholdValue": null,
+                          "representation": "Blank",
+                          "text": "{0}{1}"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "columnMatch": "Uncached % 90-100",
+                    "formatter": 18,
+                    "formatOptions": {
+                      "thresholdsOptions": "icons",
+                      "thresholdsGrid": [
+                        {
+                          "operator": ">",
+                          "thresholdValue": "0",
+                          "representation": "4",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "Default",
+                          "thresholdValue": null,
+                          "representation": "Blank",
+                          "text": "{0}{1}"
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "rowLimit": 500
+              },
+              "sortBy": []
+            },
+            "name": "query - 0 - Copy - Copy - Copy"
           },
           {
             "type": 3,
@@ -6675,6 +7183,162 @@
         "value": "6"
       },
       "name": "Unused Compute Disks/Public IPs"
+    },
+    {
+      "type": 12,
+      "content": {
+        "version": "NotebookGroup/1.0",
+        "groupType": "editable",
+        "title": "Azure SQL & MySQL",
+        "items": [
+          {
+            "type": 3,
+            "content": {
+              "version": "KqlItem/1.0",
+              "query": "resources\r\n| where subscriptionId in ({subscription:subid}) or '*' in ({subscription:subid})\r\n| where type in('microsoft.sql/servers/databases')\r\n| where kind  contains 'user'\r\n| extend s=todynamic(sku)\r\n| extend p=todynamic(properties)\r\n| project ResourceId=id, name , resourceGroup , sku=s.name , tier=s.tier, DTU=s.capacity, storgaeType=p.storageAccountType, ServiceObjective=p.currentServiceObjectiveName\r\n",
+              "size": 0,
+              "title": "Azure SQL Databases ",
+              "showExportToExcel": true,
+              "queryType": 1,
+              "resourceType": "microsoft.resourcegraph/resources",
+              "crossComponentResources": [
+                "{subscription}"
+              ],
+              "gridSettings": {
+                "rowLimit": 500
+              }
+            },
+            "name": "query - 13"
+          },
+          {
+            "type": 3,
+            "content": {
+              "version": "KqlItem/1.0",
+              "query": "AzureMetrics\r\n| where TimeGenerated >ago(7d)\r\n| extend subid=tostring(split(_ResourceId, '/')[2]) \r\n| where subid in ({subscription:subid}) or '*' in ({subscription:subid}) \r\n| where tostring(split(_ResourceId,'/')[4])  in ({rg}) or '*' in ({rg}) \r\n| where MetricName == \"dtu_used\" \r\n| summarize DTU_Min=min(Average) , DTU_Avg=avg(Average), DTU_Max=max(Average) by Resource, ResourceId, bin(TimeGenerated,1d)\r\n| join kind=leftouter (AzureMetrics\r\n| where TimeGenerated >ago(7d)\r\n| extend subid=tostring(split(_ResourceId, '/')[2]) \r\n| where subid in ({subscription:subid}) or '*' in ({subscription:subid}) \r\n| where tostring(split(_ResourceId,'/')[4])  in ({rg}) or '*' in ({rg}) \r\n| where MetricName == \"dtu_limit\" \r\n| summarize  DTU=max(Maximum) by Resource,ResourceId, bin(TimeGenerated,1d)) on ResourceId, TimeGenerated\r\n| project Resource, DTU_Min,DTU_Avg,DTU_Max,DTU, TimeGenerated, ResourceId\r\n| where isnotempty(DTU)\r\n| summarize MaxDTU=max(DTU_Max), DTUCapacity=avg(DTU) by Resource, ResourceId\r\n",
+              "size": 0,
+              "title": "Database DTU Usage",
+              "exportFieldName": "ResourceId",
+              "exportParameterName": "ResourceId",
+              "showExportToExcel": true,
+              "queryType": 0,
+              "resourceType": "microsoft.operationalinsights/workspaces",
+              "crossComponentResources": [
+                "{Workspace}"
+              ],
+              "gridSettings": {
+                "rowLimit": 500
+              }
+            },
+            "name": "AureSQL"
+          },
+          {
+            "type": 3,
+            "content": {
+              "version": "KqlItem/1.0",
+              "query": "AzureMetrics\r\n| where TimeGenerated >ago(7d)\r\n| where ResourceId =~ \"{ResourceId}\"\r\n| where MetricName == \"dtu_used\" \r\n| summarize DTU_Min=min(Average) , DTU_Avg=avg(Average), DTU_Max=max(Average) by Resource, ResourceId, bin(TimeGenerated,15m)\r\n| join kind=leftouter (AzureMetrics\r\n| where ResourceId =~ \"{ResourceId}\"\r\n| where TimeGenerated >ago(7d)\r\n| where MetricName == \"dtu_limit\" \r\n| summarize  DTU=max(Maximum) by Resource,ResourceId, bin(TimeGenerated,15m)) on ResourceId, TimeGenerated\r\n| project Resource, DTU_Min,DTU_Avg,DTU_Max,DTU, TimeGenerated, ResourceId\r\n\r\n",
+              "size": 0,
+              "aggregation": 3,
+              "title": "Database DTU Usage History Last 7 Days ",
+              "showExportToExcel": true,
+              "queryType": 0,
+              "resourceType": "microsoft.operationalinsights/workspaces",
+              "crossComponentResources": [
+                "{Workspace}"
+              ],
+              "visualization": "linechart",
+              "gridSettings": {
+                "rowLimit": 1000
+              }
+            },
+            "name": "DTU History"
+          },
+          {
+            "type": 3,
+            "content": {
+              "version": "KqlItem/1.0",
+              "query": "AzureMetrics\r\n| where TimeGenerated >ago(7d)\r\n| extend subid=tostring(split(_ResourceId, '/')[2]) \r\n| where subid in ({subscription:subid}) or '*' in ({subscription:subid}) \r\n| where tostring(split(_ResourceId,'/')[4])  in ({rg}) or '*' in ({rg}) \r\n| where MetricName == \"dwu_used\" \r\n| summarize DWU_Min=min(Average) , DWU_Avg=avg(Average), DWU_Max=max(Average) by Resource, ResourceId, bin(TimeGenerated,1d)\r\n| join kind=leftouter (AzureMetrics\r\n| where TimeGenerated >ago(7d)\r\n| extend subid=tostring(split(_ResourceId, '/')[2]) \r\n| where subid in ({subscription:subid}) or '*' in ({subscription:subid}) \r\n| where tostring(split(_ResourceId,'/')[4])  in ({rg}) or '*' in ({rg}) \r\n| where MetricName == \"dwu_limit\" \r\n| summarize  DWU=max(Maximum) by Resource,ResourceId, bin(TimeGenerated,1d)) on ResourceId, TimeGenerated\r\n| project Resource, DWU_Min,DWU_Avg,DWU_Max,DWU, TimeGenerated, ResourceId\r\n| summarize Max_DWU=max(DWU_Max), Capacity=avg(DWU) by Resource, ResourceId\r\n",
+              "size": 0,
+              "title": "Database DWU Usage",
+              "exportFieldName": "ResourceId",
+              "exportParameterName": "ResourceId2",
+              "showExportToExcel": true,
+              "queryType": 0,
+              "resourceType": "microsoft.operationalinsights/workspaces",
+              "crossComponentResources": [
+                "{Workspace}"
+              ],
+              "gridSettings": {
+                "rowLimit": 500
+              }
+            },
+            "name": "DWU"
+          },
+          {
+            "type": 3,
+            "content": {
+              "version": "KqlItem/1.0",
+              "query": "AzureMetrics\r\n| where ResourceId =~ \"{ResourceId2}\"\r\n| where TimeGenerated >ago(7d)\r\n| extend subid=tostring(split(_ResourceId, '/')[2]) \r\n| where subid in ({subscription:subid}) or '*' in ({subscription:subid}) \r\n| where tostring(split(_ResourceId,'/')[4])  in ({rg}) or '*' in ({rg}) \r\n| where MetricName == \"dwu_used\" \r\n| summarize DWU_Min=min(Average) , DWU_Avg=avg(Average), DWU_Max=max(Average) by Resource, ResourceId, bin(TimeGenerated,15m)\r\n| join kind=leftouter (AzureMetrics\r\n| where TimeGenerated >ago(7d)\r\n| where ResourceId =~ \"{ResourceId2}\"\r\n| extend subid=tostring(split(_ResourceId, '/')[2]) \r\n| where subid in ({subscription:subid}) or '*' in ({subscription:subid}) \r\n| where tostring(split(_ResourceId,'/')[4])  in ({rg}) or '*' in ({rg}) \r\n| where MetricName == \"dwu_limit\" \r\n| summarize  DWU=max(Maximum) by Resource,ResourceId, bin(TimeGenerated,15m)) on ResourceId, TimeGenerated\r\n| project Resource, DWU_Min,DWU_Avg,DWU_Max,DWU, TimeGenerated, ResourceId\r\n\r\n",
+              "size": 0,
+              "aggregation": 3,
+              "title": "Database DWU Usage History Last 7 Days",
+              "showExportToExcel": true,
+              "queryType": 0,
+              "resourceType": "microsoft.operationalinsights/workspaces",
+              "crossComponentResources": [
+                "{Workspace}"
+              ],
+              "visualization": "linechart",
+              "gridSettings": {
+                "rowLimit": 500
+              }
+            },
+            "name": "DWU - Copy"
+          },
+          {
+            "type": 3,
+            "content": {
+              "version": "KqlItem/1.0",
+              "query": "resources\r\n| where subscriptionId in ({subscription:subid}) or '*' in ({subscription:subid})\r\n| where type == \"microsoft.dbformysql/servers\"\r\n| extend s=todynamic(sku)\r\n| extend p=todynamic(properties)\r\n| project ResourceId=id, name , resourceGroup ,location ,sku=s.name , tier=s.tier, Capacity=s.capacity,family=s.family, BackupRetention=p.storageProfile.backupRetentionDays, storageMB=p.storageProfile.storageMB, version=p.version,p \r\n",
+              "size": 0,
+              "title": "Azure MySQL Databases",
+              "showExportToExcel": true,
+              "queryType": 1,
+              "resourceType": "microsoft.resourcegraph/resources",
+              "crossComponentResources": [
+                "{subscription}"
+              ],
+              "gridSettings": {
+                "rowLimit": 1000
+              }
+            },
+            "name": "UnusedNIC"
+          },
+          {
+            "type": 3,
+            "content": {
+              "version": "KqlItem/1.0",
+              "query": "AzureMetrics\r\n| where TimeGenerated > ago(7d)\r\n| extend subid=tostring(split(_ResourceId, '/')[2]) \r\n| where subid in ({subscription:subid}) or '*' in ({subscription:subid}) \r\n| where tostring(split(_ResourceId,'/')[4])  in ({rg}) or '*' in ({rg}) \r\n| where ResourceProvider == \"MICROSOFT.DBFORMYSQL\"\r\n| where MetricName == \"cpu_percent\"\r\n| summarize AvgCPU=avg(Average),P95_CPU=percentile(Average,95) by _ResourceId\r\n| join  kind= leftouter (AzureMetrics\r\n| where TimeGenerated > ago(7d)\r\n| extend subid=tostring(split(_ResourceId, '/')[2]) \r\n| where subid in ({subscription:subid}) or '*' in ({subscription:subid}) \r\n| where tostring(split(_ResourceId,'/')[4])  in ({rg}) or '*' in ({rg}) \r\n| where ResourceProvider == \"MICROSOFT.DBFORMYSQL\"\r\n| where MetricName == \"memory_percent\"\r\n| summarize AvgMEM=avg(Average),P95_MEM=percentile(Average,95) by _ResourceId\r\n) on _ResourceId\r\n| join  kind= leftouter (AzureMetrics\r\n| where TimeGenerated > ago(7d)\r\n| extend subid=tostring(split(_ResourceId, '/')[2]) \r\n| where subid in ({subscription:subid}) or '*' in ({subscription:subid}) \r\n| where tostring(split(_ResourceId,'/')[4])  in ({rg}) or '*' in ({rg}) \r\n| where ResourceProvider == \"MICROSOFT.DBFORMYSQL\"\r\n| where MetricName == \"storage_percent\"\r\n| summarize AvgStorage=avg(Average),P95_Storage=percentile(Average,95) by _ResourceId\r\n) on _ResourceId\r\n| join  kind= leftouter (AzureMetrics\r\n| where TimeGenerated > ago(7d)\r\n| extend subid=tostring(split(_ResourceId, '/')[2]) \r\n| where subid in ({subscription:subid}) or '*' in ({subscription:subid}) \r\n| where tostring(split(_ResourceId,'/')[4])  in ({rg}) or '*' in ({rg}) \r\n| where ResourceProvider == \"MICROSOFT.DBFORMYSQL\"\r\n| where MetricName == \"serverlog_storage_percent\"\r\n| summarize AvgLogStorage=avg(Average),P95_LogStorage=percentile(Average,95) by _ResourceId\r\n) on _ResourceId\r\n| join  kind= leftouter (AzureMetrics\r\n| where TimeGenerated > ago(7d)\r\n| extend subid=tostring(split(_ResourceId, '/')[2]) \r\n| where subid in ({subscription:subid}) or '*' in ({subscription:subid}) \r\n| where tostring(split(_ResourceId,'/')[4])  in ({rg}) or '*' in ({rg}) \r\n| where ResourceProvider == \"MICROSOFT.DBFORMYSQL\"\r\n| where MetricName == \"io_consumption_percent\"\r\n| summarize AvgIO_Pct=avg(Average),P95_IO_Pct=percentile(Average,95) by _ResourceId\r\n) on _ResourceId\r\n| project ResourceId=_ResourceId, AvgCPU, P95_CPU, AvgMEM, P95_MEM, AvgStorage, P95_Storage, AvgIO_Pct, P95_IO_Pct, AvgLogStorage, P95_LogStorage",
+              "size": 0,
+              "title": "MySQL Usage",
+              "timeContext": {
+                "durationMs": 86400000
+              },
+              "queryType": 0,
+              "resourceType": "microsoft.operationalinsights/workspaces",
+              "crossComponentResources": [
+                "{Workspace}"
+              ]
+            },
+            "name": "query - 3"
+          }
+        ]
+      },
+      "conditionalVisibility": {
+        "parameterName": "tab",
+        "comparison": "isEqualTo",
+        "value": "7"
+      },
+      "name": "Azure SQL"
     }
   ],
   "defaultResourceIds": [
