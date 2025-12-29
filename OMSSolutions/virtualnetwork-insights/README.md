@@ -14,6 +14,7 @@ Azure Virtual Network Insights  Workbook  pulls information about
 * User Defines Routes
 * Network Secuirty Groups 
 * Internet Egress Configuration for each subnet
+* Subnet delegations across subscriptions& VNETs
 
 
 ![alt text](images/summary.png "Summary")
