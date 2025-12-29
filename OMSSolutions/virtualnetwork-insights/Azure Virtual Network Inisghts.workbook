@@ -1,0 +1,720 @@
+{
+  "version": "Notebook/1.0",
+  "items": [
+    {
+      "type": 9,
+      "content": {
+        "version": "KqlParameterItem/1.0",
+        "parameters": [
+          {
+            "id": "e842b99d-8cc3-4422-8d33-f9f8cbc173b8",
+            "version": "KqlParameterItem/1.0",
+            "name": "location",
+            "type": 2,
+            "multiSelect": true,
+            "quote": "'",
+            "delimiter": ",",
+            "query": "resources\r\n| where ['type'] ==\"microsoft.network/virtualnetworks\"\r\n| project id,name, resourceGroup,subscriptionId,location,addspace=properties.addressSpace.addressPrefixes,subnets=properties.subnets, ddos=properties.enableDdosProtection,peering=properties.virtualNetworkPeerings\r\n| distinct  location",
+            "crossComponentResources": [
+              "value::all"
+            ],
+            "typeSettings": {
+              "additionalResourceOptions": [
+                "value::all"
+              ],
+              "showDefault": false
+            },
+            "timeContext": {
+              "durationMs": 86400000
+            },
+            "queryType": 1,
+            "resourceType": "microsoft.resourcegraph/resources",
+            "value": [
+              "value::all"
+            ]
+          },
+          {
+            "id": "6d390ba8-fce9-4566-9049-c188ee78547c",
+            "version": "KqlParameterItem/1.0",
+            "name": "Subscription",
+            "type": 6,
+            "multiSelect": true,
+            "quote": "'",
+            "delimiter": ",",
+            "typeSettings": {
+              "additionalResourceOptions": [
+                "value::all"
+              ],
+              "includeAll": true,
+              "showDefault": false
+            },
+            "timeContext": {
+              "durationMs": 86400000
+            },
+            "value": [
+              "value::all"
+            ]
+          }
+        ],
+        "style": "pills",
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces"
+      },
+      "name": "parameters - 1"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "resources\r\n| where ['type'] ==\"microsoft.network/virtualnetworks\"\r\n| where location in ({location}) and subscriptionId in ({Subscription:subid})\r\n| summarize Vnets=count(id) by location",
+        "size": 4,
+        "title": "VNET Locations",
+        "queryType": 1,
+        "resourceType": "microsoft.resourcegraph/resources",
+        "crossComponentResources": [
+          "value::all"
+        ],
+        "visualization": "tiles",
+        "tileSettings": {
+          "showBorder": false,
+          "titleContent": {
+            "columnMatch": "location",
+            "formatter": 1
+          },
+          "leftContent": {
+            "columnMatch": "Vnets",
+            "formatter": 12,
+            "formatOptions": {
+              "palette": "auto"
+            },
+            "numberFormat": {
+              "unit": 17,
+              "options": {
+                "maximumSignificantDigits": 3,
+                "maximumFractionDigits": 2
+              }
+            }
+          }
+        }
+      },
+      "name": "query - 0"
+    },
+    {
+      "type": 11,
+      "content": {
+        "version": "LinkItem/1.0",
+        "style": "tabs",
+        "links": [
+          {
+            "id": "0f5221cc-39cd-483e-a877-b31bbd28a728",
+            "cellValue": "tab",
+            "linkTarget": "parameter",
+            "linkLabel": "Summary",
+            "subTarget": "tab1",
+            "preText": "Summary",
+            "style": "link"
+          },
+          {
+            "id": "bc02bae4-4415-4c10-b1df-61cdbfaed00a",
+            "cellValue": "tab",
+            "linkTarget": "parameter",
+            "linkLabel": "InternetEgress",
+            "subTarget": "tab2",
+            "preText": "InternetEgress",
+            "style": "link"
+          },
+          {
+            "id": "8554e947-bf12-4a11-9e30-e279ccecc1cc",
+            "cellValue": "tab",
+            "linkTarget": "parameter",
+            "linkLabel": "NSG",
+            "subTarget": "tab3",
+            "preText": "NSG",
+            "style": "link"
+          },
+          {
+            "id": "c91fdf55-5015-41a7-970f-60aceee1705b",
+            "cellValue": "tab",
+            "linkTarget": "parameter",
+            "linkLabel": "DDOS",
+            "subTarget": "tab4",
+            "style": "link"
+          }
+        ]
+      },
+      "name": "links - 9"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "\r\nresources\r\n| where ['type'] ==\"microsoft.network/virtualnetworks\"\r\n| where location in ({location})  and subscriptionId in ({Subscription:subid})\r\n| project id,name, resourceGroup,subscriptionId,addspace=properties.addressSpace.addressPrefixes,subnets=properties.subnets, ddos=properties.enableDdosProtection,peering=properties.virtualNetworkPeerings\r\n| mv-expand (subnets)\r\n| extend subnetcidr=subnets.properties.addressPrefix, UDRid=tostring(subnets.properties.routeTable.id),subnetname=subnets.name\r\n| join kind=leftouter \r\n(\r\nresources\r\n| where type == \"microsoft.network/routetables\"\r\n| extend routes=properties.routes,hasDefaultRoute=iff(properties.routes contains \"0.0.0.0/0\",true,false)\r\n| project id, name,subscriptionId, routes,hasDefaultRoute\r\n| mv-expand (routes)\r\n| extend  addressPrefix=routes.properties.addressPrefix, nextHopIpAddress=routes.properties.nextHopIpAddress,nextHopType=routes.properties.nextHopType\r\n| where hasDefaultRoute == true\r\n| extend CheckDefRoute=iff(addressPrefix startswith  \"0.0.0.0\" , strcat(addressPrefix,\" |\",nextHopType,\" |\",nextHopIpAddress),\"\")\r\n|summarize CheckDefRoute=make_set(CheckDefRoute) by id, name ,subscriptionId) on $left.UDRid==$right.id\r\n| project VNETName=name, subscriptionId,subnetname,subnetcidr,UDR=iff(isnotempty(name1),name1,\"No UDR Defined\"),CheckDefRoute= iff(isnotempty(name1),strcat_array(CheckDefRoute,''),\"DefaultAzureEgressNoUDR\")\r\n|summarize SubnetCount=count(subnetname) by CheckDefRoute\r\n| extend InternetEgress=case(CheckDefRoute ==\"0.0.0.0/0 |Internet |\",\"DirectEgresstoInternetviaUDR\",\r\nCheckDefRoute contains \"VirtualAppliance\" , \"Internet Sent to Firewall\",\r\nCheckDefRoute ==\"DefaultAzureEgressNoUDR\", \"Azure Default Internet \",\"Unkown\")\r\n| summarize SubnetCount=sum(SubnetCount) by InternetEgress",
+        "size": 1,
+        "title": "All Internet Routes",
+        "exportFieldName": "InternetEgress",
+        "exportParameterName": "InternetEgress",
+        "queryType": 1,
+        "resourceType": "microsoft.resourcegraph/resources",
+        "crossComponentResources": [
+          "value::all"
+        ]
+      },
+      "conditionalVisibility": {
+        "parameterName": "tab",
+        "comparison": "isEqualTo",
+        "value": "tab1"
+      },
+      "customWidth": "33",
+      "name": "query - 2"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "resources\r\n| where ['type'] ==\"microsoft.network/virtualnetworks\"\r\n| where location in ({location})  and subscriptionId in ({Subscription:subid})\r\n| project id,name, resourceGroup,subscriptionId,location,addspace=properties.addressSpace.addressPrefixes,subnets=properties.subnets, ddos=properties.enableDdosProtection,peering=properties.virtualNetworkPeerings\r\n| summarize Count=count(id) by DDOS_Enabled=tostring(ddos)",
+        "size": 1,
+        "title": "DDOS Enabled VNETs",
+        "queryType": 1,
+        "resourceType": "microsoft.resourcegraph/resources",
+        "crossComponentResources": [
+          "value::all"
+        ],
+        "visualization": "piechart",
+        "chartSettings": {
+          "seriesLabelSettings": [
+            {
+              "seriesName": "true",
+              "color": "green"
+            },
+            {
+              "seriesName": "false",
+              "color": "orangeDark"
+            }
+          ]
+        }
+      },
+      "conditionalVisibility": {
+        "parameterName": "tab",
+        "comparison": "isEqualTo",
+        "value": "tab1"
+      },
+      "customWidth": "33",
+      "name": "query - 2 - Copy"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "\r\nresources\r\n| where ['type'] ==\"microsoft.network/virtualnetworks\"\r\n| where location in ({location})  and subscriptionId in ({Subscription:subid})\r\n| project id,name, resourceGroup,subscriptionId,addspace=properties.addressSpace.addressPrefixes,subnets=properties.subnets, ddos=properties.enableDdosProtection,peering=properties.virtualNetworkPeerings\r\n| mv-expand (subnets)\r\n| extend subnetcidr=subnets.properties.addressPrefix, UDRid=tostring(subnets.properties.routeTable.id),subnetname=subnets.name, dellist=todynamic(subnets.properties.delegations), servicelinks=todynamic(subnets.properties.serviceAssociationLinks)\r\n| extend delagation=tostring(dellist[0].name)\r\n| extend linkedservice= servicelinks[0].properties.linkedResourceType\r\n| extend delagation=tostring(iff(isempty( linkedservice),delagation,linkedservice))\r\n| summarize Count=count() by delagation\r\n| extend DelegatedService=iff(isempty( delagation),\"NoDelagation\",delagation)\r\n| project DelegatedService,Count\r\n",
+        "size": 1,
+        "title": "Subnet Delagations / Linked Services",
+        "exportFieldName": "InternetEgress",
+        "exportParameterName": "InternetEgress",
+        "queryType": 1,
+        "resourceType": "microsoft.resourcegraph/resources",
+        "crossComponentResources": [
+          "value::all"
+        ]
+      },
+      "conditionalVisibility": {
+        "parameterName": "tab",
+        "comparison": "isEqualTo",
+        "value": "tab1"
+      },
+      "customWidth": "33",
+      "name": "query - 2 - Copy"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "resources\r\n| where ['type'] ==\"microsoft.network/virtualnetworks\"\r\n| where location in ({location})  and subscriptionId in ({Subscription:subid})\r\n| project id,name, resourceGroup,subscriptionId,addspace=properties.addressSpace.addressPrefixes,subnets=properties.subnets, ddos=properties.enableDdosProtection,peering=properties.virtualNetworkPeerings\r\n| mv-expand (subnets)\r\n| extend subnetcidr=subnets.properties.addressPrefix, UDRid=tostring(subnets.properties.routeTable.id),subnetname=subnets.name, dellist=todynamic(subnets.properties.delegations), servicelinks=todynamic(subnets.properties.serviceAssociationLinks)\r\n| extend delagation=tostring(dellist[0].name)\r\n| extend linkedservice= servicelinks[0].properties.linkedResourceType\r\n| extend delagation=tostring(iff(isempty( linkedservice),delagation,linkedservice))\r\n| join kind=leftouter \r\n(\r\nresources\r\n| where type == \"microsoft.network/routetables\"\r\n| extend routes=properties.routes,hasDefaultRoute=iff(properties.routes contains \"0.0.0.0/0\",true,false)\r\n| project id, name, routes,hasDefaultRoute\r\n| mv-expand (routes)\r\n| extend  addressPrefix=routes.properties.addressPrefix, nextHopIpAddress=routes.properties.nextHopIpAddress,nextHopType=routes.properties.nextHopType) on $left.UDRid==$right.id\r\n| project VNETName=name, subscriptionId,subnetname,subnetcidr,UDR=name1,addressPrefix,nextHopType,nextHopIpAddress,hasDefaultRoute, delagation\r\n",
+        "size": 0,
+        "title": "Assigned Routes for VNEts/Subnets - Delagations",
+        "showExportToExcel": true,
+        "queryType": 1,
+        "resourceType": "microsoft.resourcegraph/resources",
+        "crossComponentResources": [
+          "value::all"
+        ],
+        "gridSettings": {
+          "rowLimit": 500
+        }
+      },
+      "conditionalVisibility": {
+        "parameterName": "tab",
+        "comparison": "isEqualTo",
+        "value": "tab1"
+      },
+      "name": "query - 2 - Copy"
+    },
+    {
+      "type": 9,
+      "content": {
+        "version": "KqlParameterItem/1.0",
+        "crossComponentResources": [
+          "value::all"
+        ],
+        "parameters": [
+          {
+            "id": "52fb0b7a-2065-45ab-a37e-68ee8b3f6a95",
+            "version": "KqlParameterItem/1.0",
+            "name": "EgressType",
+            "type": 2,
+            "multiSelect": true,
+            "quote": "'",
+            "delimiter": ",",
+            "query": "\r\nresources\r\n| where ['type'] ==\"microsoft.network/virtualnetworks\"\r\n| project id,name, resourceGroup,subscriptionId,addspace=properties.addressSpace.addressPrefixes,subnets=properties.subnets, ddos=properties.enableDdosProtection,peering=properties.virtualNetworkPeerings\r\n| mv-expand (subnets)\r\n| extend subnetcidr=subnets.properties.addressPrefix, UDRid=tostring(subnets.properties.routeTable.id),subnetname=subnets.name\r\n| join kind=leftouter \r\n(\r\nresources\r\n| where type == \"microsoft.network/routetables\"\r\n| extend routes=properties.routes,hasDefaultRoute=iff(properties.routes contains \"0.0.0.0/0\",true,false)\r\n| project id, name,subscriptionId, routes,hasDefaultRoute\r\n| mv-expand (routes)\r\n| extend  addressPrefix=routes.properties.addressPrefix, nextHopIpAddress=routes.properties.nextHopIpAddress,nextHopType=routes.properties.nextHopType\r\n| where hasDefaultRoute == true\r\n| extend CheckDefRoute=iff(addressPrefix startswith  \"0.0.0.0\" , strcat(addressPrefix,\" |\",nextHopType,\" |\",nextHopIpAddress),\"\")\r\n|summarize CheckDefRoute=make_set(CheckDefRoute) by id, name ,subscriptionId) on $left.UDRid==$right.id\r\n| project VNETName=name, subscriptionId,subnetname,subnetcidr,UDR=iff(isnotempty(name1),name1,\"No UDR Defined\"),CheckDefRoute= iff(isnotempty(name1),strcat_array(CheckDefRoute,''),\"DefaultAzureEgressNoUDR\")\r\n|summarize SubnetCount=count(subnetname) by CheckDefRoute\r\n| extend InternetEgress=case(CheckDefRoute ==\"0.0.0.0/0 |Internet |\",\"DirectEgresstoInternetviaUDR\",\r\nCheckDefRoute contains \"VirtualAppliance\" , \"Internet Sent to Firewall\",\r\nCheckDefRoute ==\"DefaultAzureEgressNoUDR\", \"Azure Default Internet \",\"Unkown\")\r\n| distinct InternetEgress",
+            "crossComponentResources": [
+              "value::all"
+            ],
+            "typeSettings": {
+              "additionalResourceOptions": [
+                "value::all"
+              ],
+              "selectAllValue": "*",
+              "showDefault": false
+            },
+            "timeContext": {
+              "durationMs": 86400000
+            },
+            "defaultValue": "value::all",
+            "queryType": 1,
+            "resourceType": "microsoft.resourcegraph/resources",
+            "value": [
+              "value::all"
+            ]
+          }
+        ],
+        "style": "pills",
+        "queryType": 1,
+        "resourceType": "microsoft.resourcegraph/resources"
+      },
+      "conditionalVisibility": {
+        "parameterName": "tab",
+        "comparison": "isEqualTo",
+        "value": "tab2"
+      },
+      "name": "parameters - 17"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "\r\nresources\r\n| where ['type'] ==\"microsoft.network/virtualnetworks\"\r\n| where location in ({location})  and subscriptionId in ({Subscription:subid})\r\n| project id,name, resourceGroup,subscriptionId,addspace=properties.addressSpace.addressPrefixes,subnets=properties.subnets, ddos=properties.enableDdosProtection,peering=properties.virtualNetworkPeerings\r\n| mv-expand (subnets)\r\n| extend subnetcidr=subnets.properties.addressPrefix, UDRid=tostring(subnets.properties.routeTable.id),subnetname=subnets.name\r\n| join kind=leftouter \r\n(\r\nresources\r\n| where type == \"microsoft.network/routetables\"\r\n| extend routes=properties.routes,hasDefaultRoute=iff(properties.routes contains \"0.0.0.0/0\",true,false)\r\n| project id, name,subscriptionId, routes,hasDefaultRoute\r\n| mv-expand (routes)\r\n| extend  addressPrefix=routes.properties.addressPrefix, nextHopIpAddress=routes.properties.nextHopIpAddress,nextHopType=routes.properties.nextHopType\r\n| where hasDefaultRoute == true\r\n| extend CheckDefRoute=iff(addressPrefix startswith  \"0.0.0.0\" , strcat(addressPrefix,\" |\",nextHopType,\" |\",nextHopIpAddress),\"\")\r\n|summarize CheckDefRoute=make_set(CheckDefRoute) by id, name ,subscriptionId) on $left.UDRid==$right.id\r\n| project VNETName=name, subscriptionId,subnetname,subnetcidr,UDR=iff(isnotempty(name1),name1,\"No UDR Defined\"),CheckDefRoute= iff(isnotempty(name1),strcat_array(CheckDefRoute,''),\"DefaultAzureEgressNoUDR\")\r\n|summarize SubnetCount=count(subnetname) by CheckDefRoute\r\n| extend InternetEgress=case(CheckDefRoute ==\"0.0.0.0/0 |Internet |\",\"DirectEgresstoInternetviaUDR\",\r\nCheckDefRoute contains \"VirtualAppliance\" , \"Internet Sent to Firewall\",\r\nCheckDefRoute ==\"DefaultAzureEgressNoUDR\", \"Azure Default Internet \",\"Unkown\")\r\n| summarize SubnetCount=sum(SubnetCount) by InternetEgress\r\n| where InternetEgress in ({EgressType}) or '*' in ({EgressType})",
+        "size": 1,
+        "title": "All Internet Routes",
+        "exportFieldName": "InternetEgress",
+        "exportParameterName": "InternetEgress",
+        "queryType": 1,
+        "resourceType": "microsoft.resourcegraph/resources",
+        "crossComponentResources": [
+          "value::all"
+        ]
+      },
+      "conditionalVisibility": {
+        "parameterName": "tab",
+        "comparison": "isEqualTo",
+        "value": "tab2"
+      },
+      "customWidth": "50",
+      "name": "query - 2 - Copy - Copy"
+    },
+    {
+      "type": 1,
+      "content": {
+        "json": ""
+      },
+      "name": "text - 16"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "resources\r\n| where ['type'] ==\"microsoft.network/virtualnetworks\"\r\n| where location in ({location})  and subscriptionId in ({Subscription:subid}) \r\n| project id,name, resourceGroup,subscriptionId,addspace=properties.addressSpace.addressPrefixes,subnets=properties.subnets, ddos=properties.enableDdosProtection,peering=properties.virtualNetworkPeerings\r\n| mv-expand (subnets)\r\n| extend subnetcidr=subnets.properties.addressPrefix, UDRid=tostring(subnets.properties.routeTable.id),subnetname=subnets.name\r\n| join kind=leftouter \r\n(\r\nresources\r\n| where type == \"microsoft.network/routetables\"\r\n| extend routes=properties.routes,hasDefaultRoute=iff(properties.routes contains \"0.0.0.0/0\",true,false)\r\n| project id, name,subscriptionId, routes,hasDefaultRoute\r\n| mv-expand (routes)\r\n| extend  addressPrefix=routes.properties.addressPrefix, nextHopIpAddress=routes.properties.nextHopIpAddress,nextHopType=routes.properties.nextHopType\r\n| where hasDefaultRoute == true\r\n| extend CheckDefRoute=iff(addressPrefix startswith  \"0.0.0.0\" , strcat(addressPrefix,\" |\",nextHopType,\" |\",nextHopIpAddress),\"\")\r\n|summarize CheckDefRoute=make_set(CheckDefRoute) by id, name ,subscriptionId) on $left.UDRid==$right.id\r\n| project VNETName=name, subscriptionId,subnetname,subnetcidr,UDR=iff(isnotempty(name1),name1,\"No UDR Defined\"),CheckDefRoute= iff(isnotempty(name1),strcat_array(CheckDefRoute,''),\"DefaultAzureEgressNoUDR\")\r\n| extend InternetEgress=case(CheckDefRoute ==\"0.0.0.0/0 |Internet |\",\"DirectEgresstoInternetviaUDR\",\r\nCheckDefRoute contains \"VirtualAppliance\" , \"Internet Sent to Firewall\",\r\nCheckDefRoute ==\"DefaultAzureEgressNoUDR\", \"Azure Default Internet \",\"Unkown\")\r\n| where InternetEgress in (\"{EgressType}\") or '*'   in  ({EgressType}) ",
+        "size": 2,
+        "title": "Assigned Routes for VNEts/Subnets",
+        "showExportToExcel": true,
+        "queryType": 1,
+        "resourceType": "microsoft.resourcegraph/resources",
+        "crossComponentResources": [
+          "value::all"
+        ],
+        "gridSettings": {
+          "rowLimit": 500
+        }
+      },
+      "conditionalVisibility": {
+        "parameterName": "tab",
+        "comparison": "isEqualTo",
+        "value": "tab2"
+      },
+      "name": "query - 2 - Copy - Copy"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "\r\nresources\r\n| where type == \"microsoft.network/routetables\"\r\n| where location in ({location})  and subscriptionId in ({Subscription:subid})\r\n| extend routes=properties.routes,hasDefaultRoute=iff(properties.routes contains \"0.0.0.0/0\",true,false)\r\n| project id, name,subscriptionId, routes,hasDefaultRoute\r\n| mv-expand (routes)\r\n| extend  addressPrefix=routes.properties.addressPrefix, nextHopIpAddress=routes.properties.nextHopIpAddress,nextHopType=routes.properties.nextHopType\r\n| where hasDefaultRoute == true\r\n| extend CheckDefRoute=iff(addressPrefix startswith  \"0.0.0.0\" , strcat(addressPrefix,\" |\",nextHopType,\" |\",nextHopIpAddress),\"\")\r\n| where isnotempty( CheckDefRoute)\r\n|summarize CheckDefRoute=make_set(CheckDefRoute) by id, name ,subscriptionId\r\n| summarize Count=count() by tostring(CheckDefRoute)",
+        "size": 1,
+        "title": "Defined Internet Routes  in Route Tables",
+        "queryType": 1,
+        "resourceType": "microsoft.resourcegraph/resources",
+        "crossComponentResources": [
+          "value::all"
+        ],
+        "gridSettings": {
+          "rowLimit": 500,
+          "sortBy": [
+            {
+              "itemKey": "Count",
+              "sortOrder": 2
+            }
+          ]
+        },
+        "sortBy": [
+          {
+            "itemKey": "Count",
+            "sortOrder": 2
+          }
+        ]
+      },
+      "conditionalVisibility": {
+        "parameterName": "tab",
+        "comparison": "isEqualTo",
+        "value": "tab1"
+      },
+      "customWidth": "50",
+      "name": "query - 2 - Copy - Copy"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "\r\nresources\r\n| where ['type'] ==\"microsoft.network/virtualnetworks\"\r\n| where location in ({location})  and subscriptionId in ({Subscription:subid})\r\n| project id,name, resourceGroup,subscriptionId,addspace=properties.addressSpace.addressPrefixes,subnets=properties.subnets, ddos=properties.enableDdosProtection,peering=properties.virtualNetworkPeerings\r\n| mv-expand (subnets)\r\n| extend subnetcidr=subnets.properties.addressPrefix, UDRid=tostring(subnets.properties.routeTable.id),subnetname=subnets.name\r\n| join kind=leftouter \r\n(\r\nresources\r\n| where type == \"microsoft.network/routetables\"\r\n| extend routes=properties.routes,hasDefaultRoute=iff(properties.routes contains \"0.0.0.0/0\",true,false)\r\n| project id, name,subscriptionId, routes,hasDefaultRoute\r\n| mv-expand (routes)\r\n| extend  addressPrefix=routes.properties.addressPrefix, nextHopIpAddress=routes.properties.nextHopIpAddress,nextHopType=routes.properties.nextHopType\r\n| where hasDefaultRoute == true\r\n| extend CheckDefRoute=iff(addressPrefix startswith  \"0.0.0.0\" , strcat(addressPrefix,\" |\",nextHopType,\" |\",nextHopIpAddress),\"\")\r\n|summarize CheckDefRoute=make_set(CheckDefRoute) by id, name ,subscriptionId) on $left.UDRid==$right.id\r\n| project VNETName=name, subscriptionId,subnetname,subnetcidr,UDR=name1,CheckDefRoute=strcat_array(CheckDefRoute,'')\r\n| where isnotempty( CheckDefRoute)\r\n| summarize AssignedSubnets=count(subnetname) by CheckDefRoute\r\n| order by ['AssignedSubnets'] desc",
+        "size": 1,
+        "title": "Assigned Internet Routes for all Subnets",
+        "queryType": 1,
+        "resourceType": "microsoft.resourcegraph/resources",
+        "crossComponentResources": [
+          "value::all"
+        ],
+        "gridSettings": {
+          "rowLimit": 500
+        },
+        "sortBy": []
+      },
+      "conditionalVisibility": {
+        "parameterName": "tab",
+        "comparison": "isEqualTo",
+        "value": "tab1"
+      },
+      "customWidth": "50",
+      "name": "query - 2 - Copy - Copy - Copy"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "resources\r\n| where ['type'] ==\"microsoft.network/networksecuritygroups\"\r\n| where location in ({location})  and subscriptionId in ({Subscription:subid})\r\n| project id, name,subscriptionId, defaultNSG=properties.defaultSecurityRules,NSGlist=properties.securityRules\r\n| mv-expand (defaultNSG)\r\n| extend destinationAddressPrefixes=defaultNSG.properties.destinationAddressPrefixes, \r\ndestinationAddressPrefix=defaultNSG.properties.destinationAddressPrefix,\r\nsourceAddressPrefixes=defaultNSG.properties.sourceAddressPrefixes,\r\nsourceAddressPrefix=defaultNSG.properties.sourceAddressPrefix,direction=defaultNSG.properties.direction, access=defaultNSG.properties.access\r\n| project NSg=id,subscriptionId,source=iff(isempty(sourceAddressPrefix),sourceAddressPrefixes,sourceAddressPrefix),destination=iff(isempty( destinationAddressPrefix),destinationAddressPrefixes,destinationAddressPrefix)  ,direction,access",
+        "size": 0,
+        "title": "All NSG Rules",
+        "showExportToExcel": true,
+        "queryType": 1,
+        "resourceType": "microsoft.resourcegraph/resources",
+        "crossComponentResources": [
+          "value::all"
+        ],
+        "gridSettings": {
+          "rowLimit": 500
+        }
+      },
+      "conditionalVisibility": {
+        "parameterName": "tab",
+        "comparison": "isEqualTo",
+        "value": "tab1"
+      },
+      "name": "query - 2 - Copy - Copy"
+    },
+    {
+      "type": 9,
+      "content": {
+        "version": "KqlParameterItem/1.0",
+        "crossComponentResources": [
+          "value::all"
+        ],
+        "parameters": [
+          {
+            "id": "c1bc392b-6b3a-4c19-ae3c-148c2c7b6840",
+            "version": "KqlParameterItem/1.0",
+            "name": "Direction",
+            "type": 2,
+            "multiSelect": true,
+            "quote": "'",
+            "delimiter": ",",
+            "typeSettings": {
+              "additionalResourceOptions": [],
+              "showDefault": false
+            },
+            "jsonData": "[\r\n    { \"value\":\"Inbound\", \"label\":\"Inbound\", \"selected\": true },\r\n    { \"value\":\"Outbound\", \"label\":\"Outbound\", \"selected\": false }\r\n]",
+            "timeContext": {
+              "durationMs": 86400000
+            },
+            "value": [
+              "Inbound",
+              "Outbound"
+            ]
+          },
+          {
+            "id": "c1bc392b-6b3a-4c19-ae3c-148c2c7b6840",
+            "version": "KqlParameterItem/1.0",
+            "name": "Action",
+            "type": 2,
+            "multiSelect": true,
+            "quote": "'",
+            "delimiter": ",",
+            "typeSettings": {
+              "additionalResourceOptions": [],
+              "showDefault": false
+            },
+            "jsonData": "[\r\n    { \"value\":\"Allow\", \"label\":\"Allow\", \"selected\": false },\r\n    { \"value\":\"Deny\", \"label\":\"Deny\", \"selected\": true }\r\n]",
+            "timeContext": {
+              "durationMs": 86400000
+            },
+            "value": [
+              "Deny",
+              "Allow"
+            ]
+          },
+          {
+            "id": "c1bc392b-6b3a-4c19-ae3c-148c2c7b6840",
+            "version": "KqlParameterItem/1.0",
+            "name": "Source",
+            "type": 2,
+            "multiSelect": true,
+            "quote": "'",
+            "delimiter": ",",
+            "query": "resources\r\n| where ['type'] ==\"microsoft.network/networksecuritygroups\"\r\n| where location in ({location})  and subscriptionId in ({Subscription:subid})\r\n| project id, name,subscriptionId, defaultNSG=properties.defaultSecurityRules,NSGlist=properties.securityRules\r\n| mv-expand (defaultNSG)\r\n| extend destinationAddressPrefixes=defaultNSG.properties.destinationAddressPrefixes, \r\ndestinationAddressPrefix=defaultNSG.properties.destinationAddressPrefix,\r\nsourceAddressPrefixes=defaultNSG.properties.sourceAddressPrefixes,\r\nsourceAddressPrefix=defaultNSG.properties.sourceAddressPrefix,direction=defaultNSG.properties.direction, access=defaultNSG.properties.access\r\n| project NSg=id,subscriptionId,source=iff(isempty(sourceAddressPrefix),sourceAddressPrefixes,sourceAddressPrefix),destination=iff(isempty( destinationAddressPrefix),destinationAddressPrefixes,destinationAddressPrefix)  ,direction,access\r\n| distinct tostring(source)",
+            "crossComponentResources": [
+              "value::all"
+            ],
+            "typeSettings": {
+              "additionalResourceOptions": [
+                "value::all"
+              ],
+              "selectAllValue": "*",
+              "showDefault": false
+            },
+            "timeContext": {
+              "durationMs": 86400000
+            },
+            "queryType": 1,
+            "resourceType": "microsoft.resourcegraph/resources",
+            "value": [
+              "value::all"
+            ]
+          },
+          {
+            "id": "c1bc392b-6b3a-4c19-ae3c-148c2c7b6840",
+            "version": "KqlParameterItem/1.0",
+            "name": "Destination",
+            "type": 2,
+            "multiSelect": true,
+            "quote": "'",
+            "delimiter": ",",
+            "query": "resources\r\n| where ['type'] ==\"microsoft.network/networksecuritygroups\"\r\n| where location in ({location})  and subscriptionId in ({Subscription:subid})\r\n| project id, name,subscriptionId, defaultNSG=properties.defaultSecurityRules,NSGlist=properties.securityRules\r\n| mv-expand (defaultNSG)\r\n| extend destinationAddressPrefixes=defaultNSG.properties.destinationAddressPrefixes, \r\ndestinationAddressPrefix=defaultNSG.properties.destinationAddressPrefix,\r\nsourceAddressPrefixes=defaultNSG.properties.sourceAddressPrefixes,\r\nsourceAddressPrefix=defaultNSG.properties.sourceAddressPrefix,direction=defaultNSG.properties.direction, access=defaultNSG.properties.access\r\n| project NSg=id,subscriptionId,source=iff(isempty(sourceAddressPrefix),sourceAddressPrefixes,sourceAddressPrefix),destination=iff(isempty( destinationAddressPrefix),destinationAddressPrefixes,destinationAddressPrefix)  ,direction,access\r\n| distinct tostring(destination)",
+            "crossComponentResources": [
+              "value::all"
+            ],
+            "typeSettings": {
+              "additionalResourceOptions": [
+                "value::all"
+              ],
+              "selectAllValue": "*",
+              "showDefault": false
+            },
+            "timeContext": {
+              "durationMs": 86400000
+            },
+            "queryType": 1,
+            "resourceType": "microsoft.resourcegraph/resources",
+            "value": [
+              "value::all"
+            ]
+          }
+        ],
+        "style": "pills",
+        "queryType": 1,
+        "resourceType": "microsoft.resourcegraph/resources"
+      },
+      "name": "parameters - 19"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "resources\r\n| where ['type'] ==\"microsoft.network/networksecuritygroups\"\r\n| where location in ({location})  and subscriptionId in ({Subscription:subid})\r\n| project id, name,subscriptionId, defaultNSG=properties.defaultSecurityRules,NSGlist=properties.securityRules\r\n| mv-expand (defaultNSG)\r\n| extend destinationAddressPrefixes=defaultNSG.properties.destinationAddressPrefixes, \r\ndestinationAddressPrefix=defaultNSG.properties.destinationAddressPrefix,\r\nsourceAddressPrefixes=defaultNSG.properties.sourceAddressPrefixes,\r\nsourceAddressPrefix=defaultNSG.properties.sourceAddressPrefix,direction=defaultNSG.properties.direction, access=defaultNSG.properties.access\r\n| project NSg=id,subscriptionId,source=iff(isempty(sourceAddressPrefix),sourceAddressPrefixes,sourceAddressPrefix),destination=iff(isempty( destinationAddressPrefix),destinationAddressPrefixes,destinationAddressPrefix)  ,direction,access\r\n| where access  in ({Action:value})\r\n| where direction in ({Direction:value})\r\n| where tostring(source)  in  ({Source:value})   or '*'   in  ({Source}) \r\n| where tostring(destination)  in  ({Destination:value})   or '*'   in  ({Destination}) ",
+        "size": 0,
+        "title": "All NSG Rules",
+        "showExportToExcel": true,
+        "queryType": 1,
+        "resourceType": "microsoft.resourcegraph/resources",
+        "crossComponentResources": [
+          "value::all"
+        ],
+        "gridSettings": {
+          "rowLimit": 500
+        }
+      },
+      "conditionalVisibility": {
+        "parameterName": "tab",
+        "comparison": "isEqualTo",
+        "value": "tab3"
+      },
+      "name": "query - 2 - Copy - Copy - Copy"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "resources\r\n| where ['type'] ==\"microsoft.network/networksecuritygroups\"\r\n| where location in ({location})  and subscriptionId in ({Subscription:subid})\r\n| project id, name,subscriptionId, defaultNSG=properties.defaultSecurityRules,NSGlist=properties.securityRules\r\n| mv-expand (NSGlist)\r\n| extend destinationAddressPrefix=tostring(NSGlist.properties.destinationAddressPrefix), sourceAddressPrefix=NSGlist.properties.sourceAddressPrefix,direction=NSGlist.properties.direction, access=NSGlist.properties.access,priority=NSGlist.properties.priority, Rulename =NSGlist.name \r\n| where direction ==\"Outbound\" and ['access'] ==\"Deny\"\r\n| extend rule= strcat(\"Source:\",sourceAddressPrefix,\"  Dest:\",destinationAddressPrefix, \" access:\" , ['access'])\r\n| extend check=case ( destinationAddressPrefix ==\"Internet\" and ['access'] ==\"Deny\",\"DenyInternetbyNSG\",\r\ndestinationAddressPrefix ==\"*\" and ['access'] ==\"Deny\", \"DenyAllOutboundRule\",\"\")\r\n|summarize CheckInternetDeny=make_set(check) by id, name ,subscriptionId\r\n| extend CheckInternetDeny=strcat_array(CheckInternetDeny,\"\")\r\n| where isnotempty( CheckInternetDeny)",
+        "size": 1,
+        "title": "NSGs with Internet Deny",
+        "queryType": 1,
+        "resourceType": "microsoft.resourcegraph/resources",
+        "crossComponentResources": [
+          "value::all"
+        ],
+        "gridSettings": {
+          "rowLimit": 500
+        }
+      },
+      "conditionalVisibility": {
+        "parameterName": "tab",
+        "comparison": "isEqualTo",
+        "value": "tab3"
+      },
+      "name": "query - 2 - Copy - Copy - Copy"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "resources\r\n| where ['type'] ==\"microsoft.network/virtualnetworks\"\r\n| where location in ({location})  and subscriptionId in ({Subscription:subid})\r\n| project id,name, resourceGroup,subscriptionId,location,addspace=properties.addressSpace.addressPrefixes,subnets=properties.subnets, ddos=properties.enableDdosProtection,peering=properties.virtualNetworkPeerings\r\n| summarize Count=count(id) by DDOS_Enabled=tostring(ddos)",
+        "size": 4,
+        "title": "DDOS Enabled VNETs",
+        "exportFieldName": "DDOS_Enabled",
+        "exportParameterName": "DDOS_Enabled",
+        "queryType": 1,
+        "resourceType": "microsoft.resourcegraph/resources",
+        "crossComponentResources": [
+          "value::all"
+        ],
+        "visualization": "piechart",
+        "chartSettings": {
+          "seriesLabelSettings": [
+            {
+              "seriesName": "true",
+              "color": "green"
+            },
+            {
+              "seriesName": "false",
+              "color": "orangeDark"
+            }
+          ]
+        }
+      },
+      "conditionalVisibility": {
+        "parameterName": "tab",
+        "comparison": "isEqualTo",
+        "value": "tab4"
+      },
+      "customWidth": "50",
+      "name": "query - 2 - Copy - Copy"
+    },
+    {
+      "type": 9,
+      "content": {
+        "version": "KqlParameterItem/1.0",
+        "parameters": [
+          {
+            "id": "e4448c21-16f4-4b93-907c-31128a7053d7",
+            "version": "KqlParameterItem/1.0",
+            "name": "DDOS_Enabled",
+            "type": 2,
+            "typeSettings": {
+              "additionalResourceOptions": [],
+              "showDefault": false
+            },
+            "jsonData": "[\r\n    { \"value\":true, \"label\":\"TRUE\", \"selected\": false },\r\n    { \"value\":false, \"label\":\"FALSE\", \"selected\": true }\r\n]",
+            "timeContext": {
+              "durationMs": 86400000
+            }
+          }
+        ],
+        "style": "above",
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces"
+      },
+      "conditionalVisibility": {
+        "parameterName": "tab",
+        "comparison": "isEqualTo",
+        "value": "tab4"
+      },
+      "customWidth": "50",
+      "name": "parameters - 14"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "resources\r\n| where ['type'] ==\"microsoft.network/virtualnetworks\"\r\n| where location in ({location})  and subscriptionId in ({Subscription:subid})\r\n| project id,name, resourceGroup,subscriptionId,location,addspace=properties.addressSpace.addressPrefixes,subnets=properties.subnets, ddos=properties.enableDdosProtection,peering=properties.virtualNetworkPeerings\r\n| where ddos == {DDOS_Enabled:label}\r\n| join kind=leftouter  (\r\nresourcecontainers\r\n| where type == \"microsoft.resources/subscriptions\"\r\n| project subscriptionId,SubName=name) on $left.subscriptionId==$right.subscriptionId\r\n| project SubName, id,name, resourceGroup,ddos,subscriptionId,location,addspace,subnets, peering",
+        "size": 0,
+        "title": "DDOS Enabled VNETs",
+        "showExportToExcel": true,
+        "queryType": 1,
+        "resourceType": "microsoft.resourcegraph/resources",
+        "crossComponentResources": [
+          "value::all"
+        ],
+        "visualization": "table",
+        "gridSettings": {
+          "sortBy": [
+            {
+              "itemKey": "SubName",
+              "sortOrder": 2
+            }
+          ]
+        },
+        "sortBy": [
+          {
+            "itemKey": "SubName",
+            "sortOrder": 2
+          }
+        ],
+        "chartSettings": {
+          "seriesLabelSettings": [
+            {
+              "seriesName": "true",
+              "color": "green"
+            },
+            {
+              "seriesName": "false",
+              "color": "orangeDark"
+            }
+          ]
+        }
+      },
+      "conditionalVisibility": {
+        "parameterName": "tab",
+        "comparison": "isEqualTo",
+        "value": "tab4"
+      },
+      "name": "query - 2 - Copy - Copy - Copy"
+    }
+  ],
+  "fallbackResourceIds": [
+    "Azure Monitor"
+  ],
+  "$schema": "https://github.com/Microsoft/Application-Insights-Workbooks/blob/master/schema/workbook.json"
+}
