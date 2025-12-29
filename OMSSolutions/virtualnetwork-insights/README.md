@@ -60,4 +60,3 @@ Egress tab visuzlizes the internet egress configuration across virtual networks 
 
 Once deployed workbook can be accessed under Azure Portal/Monitoring/Workbooks
 
-![alt text](images/wbimage6.PNG "Workbook")
