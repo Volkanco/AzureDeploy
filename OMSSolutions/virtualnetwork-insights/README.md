@@ -2,24 +2,23 @@
 
 [![Deploy to Azure](http://azuredeploy.net/deploybutton.png)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FVolkanco%2FAzureDeploy%2Fmaster%2FOMSSolutions%2Fvirtualnetwork-insights%2Fazuredeploy.json) 
 <a href="http://armviz.io/#/?load=https%3A%2F%2raw.githubusercontent.com%2FVolkanco%2FAzureDeploy%2Fmaster%2FOMSSolutions%2Fvirtualnetwork-insights%2Fazuredeploy.json" target="_blank">
-    <img src="http://armviz.io/visualizebutton.png"/>
 </a>
 
->[AZURE.NOTE]This is preliminary documentation for Azure Virtaul Netwotk Insights  Workbook which helps vizualizing the  Virtual Networks, UDRS, NSGs and related settings. 
+>[AZURE.NOTE]This is preliminary documentation for Azure Virtual Netwotk Insights  Workbook which helps vizualizing the  Virtual Networks, UDRS, NSGs and related settings. 
 
 
-Azure Virtual NEtwork Insights  Workbook  pulls information about 
+Azure Virtual Network Insights  Workbook  pulls information about 
 
 * Azure Virtual Netwotks and their DDOS protection setting
 * Subnets
-* User DEfines Routes
+* User Defines Routes
 * Network Secuirty Groups 
 * Internet Egress Configuration for each subnet
 
 
 ![alt text](images/wbimage1.PNG "Summary)
 
-Using these metrics  you can identfy the egress path of each subnet. You can check which subnets are sending internet to speicific firewall appliances and which ones has direc internet egress without firewall. 
+Using these views you can identfy the egress path of each subnet. You can check which subnets are sending internet to speicific firewall appliances and which ones has direc internet egress without firewall. 
 
 
 
@@ -31,53 +30,36 @@ You can filter subscriptions , log analytics workspaces, resurce groups and set 
 
 ## Pre-reqs
 
-- **Azure Monitor should be enabled for VMs**
-
-Data is pulled from log analtics workspace and  all azure VMs  needs to be configured to report to one or many workspaces. 
-VM Insights solution should be enabled to be able to provide Azure size history and size optimization recommendations.
+You need at least reader permission on the subscriptions where virtual networks are deployed. 
 
 
 ## Solution Views 
 
-![alt text](images/wbimage1.PNG "part1")
-![alt text](images/wbimage2.PNG "Part2")
+### DDOS 
 
-You can select a libe from 
-table and see the size history and storage profile for the selected VM ; 
-
-![alt text](images/wbimage7.PNG "Part2")
-
-![alt text](images/wbimage8.PNG "Part2")
-
-# Performance History of a VM 
-This view vizualize  performance metrics on   timecharts  for detailed analysis. Data behind all views can be exported to excel . 
+![alt text](images/ddos.png "DDOS")
 
 
-![alt text](images/wbimage9.PNG "Part2")
+DDOS tab displays DDOS protection coverage accross virtual networks. 
+
+### NSG
+
+![alt text](images/nsgview.png "NSG")
 
 
-# Size Optimization 
-Workbook compares the actual usage for CPU/Memory/Iops and compares them to the threshol set by customer  and decides if CPU/Memory/IOPs can be resized. If all 3 can be resized  if checks which VM sizes on Azure will be able to accomodate the load.  
+NSG tab displays all network secuirty rules  across all subnets. You can filter the view by source/destination/directian and action to identify the applicable rules for the given virtaul netwirks. 
 
-![alt text](images/wbimage3.PNG "Part3")
-![alt text](images/wbimage10.PNG "Part4")
+### Internet Eggress
 
-# Unused Disks
+![alt text](images/egress.png "EGRESS")
 
-This part displays all the managed disk which is not unattached or reserved by a deallocated VMs . These can be cleaned up or converted to VHD blobs to save cost.
 
-![alt text](images/wbimage4.PNG "Part5")
-
-# Unused Public IPs
-
-This part displays all public IP addresses that is not associcated  to a NIC.
-
-![alt text](images/wbimage11.PNG "Part6")
+Egress tab visuzlizes the internet egress configuration across virtual networks & subnets. By using this view you can identify which subnets has direct internet access and which ones are forced to any firewall appliance.
 
 ## Template Deployment
 
-[![Deploy to Azure](http://azuredeploy.net/deploybutton.png)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FVolkanco%2FAzureDeploy%2Fmaster%2FOMSSolutions%2Fvm-size-optimization%2Fazuredeploy.json) 
-<a href="http://armviz.io/#/?load=https%3A%2F%2raw.githubusercontent.com%2FVolkanco%2FAzureDeploy%2Fmaster%2FOMSSolutions%2Fvm-size-optimization%2Fazuredeploy.json" target="_blank">
+[![Deploy to Azure](http://azuredeploy.net/deploybutton.png)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FVolkanco%2FAzureDeploy%2Fmaster%2FOMSSolutions%2Fvirtualnetwork-insights%2Fazuredeploy.json) 
+<a href="http://armviz.io/#/?load=https%3A%2F%2raw.githubusercontent.com%2FVolkanco%2FAzureDeploy%2Fmaster%2FOMSSolutions%2Fvirtualnetwork-insights%2Fazuredeploy.json" target="_blank">
     <img src="http://armviz.io/visualizebutton.png"/>
 </a>
 
