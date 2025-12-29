@@ -16,7 +16,7 @@ Azure Virtual Network Insights  Workbook  pulls information about
 * Internet Egress Configuration for each subnet
 
 
-![alt text](images/summary.png "Summary)
+![alt text](images/dummary.png "DDOS")
 
 Using these views you can identfy the egress path of each subnet. You can check which subnets are sending internet to speicific firewall appliances and which ones has direc internet egress without firewall. 
 
