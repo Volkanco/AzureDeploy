@@ -1,4 +1,4 @@
-# Azure VM Size Optimization Wokbook
+# Azure Virtual Network Insights Workbook
 
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FVolkanco%2FAzureDeploy%2Fmaster%2FOMSSolutions%2Fvirtualnetwork-insights%2Fazuredeploy.json) 
 <a href="http://armviz.io/#/?load=https%3A%2F%2raw.githubusercontent.com%2FVolkanco%2FAzureDeploy%2Fmaster%2FOMSSolutions%2Fvirtualnetwork-insights%2Fazuredeploy.json" target="_blank">
