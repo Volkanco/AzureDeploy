@@ -63,6 +63,58 @@
       "name": "parameters - 1"
     },
     {
+      "type": 11,
+      "content": {
+        "version": "LinkItem/1.0",
+        "style": "tabs",
+        "links": [
+          {
+            "id": "0f5221cc-39cd-483e-a877-b31bbd28a728",
+            "cellValue": "tab",
+            "linkTarget": "parameter",
+            "linkLabel": "Summary",
+            "subTarget": "tab1",
+            "preText": "Summary",
+            "style": "link"
+          },
+          {
+            "id": "04f172ec-3cf8-4b8c-9040-3f83bb968d93",
+            "cellValue": "tab",
+            "linkTarget": "parameter",
+            "linkLabel": "Internet Egress ",
+            "subTarget": "tab6",
+            "style": "link"
+          },
+          {
+            "id": "8554e947-bf12-4a11-9e30-e279ccecc1cc",
+            "cellValue": "tab",
+            "linkTarget": "parameter",
+            "linkLabel": "NSG",
+            "subTarget": "tab3",
+            "preText": "NSG",
+            "style": "link"
+          },
+          {
+            "id": "c91fdf55-5015-41a7-970f-60aceee1705b",
+            "cellValue": "tab",
+            "linkTarget": "parameter",
+            "linkLabel": "DDOS",
+            "subTarget": "tab4",
+            "style": "link"
+          },
+          {
+            "id": "56e61b22-0d17-44d7-b887-3b404f46cc25",
+            "cellValue": "tab",
+            "linkTarget": "parameter",
+            "linkLabel": "Flow",
+            "subTarget": "tab5",
+            "style": "link"
+          }
+        ]
+      },
+      "name": "links - 9"
+    },
+    {
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
@@ -97,58 +149,18 @@
           }
         }
       },
-      "name": "query - 0"
-    },
-    {
-      "type": 11,
-      "content": {
-        "version": "LinkItem/1.0",
-        "style": "tabs",
-        "links": [
-          {
-            "id": "0f5221cc-39cd-483e-a877-b31bbd28a728",
-            "cellValue": "tab",
-            "linkTarget": "parameter",
-            "linkLabel": "Summary",
-            "subTarget": "tab1",
-            "preText": "Summary",
-            "style": "link"
-          },
-          {
-            "id": "bc02bae4-4415-4c10-b1df-61cdbfaed00a",
-            "cellValue": "tab",
-            "linkTarget": "parameter",
-            "linkLabel": "InternetEgress",
-            "subTarget": "tab2",
-            "preText": "InternetEgress",
-            "style": "link"
-          },
-          {
-            "id": "8554e947-bf12-4a11-9e30-e279ccecc1cc",
-            "cellValue": "tab",
-            "linkTarget": "parameter",
-            "linkLabel": "NSG",
-            "subTarget": "tab3",
-            "preText": "NSG",
-            "style": "link"
-          },
-          {
-            "id": "c91fdf55-5015-41a7-970f-60aceee1705b",
-            "cellValue": "tab",
-            "linkTarget": "parameter",
-            "linkLabel": "DDOS",
-            "subTarget": "tab4",
-            "style": "link"
-          }
-        ]
+      "conditionalVisibility": {
+        "parameterName": "tab",
+        "comparison": "isEqualTo",
+        "value": "tab1"
       },
-      "name": "links - 9"
+      "name": "query - 0"
     },
     {
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
-        "query": "\r\nresources\r\n| where ['type'] ==\"microsoft.network/virtualnetworks\"\r\n| where location in ({location})  and subscriptionId in ({Subscription:subid})\r\n| project id,name, resourceGroup,subscriptionId,addspace=properties.addressSpace.addressPrefixes,subnets=properties.subnets, ddos=properties.enableDdosProtection,peering=properties.virtualNetworkPeerings\r\n| mv-expand (subnets)\r\n| extend subnetcidr=subnets.properties.addressPrefix, UDRid=tostring(subnets.properties.routeTable.id),subnetname=subnets.name\r\n| join kind=leftouter \r\n(\r\nresources\r\n| where type == \"microsoft.network/routetables\"\r\n| extend routes=properties.routes,hasDefaultRoute=iff(properties.routes contains \"0.0.0.0/0\",true,false)\r\n| project id, name,subscriptionId, routes,hasDefaultRoute\r\n| mv-expand (routes)\r\n| extend  addressPrefix=routes.properties.addressPrefix, nextHopIpAddress=routes.properties.nextHopIpAddress,nextHopType=routes.properties.nextHopType\r\n| where hasDefaultRoute == true\r\n| extend CheckDefRoute=iff(addressPrefix startswith  \"0.0.0.0\" , strcat(addressPrefix,\" |\",nextHopType,\" |\",nextHopIpAddress),\"\")\r\n|summarize CheckDefRoute=make_set(CheckDefRoute) by id, name ,subscriptionId) on $left.UDRid==$right.id\r\n| project VNETName=name, subscriptionId,subnetname,subnetcidr,UDR=iff(isnotempty(name1),name1,\"No UDR Defined\"),CheckDefRoute= iff(isnotempty(name1),strcat_array(CheckDefRoute,''),\"DefaultAzureEgressNoUDR\")\r\n|summarize SubnetCount=count(subnetname) by CheckDefRoute\r\n| extend InternetEgress=case(CheckDefRoute ==\"0.0.0.0/0 |Internet |\",\"DirectEgresstoInternetviaUDR\",\r\nCheckDefRoute contains \"VirtualAppliance\" , \"Internet Sent to Firewall\",\r\nCheckDefRoute ==\"DefaultAzureEgressNoUDR\", \"Azure Default Internet \",\"Unkown\")\r\n| summarize SubnetCount=sum(SubnetCount) by InternetEgress",
+        "query": "resources\r\n| where type == \"microsoft.network/virtualnetworks\"\r\n| where location in ({location}) and subscriptionId in ({Subscription:subid})\r\n| mv-expand subnet = properties.subnets\r\n| extend subnetName = tostring(subnet.name)\r\n| extend subnetCidr = tostring(subnet.properties.addressPrefix)\r\n| extend defaultOutboundAccess = tostring(subnet.properties.defaultOutboundAccess)\r\n| extend natGatewayId = tostring(subnet.properties.natGateway.id)\r\n| extend routeTableId = tostring(subnet.properties.routeTable.id)\r\n| extend isPrivate = case(\r\n    defaultOutboundAccess =~ \"false\" or defaultOutboundAccess =~ \"Disabled\", true,\r\n    false\r\n  )\r\n| extend hasNatGateway = isnotempty(natGatewayId)\r\n| extend natGatewayName = iff(hasNatGateway, extract(@\"natGateways/(.+)$\", 1, natGatewayId), \"None\")\r\n| join kind=leftouter (\r\n    resources\r\n    | where type == \"microsoft.network/routetables\"\r\n    | mv-expand route = properties.routes\r\n    | where tostring(route.properties.addressPrefix) == \"0.0.0.0/0\"\r\n    | project routeTableId = id,\r\n        routeTableName = name,\r\n        nextHopType = tostring(route.properties.nextHopType),\r\n        nextHopIp = tostring(route.properties.nextHopIpAddress)\r\n) on routeTableId\r\n| extend hasInternetUDR = isnotempty(nextHopType)\r\n| extend internetRoute = case(\r\n    isnotempty(nextHopIp), strcat(nextHopType, \" -> \", nextHopIp),\r\n    isnotempty(nextHopType), nextHopType,\r\n    \"None\"\r\n  )\r\n| extend OutboundStatus = case(\r\n    isPrivate and hasNatGateway, \"✅ Private Subnet + NAT Gateway\",\r\n    isPrivate and hasInternetUDR and nextHopType == \"VirtualAppliance\", \"✅ Private Subnet + Firewall\",\r\n    isPrivate and hasInternetUDR and nextHopType == \"Internet\", \"⚠️ Private Subnet + Direct Internet UDR\",\r\n    isPrivate and not(hasNatGateway) and not(hasInternetUDR), \"🔒 Private Subnet - No Outbound Path\",\r\n    not(isPrivate) and hasNatGateway, \"NAT Gateway (Not Private)\",\r\n    not(isPrivate) and hasInternetUDR, \"UDR Egress (Not Private)\",\r\n    not(isPrivate), \"Default Azure Egress (Not Private)\",\r\n    \"Unknown\"\r\n  )\r\n| project VNetName = name, SubnetName = subnetName, SubnetCIDR = subnetCidr,\r\n    IsPrivate = isPrivate, NATGateway = natGatewayName,\r\n    InternetUDR = internetRoute, OutboundStatus,\r\n    subscriptionId\r\n| order by IsPrivate desc, OutboundStatus asc\r\n|summarize VNEts=count(VNetName), SubnetCount=count(SubnetName) by OutboundStatus",
         "size": 1,
         "title": "All Internet Routes",
         "exportFieldName": "InternetEgress",
@@ -298,29 +310,6 @@
       "name": "parameters - 17"
     },
     {
-      "type": 3,
-      "content": {
-        "version": "KqlItem/1.0",
-        "query": "\r\nresources\r\n| where ['type'] ==\"microsoft.network/virtualnetworks\"\r\n| where location in ({location})  and subscriptionId in ({Subscription:subid})\r\n| project id,name, resourceGroup,subscriptionId,addspace=properties.addressSpace.addressPrefixes,subnets=properties.subnets, ddos=properties.enableDdosProtection,peering=properties.virtualNetworkPeerings\r\n| mv-expand (subnets)\r\n| extend subnetcidr=subnets.properties.addressPrefix, UDRid=tostring(subnets.properties.routeTable.id),subnetname=subnets.name\r\n| join kind=leftouter \r\n(\r\nresources\r\n| where type == \"microsoft.network/routetables\"\r\n| extend routes=properties.routes,hasDefaultRoute=iff(properties.routes contains \"0.0.0.0/0\",true,false)\r\n| project id, name,subscriptionId, routes,hasDefaultRoute\r\n| mv-expand (routes)\r\n| extend  addressPrefix=routes.properties.addressPrefix, nextHopIpAddress=routes.properties.nextHopIpAddress,nextHopType=routes.properties.nextHopType\r\n| where hasDefaultRoute == true\r\n| extend CheckDefRoute=iff(addressPrefix startswith  \"0.0.0.0\" , strcat(addressPrefix,\" |\",nextHopType,\" |\",nextHopIpAddress),\"\")\r\n|summarize CheckDefRoute=make_set(CheckDefRoute) by id, name ,subscriptionId) on $left.UDRid==$right.id\r\n| project VNETName=name, subscriptionId,subnetname,subnetcidr,UDR=iff(isnotempty(name1),name1,\"No UDR Defined\"),CheckDefRoute= iff(isnotempty(name1),strcat_array(CheckDefRoute,''),\"DefaultAzureEgressNoUDR\")\r\n|summarize SubnetCount=count(subnetname) by CheckDefRoute\r\n| extend InternetEgress=case(CheckDefRoute ==\"0.0.0.0/0 |Internet |\",\"DirectEgresstoInternetviaUDR\",\r\nCheckDefRoute contains \"VirtualAppliance\" , \"Internet Sent to Firewall\",\r\nCheckDefRoute ==\"DefaultAzureEgressNoUDR\", \"Azure Default Internet \",\"Unkown\")\r\n| summarize SubnetCount=sum(SubnetCount) by InternetEgress\r\n| where InternetEgress in ({EgressType}) or '*' in ({EgressType})",
-        "size": 1,
-        "title": "All Internet Routes",
-        "exportFieldName": "InternetEgress",
-        "exportParameterName": "InternetEgress",
-        "queryType": 1,
-        "resourceType": "microsoft.resourcegraph/resources",
-        "crossComponentResources": [
-          "value::all"
-        ]
-      },
-      "conditionalVisibility": {
-        "parameterName": "tab",
-        "comparison": "isEqualTo",
-        "value": "tab2"
-      },
-      "customWidth": "50",
-      "name": "query - 2 - Copy - Copy"
-    },
-    {
       "type": 1,
       "content": {
         "json": ""
@@ -349,7 +338,7 @@
         "comparison": "isEqualTo",
         "value": "tab2"
       },
-      "name": "query - 2 - Copy - Copy"
+      "name": "query - 2 - Copy - Copy - Copy"
     },
     {
       "type": 3,
@@ -466,7 +455,6 @@
             ]
           },
           {
-            "id": "c1bc392b-6b3a-4c19-ae3c-148c2c7b6840",
             "version": "KqlParameterItem/1.0",
             "name": "Action",
             "type": 2,
@@ -484,10 +472,10 @@
             "value": [
               "Deny",
               "Allow"
-            ]
+            ],
+            "id": "4c3f2aae-75c3-4e5b-8586-7458867eeb98"
           },
           {
-            "id": "c1bc392b-6b3a-4c19-ae3c-148c2c7b6840",
             "version": "KqlParameterItem/1.0",
             "name": "Source",
             "type": 2,
@@ -512,10 +500,10 @@
             "resourceType": "microsoft.resourcegraph/resources",
             "value": [
               "value::all"
-            ]
+            ],
+            "id": "3f69c859-33ad-4cb8-b669-b27517ac1de7"
           },
           {
-            "id": "c1bc392b-6b3a-4c19-ae3c-148c2c7b6840",
             "version": "KqlParameterItem/1.0",
             "name": "Destination",
             "type": 2,
@@ -540,12 +528,18 @@
             "resourceType": "microsoft.resourcegraph/resources",
             "value": [
               "value::all"
-            ]
+            ],
+            "id": "30f8f260-4281-45db-af09-2ebbaa124b0e"
           }
         ],
         "style": "pills",
         "queryType": 1,
         "resourceType": "microsoft.resourcegraph/resources"
+      },
+      "conditionalVisibility": {
+        "parameterName": "tab",
+        "comparison": "isEqualTo",
+        "value": "tab3"
       },
       "name": "parameters - 19"
     },
@@ -711,6 +705,508 @@
         "value": "tab4"
       },
       "name": "query - 2 - Copy - Copy - Copy"
+    },
+    {
+      "type": 1,
+      "content": {
+        "json": "## 🌐 Network Topology\r\nThis view shows how your Azure Virtual Networks are connected via VNet Peering. \r\n- **Central Hub** (blue) = Main hub with highest peering count\r\n- **Company Hub** (teal) = Regional/company-specific hubs\r\n- **Spoke** (green) = Spoke VNets connected to hubs\r\n- **Isolated** (red) = VNets with no peering\r\n\r\nEdge labels show: `Fwd` = AllowForwardedTraffic, `GwTransit` = AllowGatewayTransit, `RemoteGw` = UseRemoteGateways"
+      },
+      "conditionalVisibility": {
+        "parameterName": "tab",
+        "comparison": "isEqualTo",
+        "value": "tab5"
+      },
+      "name": "text - topology-header"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "// Graph-ready output: one table containing BOTH node rows and edge rows.\r\n// Node rows: NodeId populated, SourceId/TargetId empty.\r\n// Edge rows: SourceId/TargetId populated, NodeId empty.\r\n//\r\n// NOTE: No `let` statements (ARG-compatible).\r\n//\r\n// Heuristic:\r\n// - hubScore based on: GatewaySubnet, AzureFirewallSubnet, allowGatewayTransit, peeringCount thresholds\r\n// - Edge type 1: GatewayTransit (best signal): Hub -> Spoke\r\n// - Edge type 2: Peering (fallback): HubCandidate -> Peer\r\n\r\n// =====================\r\n// NODES\r\n// =====================\r\nresources\r\n| where type == \"microsoft.network/virtualnetworks\"\r\n| where location in ({location}) and subscriptionId in ({Subscription:subid})\r\n| extend peeringCount = array_length(properties.virtualNetworkPeerings)\r\n| extend hasGatewaySubnet = tostring(properties.subnets) has \"\\\"name\\\":\\\"GatewaySubnet\\\"\"\r\n| extend hasAzureFirewallSubnet = tostring(properties.subnets) contains 'subnets/AzureFirewallSubnet'\r\n| extend offersGatewayTransit = tostring(properties.virtualNetworkPeerings) has \"\\\"allowGatewayTransit\\\":true\"\r\n| extend usesRemoteGateway = tostring(properties.virtualNetworkPeerings) has \"\\\"useRemoteGateways\\\":true\"\r\n| extend hubScore =\r\n    (iff(hasGatewaySubnet, 3, 0)) +\r\n    (iff(hasAzureFirewallSubnet, 3, 0)) +\r\n    (iff(offersGatewayTransit, 3, 0)) +\r\n    (iff(peeringCount >= 4, 2, iff(peeringCount >= 2, 1, 0)))\r\n| extend VNetRole = case(\r\n    hubScore >= 6, \"Hub-Strong\",\r\n    hubScore >= 4, \"Hub-Candidate\",\r\n    usesRemoteGateway, \"Spoke(RemoteGW)\",\r\n    peeringCount > 0, \"PeeredVNet\",\r\n    \"Isolated\"\r\n  )\r\n| project\r\n    // Graph fields\r\n    NodeId = id,\r\n    SourceId = \"\",\r\n    TargetId = \"\",\r\n    // Optional fields for node display\r\n    NodeName = strcat(name, \" | peerings=\", tostring(peeringCount), \" | score=\", tostring(hubScore)),\r\n    NodeGroup = VNetRole,\r\n    EdgeLabel = \"\"\r\n| union (\r\n// =====================\r\n// EDGES (1): GatewayTransit Hub -> Spoke\r\n// =====================\r\n    resources\r\n    | where type == \"microsoft.network/virtualnetworks\"\r\n    | where location in ({location}) and subscriptionId in ({Subscription:subid})\r\n    | mv-expand p = properties.virtualNetworkPeerings\r\n    | extend remoteVNetId = tostring(p.properties.remoteVirtualNetwork.id)\r\n    | extend useRemoteGw = tostring(p.properties.useRemoteGateways) == \"true\"\r\n    | where useRemoteGw\r\n    | project SpokeVNetId = id, HubVNetIdCandidate = remoteVNetId\r\n    | join kind=inner (\r\n        resources\r\n        | where type == \"microsoft.network/virtualnetworks\"\r\n        | where location in ({location}) and subscriptionId in ({Subscription:subid})\r\n        | mv-expand p2 = properties.virtualNetworkPeerings\r\n        | extend remoteVNetId2 = tostring(p2.properties.remoteVirtualNetwork.id)\r\n        | extend allowGwTransit = tostring(p2.properties.allowGatewayTransit) == \"true\"\r\n        | where allowGwTransit\r\n        | project HubVNetId = id, RemoteSpokeVNetId = remoteVNetId2\r\n    ) on $left.SpokeVNetId == $right.RemoteSpokeVNetId and $left.HubVNetIdCandidate == $right.HubVNetId\r\n    | project\r\n        NodeId = \"\",\r\n        SourceId = HubVNetId,\r\n        TargetId = SpokeVNetId,\r\n        NodeName = \"\",\r\n        NodeGroup = \"\",\r\n        EdgeLabel = \"GatewayTransit\"\r\n)\r\n| union (\r\n// =====================\r\n// EDGES (2): Fallback Peering edges from HubCandidates (score >=4)\r\n// (Useful when gateway transit flags aren't used everywhere)\r\n// =====================\r\n    resources\r\n    | where type == \"microsoft.network/virtualnetworks\"\r\n    | where location in ({location}) and subscriptionId in ({Subscription:subid})\r\n    | extend peeringCount = array_length(properties.virtualNetworkPeerings)\r\n    | extend hasGatewaySubnet = tostring(properties.subnets) has \"\\\"name\\\":\\\"GatewaySubnet\\\"\"\r\n    | extend hasAzureFirewallSubnet = tostring(properties.subnets)  contains 'subnets/AzureFirewallSubnet'\r\n    | extend offersGatewayTransit = tostring(properties.virtualNetworkPeerings) has \"\\\"allowGatewayTransit\\\":true\"\r\n    | extend hubScore =\r\n        (iff(hasGatewaySubnet, 3, 0)) +\r\n        (iff(hasAzureFirewallSubnet, 3, 0)) +\r\n        (iff(offersGatewayTransit, 3, 0)) +\r\n        (iff(peeringCount >= 4, 2, iff(peeringCount >= 2, 1, 0)))\r\n    | where hubScore >= 4\r\n    | mv-expand p = properties.virtualNetworkPeerings\r\n    | extend remoteVNetId = tostring(p.properties.remoteVirtualNetwork.id)\r\n    | project\r\n        NodeId = \"\",\r\n        SourceId = id,\r\n        TargetId = remoteVNetId,\r\n        NodeName = \"\",\r\n        NodeGroup = \"\",\r\n        EdgeLabel = \"Peering\"\r\n)",
+        "size": 2,
+        "title": "VNet Peering Topology - Hub & Spoke",
+        "queryType": 1,
+        "resourceType": "microsoft.resourcegraph/resources",
+        "crossComponentResources": [
+          "value::all"
+        ],
+        "visualization": "graph",
+        "graphSettings": {
+          "type": 0,
+          "topContent": {
+            "columnMatch": "NodeName",
+            "formatter": 1
+          },
+          "nodeIdField": "NodeId",
+          "sourceIdField": "SourceId",
+          "targetIdField": "TargetId",
+          "graphOrientation": 3,
+          "showOrientationToggles": false,
+          "edgeLabel": "EdgeLabel",
+          "nodeSize": null,
+          "staticNodeSize": 100,
+          "colorSettings": {
+            "nodeColorField": "NodeGroup",
+            "type": 3,
+            "thresholdsGrid": [
+              {
+                "operator": "==",
+                "thresholdValue": "CentralHub",
+                "representation": "blue"
+              },
+              {
+                "operator": "==",
+                "thresholdValue": "CompanyHub",
+                "representation": "teal"
+              },
+              {
+                "operator": "==",
+                "thresholdValue": "Spoke",
+                "representation": "green"
+              },
+              {
+                "operator": "==",
+                "thresholdValue": "Isolated",
+                "representation": "red"
+              }
+            ]
+          },
+          "hivesMargin": 5,
+          "edgeColorSettings": null
+        }
+      },
+      "conditionalVisibility": {
+        "parameterName": "tab",
+        "comparison": "isEqualTo",
+        "value": "tab5"
+      },
+      "name": "query - topology-graph"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "// Graph-ready output: one table containing BOTH node rows and edge rows.\r\n// Node rows: NodeId populated, SourceId/TargetId empty.\r\n// Edge rows: SourceId/TargetId populated, NodeId empty.\r\n//\r\n// NOTE: No `let` statements (ARG-compatible).\r\n//\r\n// Heuristic:\r\n// - hubScore based on: GatewaySubnet, AzureFirewallSubnet, allowGatewayTransit, peeringCount thresholds\r\n// - Edge type 1: GatewayTransit (best signal): Hub -> Spoke\r\n// - Edge type 2: Peering (fallback): HubCandidate -> Peer\r\n\r\n// =====================\r\n// NODES\r\n// =====================\r\nresources\r\n| where type == \"microsoft.network/virtualnetworks\"\r\n| where location in ({location}) and subscriptionId in ({Subscription:subid})\r\n| extend peeringCount = array_length(properties.virtualNetworkPeerings)\r\n| extend hasGatewaySubnet = tostring(properties.subnets) has \"\\\"name\\\":\\\"GatewaySubnet\\\"\"\r\n| extend hasAzureFirewallSubnet = tostring(properties.subnets) contains 'subnets/AzureFirewallSubnet'\r\n| extend offersGatewayTransit = tostring(properties.virtualNetworkPeerings) has \"\\\"allowGatewayTransit\\\":true\"\r\n| extend usesRemoteGateway = tostring(properties.virtualNetworkPeerings) has \"\\\"useRemoteGateways\\\":true\"\r\n| extend hubScore =\r\n    (iff(hasGatewaySubnet, 3, 0)) +\r\n    (iff(hasAzureFirewallSubnet, 3, 0)) +\r\n    (iff(offersGatewayTransit, 3, 0)) +\r\n    (iff(peeringCount >= 4, 2, iff(peeringCount >= 2, 1, 0)))\r\n| extend VNetRole = case(\r\n    hubScore >= 6, \"Hub-Strong\",\r\n    hubScore >= 4, \"Hub-Candidate\",\r\n    usesRemoteGateway, \"Spoke(RemoteGW)\",\r\n    peeringCount > 0, \"PeeredVNet\",\r\n    \"Isolated\"\r\n  )\r\n| project\r\n    // Graph fields\r\n    NodeId = id,\r\n    SourceId = \"\",\r\n    TargetId = \"\",\r\n    // Optional fields for node display\r\n    NodeName = strcat(name, \" | peerings=\", tostring(peeringCount), \" | score=\", tostring(hubScore)),\r\n    NodeGroup = VNetRole,\r\n    EdgeLabel = \"\"\r\n| union (\r\n// =====================\r\n// EDGES (1): GatewayTransit Hub -> Spoke\r\n// =====================\r\n    resources\r\n    | where type == \"microsoft.network/virtualnetworks\"\r\n    | where location in ({location}) and subscriptionId in ({Subscription:subid})\r\n    | mv-expand p = properties.virtualNetworkPeerings\r\n    | extend remoteVNetId = tostring(p.properties.remoteVirtualNetwork.id)\r\n    | extend useRemoteGw = tostring(p.properties.useRemoteGateways) == \"true\"\r\n    | where useRemoteGw\r\n    | project SpokeVNetId = id, HubVNetIdCandidate = remoteVNetId\r\n    | join kind=inner (\r\n        resources\r\n        | where type == \"microsoft.network/virtualnetworks\"\r\n        | where location in ({location}) and subscriptionId in ({Subscription:subid})\r\n        | mv-expand p2 = properties.virtualNetworkPeerings\r\n        | extend remoteVNetId2 = tostring(p2.properties.remoteVirtualNetwork.id)\r\n        | extend allowGwTransit = tostring(p2.properties.allowGatewayTransit) == \"true\"\r\n        | where allowGwTransit\r\n        | project HubVNetId = id, RemoteSpokeVNetId = remoteVNetId2\r\n    ) on $left.SpokeVNetId == $right.RemoteSpokeVNetId and $left.HubVNetIdCandidate == $right.HubVNetId\r\n    | project\r\n        NodeId = \"\",\r\n        SourceId = HubVNetId,\r\n        TargetId = SpokeVNetId,\r\n        NodeName = \"\",\r\n        NodeGroup = \"\",\r\n        EdgeLabel = \"GatewayTransit\"\r\n)\r\n| union (\r\n// =====================\r\n// EDGES (2): Fallback Peering edges from HubCandidates (score >=4)\r\n// (Useful when gateway transit flags aren't used everywhere)\r\n// =====================\r\n    resources\r\n    | where type == \"microsoft.network/virtualnetworks\"\r\n    | where location in ({location}) and subscriptionId in ({Subscription:subid})\r\n    | extend peeringCount = array_length(properties.virtualNetworkPeerings)\r\n    | extend hasGatewaySubnet = tostring(properties.subnets) has \"\\\"name\\\":\\\"GatewaySubnet\\\"\"\r\n    | extend hasAzureFirewallSubnet = tostring(properties.subnets) has \"\\\"name\\\":\\\"AzureFirewallSubnet\\\"\"\r\n    | extend offersGatewayTransit = tostring(properties.virtualNetworkPeerings) has \"\\\"allowGatewayTransit\\\":true\"\r\n    | extend hubScore =\r\n        (iff(hasGatewaySubnet, 3, 0)) +\r\n        (iff(hasAzureFirewallSubnet, 3, 0)) +\r\n        (iff(offersGatewayTransit, 3, 0)) +\r\n        (iff(peeringCount >= 4, 2, iff(peeringCount >= 2, 1, 0)))\r\n    | where hubScore >= 2\r\n    | mv-expand p = properties.virtualNetworkPeerings\r\n    | extend remoteVNetId = tostring(p.properties.remoteVirtualNetwork.id)\r\n    | project hasGatewaySubnet,hasAzureFirewallSubnet,\r\n        NodeId = \"\",\r\n        SourceId = id,\r\n        TargetId = remoteVNetId,\r\n        NodeName = \"\",\r\n        NodeGroup = \"\",\r\n        EdgeLabel = \"Peering\"\r\n)",
+        "size": 2,
+        "title": "VNet Peering Topology - Hub & Spoke",
+        "queryType": 1,
+        "resourceType": "microsoft.resourcegraph/resources",
+        "crossComponentResources": [
+          "value::all"
+        ],
+        "visualization": "table",
+        "graphSettings": {
+          "type": 0,
+          "topContent": {
+            "columnMatch": "NodeName",
+            "formatter": 1
+          },
+          "nodeIdField": "NodeId",
+          "sourceIdField": "SourceId",
+          "targetIdField": "TargetId",
+          "graphOrientation": 3,
+          "showOrientationToggles": false,
+          "edgeLabel": "EdgeLabel",
+          "nodeSize": null,
+          "staticNodeSize": 100,
+          "colorSettings": {
+            "nodeColorField": "NodeGroup",
+            "type": 3,
+            "thresholdsGrid": [
+              {
+                "operator": "==",
+                "thresholdValue": "CentralHub",
+                "representation": "blue"
+              },
+              {
+                "operator": "==",
+                "thresholdValue": "CompanyHub",
+                "representation": "teal"
+              },
+              {
+                "operator": "==",
+                "thresholdValue": "Spoke",
+                "representation": "green"
+              },
+              {
+                "operator": "==",
+                "thresholdValue": "Isolated",
+                "representation": "red"
+              }
+            ]
+          },
+          "hivesMargin": 5,
+          "edgeColorSettings": null
+        }
+      },
+      "conditionalVisibility": {
+        "parameterName": "tab",
+        "comparison": "isEqualTo",
+        "value": "tab5"
+      },
+      "name": "query - topology-graph - Copy"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "resources\r\n| where type == \"microsoft.network/virtualnetworks\"\r\n| where location in ({location}) and subscriptionId in ({Subscription:subid})\r\n| mv-expand peering = properties.virtualNetworkPeerings\r\n| extend peeringName = tostring(peering.name)\r\n| extend peeringState = tostring(peering.properties.peeringState)\r\n| extend remoteVNet = tostring(peering.properties.remoteVirtualNetwork.id)\r\n| extend remoteVNetName = extract(@\"virtualNetworks/(.+)$\", 1, remoteVNet)\r\n| extend allowForwarded = tostring(peering.properties.allowForwardedTraffic)\r\n| extend allowGateway = tostring(peering.properties.allowGatewayTransit)\r\n| extend useRemoteGw = tostring(peering.properties.useRemoteGateways)\r\n| extend allowVNetAccess = tostring(peering.properties.allowVirtualNetworkAccess)\r\n| project VNetName=name, PeeringName=peeringName, RemoteVNet=remoteVNetName, State=peeringState, AllowForwarded=allowForwarded, GatewayTransit=allowGateway, UseRemoteGateway=useRemoteGw, VNetAccess=allowVNetAccess, subscriptionId",
+        "size": 0,
+        "title": "VNet Peering Details",
+        "showExportToExcel": true,
+        "queryType": 1,
+        "resourceType": "microsoft.resourcegraph/resources",
+        "crossComponentResources": [
+          "value::all"
+        ],
+        "gridSettings": {
+          "rowLimit": 500
+        }
+      },
+      "conditionalVisibility": {
+        "parameterName": "tab",
+        "comparison": "isEqualTo",
+        "value": "tab5"
+      },
+      "name": "query - peering-details-table"
+    },
+    {
+      "type": 1,
+      "content": {
+        "json": "## 🔀 Internet Traffic Flow\r\nThis graph shows how internet-bound traffic (0.0.0.0/0) flows from each subnet. \r\n- **VNet** (purple) → **Subnet** (blue) → **Next Hop** (Firewall/Internet/Gateway)\r\n- Subnets without a UDR default route use Azure's default internet egress."
+      },
+      "conditionalVisibility": {
+        "parameterName": "tab",
+        "comparison": "isEqualTo",
+        "value": "tab5"
+      },
+      "name": "text - traffic-flow-header"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "// NODES: Egress targets (deduplicated)\r\nresources\r\n| where type == \"microsoft.network/virtualnetworks\"\r\n| where location in ({location}) and subscriptionId in ({Subscription:subid})\r\n| mv-expand subnet = properties.subnets\r\n| extend routeTableId = tostring(subnet.properties.routeTable.id)\r\n| join kind=leftouter (\r\n    resources\r\n    | where type == \"microsoft.network/routetables\"\r\n    | mv-expand route = properties.routes\r\n    | where tostring(route.properties.addressPrefix) == \"0.0.0.0/0\"\r\n    | project routeTableId = id,\r\n        nextHopType = tostring(route.properties.nextHopType),\r\n        nextHopIp = tostring(route.properties.nextHopIpAddress)\r\n) on routeTableId\r\n| extend subnetEgress = case(\r\n    isempty(routeTableId), \"AzureDefaultEgress\",\r\n    isempty(nextHopType), \"Private-NoDefaultRoute\",\r\n    nextHopType == \"VirtualAppliance\", strcat(\"Firewall-\", nextHopIp),\r\n    nextHopType == \"Internet\", \"DirectInternetEgress\",\r\n    nextHopType == \"VnetLocal\", \"Private-VNetLocal\",\r\n    nextHopType == \"VirtualNetworkGateway\", \"VPNGateway\",\r\n    nextHopType == \"None\", \"Private-RouteDrop\",\r\n    strcat(\"Other-\", nextHopType)\r\n  )\r\n| summarize SubnetCount = count(), EgressTypes = make_set(subnetEgress) by VNetId = id, VNetName = name, subscriptionId\r\n| mv-expand EgressType = EgressTypes\r\n| extend EgressType = tostring(EgressType)\r\n| extend EgressGroup = case(\r\n    EgressType contains \"Firewall\", \"Firewall\",\r\n    EgressType contains \"AzureDefault\", \"AzureDefaultEgress\",\r\n    EgressType contains \"DirectInternet\", \"DirectInternetEgress\",\r\n    EgressType contains \"Private\", \"Private\",\r\n    EgressType contains \"Gateway\", \"VPNGateway\",\r\n    \"Other\"\r\n  )\r\n| project NodeId = EgressType, NodeName = EgressType, NodeGroup = EgressGroup,\r\n    SourceId = \"\", TargetId = \"\", EdgeLabel = \"\"\r\n| distinct NodeId, NodeName, NodeGroup, SourceId, TargetId, EdgeLabel\r\n| union (\r\n    // NODES: VNets\r\n    resources\r\n    | where type == \"microsoft.network/virtualnetworks\"\r\n    | where location in ({location}) and subscriptionId in ({Subscription:subid})\r\n    | extend addressSpace = tostring(properties.addressSpace.addressPrefixes)\r\n    | extend subnetCount = array_length(properties.subnets)\r\n    | project NodeId = id,\r\n        NodeName = strcat(name, \" [\", addressSpace, \"]\"),\r\n        NodeGroup = \"VNet\",\r\n        SourceId = \"\", TargetId = \"\", EdgeLabel = \"\"\r\n)\r\n| union (\r\n    // EDGES: Egress Target -> VNet\r\n    resources\r\n    | where type == \"microsoft.network/virtualnetworks\"\r\n    | where location in ({location}) and subscriptionId in ({Subscription:subid})\r\n    | mv-expand subnet = properties.subnets\r\n    | extend routeTableId = tostring(subnet.properties.routeTable.id)\r\n    | join kind=leftouter (\r\n        resources\r\n        | where type == \"microsoft.network/routetables\"\r\n        | mv-expand route = properties.routes\r\n        | where tostring(route.properties.addressPrefix) == \"0.0.0.0/0\"\r\n        | project routeTableId = id,\r\n            nextHopType = tostring(route.properties.nextHopType),\r\n            nextHopIp = tostring(route.properties.nextHopIpAddress)\r\n    ) on routeTableId\r\n    | extend subnetEgress = case(\r\n        isempty(routeTableId), \"AzureDefaultEgress\",\r\n        isempty(nextHopType), \"Private-NoDefaultRoute\",\r\n        nextHopType == \"VirtualAppliance\", strcat(\"Firewall-\", nextHopIp),\r\n        nextHopType == \"Internet\", \"DirectInternetEgress\",\r\n        nextHopType == \"VnetLocal\", \"Private-VNetLocal\",\r\n        nextHopType == \"VirtualNetworkGateway\", \"VPNGateway\",\r\n        nextHopType == \"None\", \"Private-RouteDrop\",\r\n        strcat(\"Other-\", nextHopType)\r\n      )\r\n    | summarize SubnetsUsingThisEgress = count() by VNetId = id, VNetName = name, subnetEgress\r\n    | project NodeId = \"\", NodeName = \"\", NodeGroup = \"\",\r\n        SourceId = subnetEgress, TargetId = VNetId,\r\n        EdgeLabel = strcat(tostring(SubnetsUsingThisEgress), \" subnets\")\r\n)",
+        "size": 3,
+        "title": "Internet Traffic Flow - Subnet to Next Hop",
+        "queryType": 1,
+        "resourceType": "microsoft.resourcegraph/resources",
+        "crossComponentResources": [
+          "value::all"
+        ],
+        "visualization": "graph",
+        "graphSettings": {
+          "type": 0,
+          "topContent": {
+            "columnMatch": "NodeName",
+            "formatter": 1
+          },
+          "nodeIdField": "NodeId",
+          "sourceIdField": "SourceId",
+          "targetIdField": "TargetId",
+          "graphOrientation": 2,
+          "showOrientationToggles": false,
+          "edgeLabel": "EdgeLabel",
+          "nodeSize": null,
+          "staticNodeSize": 100,
+          "colorSettings": {
+            "nodeColorField": "NodeGroup",
+            "type": 3,
+            "thresholdsGrid": [
+              {
+                "operator": "==",
+                "thresholdValue": "VNet",
+                "representation": "purple"
+              },
+              {
+                "operator": "==",
+                "thresholdValue": "Subnet",
+                "representation": "blue"
+              },
+              {
+                "operator": "==",
+                "thresholdValue": "Firewall",
+                "representation": "orange"
+              },
+              {
+                "operator": "==",
+                "thresholdValue": "Internet",
+                "representation": "red"
+              },
+              {
+                "operator": "==",
+                "thresholdValue": "Gateway",
+                "representation": "green"
+              },
+              {
+                "operator": "==",
+                "thresholdValue": "Other",
+                "representation": "gray"
+              }
+            ]
+          },
+          "hivesMargin": 5,
+          "edgeColorSettings": null
+        }
+      },
+      "conditionalVisibility": {
+        "parameterName": "tab",
+        "comparison": "isEqualTo",
+        "value": "tab5"
+      },
+      "name": "query - traffic-flow-graph"
+    },
+    {
+      "type": 1,
+      "content": {
+        "json": "## 🔒 Internet Outbound Config for Subnets\r\nSubnets with `defaultOutboundAccess` set to **Disabled/False** are private — after March 31st 2026 all subnets will be created as `Private` by default.\r\n\r\nPrivate subnets needs a NAT Gateway, use a NVA or need dedicated public IP in VMs  to be able to reach internet. \r\n- ✅ **NAT Gateway** — Recommended for controlled outbound\r\n- ✅ **Firewall (UDR)** — 0.0.0.0/0 routed to Virtual Appliance\r\n- ⚠️ **Direct Internet UDR** — 0.0.0.0/0 routed to Internet (not recommended)\r\n- 🔒 **No Outbound Path** — Fully isolated, no internet access\r\n\r\nSubnets without the `defaultOutboundAccess` property set are using the legacy Azure default (implicit internet egress)."
+      },
+      "conditionalVisibility": {
+        "parameterName": "tab",
+        "comparison": "isEqualTo",
+        "value": "tab6"
+      },
+      "name": "text - private-subnet-header"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "resources\r\n| where type == \"microsoft.network/virtualnetworks\"\r\n| where location in ({location}) and subscriptionId in ({Subscription:subid})\r\n| mv-expand subnet = properties.subnets\r\n| extend defaultOutboundAccess = tostring(subnet.properties.defaultOutboundAccess)\r\n| extend isPrivate = case(\r\n    defaultOutboundAccess =~ \"false\" or defaultOutboundAccess =~ \"Disabled\", \"Private\",\r\n    defaultOutboundAccess =~ \"true\" or defaultOutboundAccess =~ \"Enabled\", \"Public(DefaultEgress)\",\r\n    \"NotSet(LegacyDefault)\"\r\n  )\r\n| summarize SubnetCount = count() by isPrivate",
+        "size": 4,
+        "title": "Subnet Privat/Public  Status",
+        "queryType": 1,
+        "resourceType": "microsoft.resourcegraph/resources",
+        "crossComponentResources": [
+          "value::all"
+        ],
+        "visualization": "piechart",
+        "chartSettings": {
+          "seriesLabelSettings": [
+            {
+              "seriesName": "Private",
+              "color": "blue"
+            },
+            {
+              "seriesName": "Public(DefaultEgress)",
+              "color": "orange"
+            },
+            {
+              "seriesName": "NotSet(LegacyDefault)",
+              "color": "gray"
+            }
+          ]
+        }
+      },
+      "conditionalVisibility": {
+        "parameterName": "tab",
+        "comparison": "isEqualTo",
+        "value": "tab6"
+      },
+      "customWidth": "33",
+      "name": "query - private-subnet-piechart"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "resources\r\n| where type == \"microsoft.network/virtualnetworks\"\r\n| where location in ({location}) and subscriptionId in ({Subscription:subid})\r\n| mv-expand subnet = properties.subnets\r\n| extend defaultOutboundAccess = tostring(subnet.properties.defaultOutboundAccess)\r\n| extend natGatewayId = tostring(subnet.properties.natGateway.id)\r\n| extend routeTableId = tostring(subnet.properties.routeTable.id)\r\n| extend isPrivate = defaultOutboundAccess =~ \"false\" or defaultOutboundAccess =~ \"Disabled\"\r\n| extend hasNatGateway = isnotempty(natGatewayId)\r\n| join kind=leftouter (\r\n    resources\r\n    | where type == \"microsoft.network/routetables\"\r\n    | mv-expand route = properties.routes\r\n    | where tostring(route.properties.addressPrefix) == \"0.0.0.0/0\"\r\n    | project routeTableId = id,\r\n        nextHopType = tostring(route.properties.nextHopType),\r\n        nextHopIp = tostring(route.properties.nextHopIpAddress)\r\n) on routeTableId\r\n| extend hasInternetUDR = isnotempty(nextHopType)\r\n| extend OutboundStatus = case(\r\n    isPrivate and hasNatGateway, \"Private+NATGateway\",\r\n    isPrivate and hasInternetUDR and nextHopType == \"VirtualAppliance\", \"Private+Firewall\",\r\n    isPrivate and hasInternetUDR and nextHopType == \"Internet\", \"Private+DirectInternetUDR\",\r\n    isPrivate and not(hasNatGateway) and not(hasInternetUDR), \"Private-NoOutbound\",\r\n    not(isPrivate), \"NotPrivate\",\r\n    \"Unknown\"\r\n  )\r\n| where isPrivate\r\n| summarize SubnetCount = count() by OutboundStatus",
+        "size": 4,
+        "title": "Private Subnet Outbound Paths",
+        "queryType": 1,
+        "resourceType": "microsoft.resourcegraph/resources",
+        "crossComponentResources": [
+          "value::all"
+        ],
+        "visualization": "piechart",
+        "chartSettings": {
+          "seriesLabelSettings": [
+            {
+              "seriesName": "Private+NATGateway",
+              "color": "green"
+            },
+            {
+              "seriesName": "Private+Firewall",
+              "color": "blue"
+            },
+            {
+              "seriesName": "Private+DirectInternetUDR",
+              "color": "orange"
+            },
+            {
+              "seriesName": "Private-NoOutbound",
+              "color": "redBright"
+            }
+          ]
+        }
+      },
+      "conditionalVisibility": {
+        "parameterName": "tab",
+        "comparison": "isEqualTo",
+        "value": "tab6"
+      },
+      "customWidth": "33",
+      "name": "query - private-outbound-piechart"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "resources\r\n| where type == \"microsoft.network/virtualnetworks\"\r\n| where location in ({location}) and subscriptionId in ({Subscription:subid})\r\n| mv-expand subnet = properties.subnets\r\n| extend defaultOutboundAccess = tostring(subnet.properties.defaultOutboundAccess)\r\n| extend isPrivate = defaultOutboundAccess =~ \"false\" or defaultOutboundAccess =~ \"Disabled\"\r\n| summarize TotalSubnets = count(), PrivateSubnets = countif(isPrivate), NonPrivateSubnets = countif(not(isPrivate)) by VNetName = name, subscriptionId\r\n| extend PrivatePercent = round(100.0 * PrivateSubnets / TotalSubnets, 1)\r\n| project VNetName, TotalSubnets, PrivateSubnets, NonPrivateSubnets, PrivatePercent, subscriptionId\r\n| order by PrivatePercent desc",
+        "size": 4,
+        "title": "Private Subnet Coverage by VNet",
+        "queryType": 1,
+        "resourceType": "microsoft.resourcegraph/resources",
+        "crossComponentResources": [
+          "value::all"
+        ],
+        "visualization": "tiles",
+        "tileSettings": {
+          "showBorder": false,
+          "titleContent": {
+            "columnMatch": "VNetName",
+            "formatter": 1
+          },
+          "leftContent": {
+            "columnMatch": "PrivatePercent",
+            "formatter": 12,
+            "formatOptions": {
+              "palette": "auto"
+            },
+            "numberFormat": {
+              "unit": 1,
+              "options": {
+                "maximumFractionDigits": 1
+              }
+            }
+          }
+        }
+      },
+      "conditionalVisibility": {
+        "parameterName": "tab",
+        "comparison": "isEqualTo",
+        "value": "tab6"
+      },
+      "customWidth": "33",
+      "name": "query - private-coverage-tiles"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "resources\r\n| where type == \"microsoft.network/virtualnetworks\"\r\n| where location in ({location}) and subscriptionId in ({Subscription:subid})\r\n| mv-expand subnet = properties.subnets\r\n| extend subnetName = tostring(subnet.name)\r\n| extend subnetCidr = tostring(subnet.properties.addressPrefix)\r\n| extend defaultOutboundAccess = tostring(subnet.properties.defaultOutboundAccess)\r\n| extend natGatewayId = tostring(subnet.properties.natGateway.id)\r\n| extend routeTableId = tostring(subnet.properties.routeTable.id)\r\n| extend isPrivate = case(\r\n    defaultOutboundAccess =~ \"false\" or defaultOutboundAccess =~ \"Disabled\", true,\r\n    false\r\n  )\r\n| extend hasNatGateway = isnotempty(natGatewayId)\r\n| extend natGatewayName = iff(hasNatGateway, extract(@\"natGateways/(.+)$\", 1, natGatewayId), \"None\")\r\n| join kind=leftouter (\r\n    resources\r\n    | where type == \"microsoft.network/routetables\"\r\n    | mv-expand route = properties.routes\r\n    | where tostring(route.properties.addressPrefix) == \"0.0.0.0/0\"\r\n    | project routeTableId = id,\r\n        routeTableName = name,\r\n        nextHopType = tostring(route.properties.nextHopType),\r\n        nextHopIp = tostring(route.properties.nextHopIpAddress)\r\n) on routeTableId\r\n| extend hasInternetUDR = isnotempty(nextHopType)\r\n| extend internetRoute = case(\r\n    isnotempty(nextHopIp), strcat(nextHopType, \" -> \", nextHopIp),\r\n    isnotempty(nextHopType), nextHopType,\r\n    \"None\"\r\n  )\r\n| extend OutboundStatus = case(\r\n    isPrivate and hasNatGateway, \"✅ Private + NAT Gateway\",\r\n    isPrivate and hasInternetUDR and nextHopType == \"VirtualAppliance\", \"✅ Private + Firewall\",\r\n    isPrivate and hasInternetUDR and nextHopType == \"Internet\", \"⚠️ Private + Direct Internet UDR\",\r\n    isPrivate and not(hasNatGateway) and not(hasInternetUDR), \"🔒 Private - No Outbound Path\",\r\n    not(isPrivate) and hasNatGateway, \"NAT Gateway (Not Private)\",\r\n    not(isPrivate) and hasInternetUDR, \"UDR Egress (Not Private)\",\r\n    not(isPrivate), \"Default Azure Egress (Not Private)\",\r\n    \"Unknown\"\r\n  )\r\n| project VNetName = name, SubnetName = subnetName, SubnetCIDR = subnetCidr,\r\n    IsPrivate = isPrivate, NATGateway = natGatewayName,\r\n    InternetUDR = internetRoute, OutboundStatus,\r\n    subscriptionId\r\n| order by IsPrivate desc, OutboundStatus asc",
+        "size": 0,
+        "title": "All Subnets - Private Status & Outbound Path Detail",
+        "showExportToExcel": true,
+        "queryType": 1,
+        "resourceType": "microsoft.resourcegraph/resources",
+        "crossComponentResources": [
+          "value::all"
+        ],
+        "gridSettings": {
+          "rowLimit": 1000,
+          "sortBy": [
+            {
+              "itemKey": "OutboundStatus",
+              "sortOrder": 2
+            }
+          ]
+        },
+        "sortBy": [
+          {
+            "itemKey": "OutboundStatus",
+            "sortOrder": 2
+          }
+        ]
+      },
+      "conditionalVisibility": {
+        "parameterName": "tab",
+        "comparison": "isEqualTo",
+        "value": "tab6"
+      },
+      "name": "query - private-subnet-detail-table"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "// NODES: Outbound categories with specific FW IP / NAT GW name\r\nresources\r\n| where type == \"microsoft.network/virtualnetworks\"\r\n| where location in ({location}) and subscriptionId in ({Subscription:subid})\r\n| mv-expand subnet = properties.subnets\r\n| extend defaultOutboundAccess = tostring(subnet.properties.defaultOutboundAccess)\r\n| extend natGatewayId = tostring(subnet.properties.natGateway.id)\r\n| extend routeTableId = tostring(subnet.properties.routeTable.id)\r\n| extend isPrivate = defaultOutboundAccess =~ \"false\" or defaultOutboundAccess =~ \"Disabled\"\r\n| extend hasNatGateway = isnotempty(natGatewayId)\r\n| extend natGwName = iff(hasNatGateway, extract(@\"natGateways/(.+)$\", 1, natGatewayId), \"\")\r\n| join kind=leftouter (\r\n    resources\r\n    | where type == \"microsoft.network/routetables\"\r\n    | mv-expand route = properties.routes\r\n    | where tostring(route.properties.addressPrefix) == \"0.0.0.0/0\"\r\n    | project routeTableId = id,\r\n        nextHopType = tostring(route.properties.nextHopType),\r\n        nextHopIp = tostring(route.properties.nextHopIpAddress)\r\n) on routeTableId\r\n| extend hasInternetUDR = isnotempty(nextHopType)\r\n| extend OutboundTarget = case(\r\n    isPrivate and hasNatGateway, strcat(\"NATGateway: \", natGwName),\r\n    isPrivate and hasInternetUDR and nextHopType == \"VirtualAppliance\", strcat(\"Firewall: \", nextHopIp),\r\n    isPrivate and hasInternetUDR and nextHopType == \"Internet\", \"DirectInternetUDR\",\r\n    isPrivate and not(hasNatGateway) and not(hasInternetUDR), \"NoOutboundPath\",\r\n    not(isPrivate), \"NotPrivate-DefaultEgress\",\r\n    \"Unknown\"\r\n  )\r\n| extend CategoryGroup = case(\r\n    OutboundTarget startswith \"NATGateway\", \"NATGateway\",\r\n    OutboundTarget startswith \"Firewall\", \"Firewall\",\r\n    OutboundTarget == \"DirectInternetUDR\", \"Warning\",\r\n    OutboundTarget == \"NoOutboundPath\", \"Locked\",\r\n    OutboundTarget startswith \"NotPrivate\", \"NotPrivate\",\r\n    \"Other\"\r\n  )\r\n// Now enrich NAT Gateway nodes with public IP\r\n| join kind=leftouter (\r\n    resources\r\n    | where type == \"microsoft.network/natgateways\"\r\n    | mv-expand pip = properties.publicIpAddresses\r\n    | extend pipId = tostring(pip.id)\r\n    | join kind=leftouter (\r\n        resources\r\n        | where type == \"microsoft.network/publicipaddresses\"\r\n        | project pipId = id, publicIp = tostring(properties.ipAddress)\r\n    ) on pipId\r\n    | project natGatewayId = id, natGwPublicIp = publicIp\r\n) on natGatewayId\r\n| extend NodeName = case(\r\n    OutboundTarget startswith \"NATGateway\" and isnotempty(natGwPublicIp),\r\n        strcat(OutboundTarget, \" (\", natGwPublicIp, \")\"),\r\n    OutboundTarget\r\n  )\r\n| distinct OutboundTarget, NodeName, CategoryGroup\r\n| project NodeId = OutboundTarget, NodeName, NodeGroup = CategoryGroup,\r\n    SourceId = \"\", TargetId = \"\", EdgeLabel = \"\"\r\n| union (\r\n    // NODES: VNets that have private subnets\r\n    resources\r\n    | where type == \"microsoft.network/virtualnetworks\"\r\n    | where location in ({location}) and subscriptionId in ({Subscription:subid})\r\n    | mv-expand subnet = properties.subnets\r\n    | extend defaultOutboundAccess = tostring(subnet.properties.defaultOutboundAccess)\r\n    | extend isPrivate = defaultOutboundAccess =~ \"false\" or defaultOutboundAccess =~ \"Disabled\"\r\n    | where isPrivate\r\n    | extend addressSpace = tostring(properties.addressSpace.addressPrefixes)\r\n    | project NodeId = id, NodeName = strcat(name, \" [\", addressSpace, \"]\"),\r\n        NodeGroup = \"PrivateVNet\",\r\n        SourceId = \"\", TargetId = \"\", EdgeLabel = \"\"\r\n    | distinct NodeId, NodeName, NodeGroup, SourceId, TargetId, EdgeLabel\r\n)\r\n| union (\r\n    // EDGES: OutboundTarget -> VNet with subnet count\r\n    resources\r\n    | where type == \"microsoft.network/virtualnetworks\"\r\n    | where location in ({location}) and subscriptionId in ({Subscription:subid})\r\n    | mv-expand subnet = properties.subnets\r\n    | extend defaultOutboundAccess = tostring(subnet.properties.defaultOutboundAccess)\r\n    | extend natGatewayId = tostring(subnet.properties.natGateway.id)\r\n    | extend routeTableId = tostring(subnet.properties.routeTable.id)\r\n    | extend isPrivate = defaultOutboundAccess =~ \"false\" or defaultOutboundAccess =~ \"Disabled\"\r\n    | extend hasNatGateway = isnotempty(natGatewayId)\r\n    | extend natGwName = iff(hasNatGateway, extract(@\"natGateways/(.+)$\", 1, natGatewayId), \"\")\r\n    | join kind=leftouter (\r\n        resources\r\n        | where type == \"microsoft.network/routetables\"\r\n        | mv-expand route = properties.routes\r\n        | where tostring(route.properties.addressPrefix) == \"0.0.0.0/0\"\r\n        | project routeTableId = id,\r\n            nextHopType = tostring(route.properties.nextHopType),\r\n            nextHopIp = tostring(route.properties.nextHopIpAddress)\r\n    ) on routeTableId\r\n    | extend hasInternetUDR = isnotempty(nextHopType)\r\n    | extend OutboundTarget = case(\r\n        isPrivate and hasNatGateway, strcat(\"NATGateway: \", natGwName),\r\n        isPrivate and hasInternetUDR and nextHopType == \"VirtualAppliance\", strcat(\"Firewall: \", nextHopIp),\r\n        isPrivate and hasInternetUDR and nextHopType == \"Internet\", \"DirectInternetUDR\",\r\n        isPrivate and not(hasNatGateway) and not(hasInternetUDR), \"NoOutboundPath\",\r\n        not(isPrivate), \"NotPrivate-DefaultEgress\",\r\n        \"Unknown\"\r\n      )\r\n    | summarize PrivateSubnets = count() by VNetId = id, OutboundTarget\r\n    | project NodeId = \"\", NodeName = \"\", NodeGroup = \"\",\r\n        SourceId = OutboundTarget, TargetId = VNetId,\r\n        EdgeLabel = strcat(tostring(PrivateSubnets), \" subnets\")\r\n)",
+        "size": 3,
+        "title": "Private Subnet Outbound Topology",
+        "queryType": 1,
+        "resourceType": "microsoft.resourcegraph/resources",
+        "crossComponentResources": [
+          "value::all"
+        ],
+        "visualization": "graph",
+        "graphSettings": {
+          "type": 0,
+          "topContent": {
+            "formatter": 1,
+            "numberFormat": {
+              "unit": 0,
+              "options": {
+                "style": "decimal"
+              }
+            }
+          },
+          "centerContent": {
+            "columnMatch": "NodeName"
+          },
+          "nodeIdField": "NodeId",
+          "sourceIdField": "SourceId",
+          "targetIdField": "TargetId",
+          "graphOrientation": 2,
+          "showOrientationToggles": false,
+          "edgeLabel": "EdgeLabel",
+          "nodeSize": null,
+          "staticNodeSize": 100,
+          "colorSettings": {
+            "nodeColorField": "NodeGroup",
+            "type": 3,
+            "thresholdsGrid": [
+              {
+                "operator": "==",
+                "thresholdValue": "NATGateway",
+                "representation": "green"
+              },
+              {
+                "operator": "==",
+                "thresholdValue": "Firewall",
+                "representation": "blue"
+              },
+              {
+                "operator": "==",
+                "thresholdValue": "Warning",
+                "representation": "orange"
+              },
+              {
+                "operator": "==",
+                "thresholdValue": "Locked",
+                "representation": "redBright"
+              },
+              {
+                "operator": "==",
+                "thresholdValue": "NotPrivate",
+                "representation": "gray"
+              },
+              {
+                "operator": "==",
+                "thresholdValue": "PrivateVNet",
+                "representation": "turquoise"
+              }
+            ]
+          },
+          "hivesMargin": 5,
+          "edgeColorSettings": null
+        }
+      },
+      "conditionalVisibility": {
+        "parameterName": "tab",
+        "comparison": "isEqualTo",
+        "value": "tab6"
+      },
+      "name": "query - private-subnet-graph"
     }
   ],
   "fallbackResourceIds": [
