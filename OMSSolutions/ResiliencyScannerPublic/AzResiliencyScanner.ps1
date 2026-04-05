@@ -128,117 +128,6 @@ Function Get-AzBAckupASR {
 
 }
 
-Function Get-AllRetirements {
-    param (
-        [string[]]$subscriptionId
-        #,[string]$query 
-    )
-
-
-    $query = "resources
-| extend ServiceID= case(
-type contains 'microsoft.compute/virtualmachine' and  (tostring(properties.hardwareProfile.vmSize) in~ ('basic_a0','basic_a1','basic_a2','basic_a3','basic_a4','standard_a0','standard_a1','standard_a2','standard_a3','standard_a4','standard_a5','standard_a6','standard_a7','standard_a9')  or tostring(sku.name) in~ ('basic_a0','basic_a1','basic_a2','basic_a3','basic_a4','standard_a0','standard_a1','standard_a2','standard_a3','standard_a4','standard_a5','standard_a6','standard_a7','standard_a9')),60
-,type == 'microsoft.web/hostingenvironments' and kind in ('ASEV1','ASEV2'),13
-,type == 'microsoft.compute/virtualmachines' and isempty(properties.storageProfile.osDisk.managedDisk),84
-,type == 'microsoft.dbforpostgresql/servers' ,86
-,type == 'microsoft.dbformysql/servers'  ,243
-,type == 'microsoft.network/loadbalancers' and sku.name=='Basic',94
-,type == 'microsoft.operationsmanagement/solutions' and plan.product=='OMSGallery/ServiceMap',213
-,type == 'microsoft.insights/components' and isempty(properties.WorkspaceResourceId) ,181
-,type == 'microsoft.classicstorage/storageaccounts',7
-,type == 'microsoft.classiccompute/domainnames', 38
-,type == 'microsoft.dbforpostgresql/servers' and properties.version == '11',225
-,type == 'microsoft.logic/integrationserviceenvironments',139
-,type == 'microsoft.classicnetwork/virtualnetworks',88
-,type == 'microsoft.network/applicationgateways' and properties.sku.tier in~ ('Standard','WAF'),298
-,type == 'microsoft.classicnetwork/reservedips',8802
-,type == 'microsoft.classicnetwork/networksecuritygroups',8801
-,type =~ 'Microsoft.CognitiveServices/accounts' and kind=~'QnAMaker',76
-,type contains 'microsoft.compute/virtualmachine' and  (tostring(properties.hardwareProfile.vmSize) in~ ('Standard_HB60rs','Standard_HB60-45rs','Standard_HB60-30rs','Standard_HB60-15rs')  or tostring(sku.name) in~ ('Standard_HB60rs','Standard_HB60-45rs','Standard_HB60-30rs','Standard_HB60-15rs')) ,62
-,type contains 'Microsoft.MachineLearning/',40
-,type =~ 'Microsoft.Network/publicIPAddresses' and sku.name=='Basic',220
-,type =~ 'Microsoft.CognitiveServices/accounts' and kind contains 'LUIS',160
-,type contains 'Microsoft.TimeSeriesInsights',31
-,type =~ 'microsoft.dbforpostgresql/servers' and properties.version == '11',249
-,type contains 'microsoft.media/mediaservices',394
-,type =~ 'microsoft.maps/accounts' and (sku has 'S1' or sku has 'S0'),465
-,type =~ 'microsoft.insights/webtests' and properties.Kind =~ 'ping',154
-,type =~ 'microsoft.healthcareapis/services',354
-,type =~ 'microsoft.healthcareapis' and properties.authenticationConfiguration.smartProxyEnabled =~ 'true',387
-,type contains 'Microsoft.DBforMariaDB',398
-,type =~ 'microsoft.cache/redis' and properties['minimumTlsVersion'] in ('1.1','1.0') ,403
-,type =~ 'microsoft.cognitiveservices/accounts' and kind == 'Personalizer', 408
-,type =~ 'microsoft.cognitiveservices/accounts' and kind == 'AnomalyDetector', 405
-,type =~ 'microsoft.cognitiveservices/accounts' and kind == 'MetricsAdvisor', 407
-,type =~ 'microsoft.cognitiveservices/accounts' and kind == 'ContentModerator', 561
-,type contains 'microsoft.compute/virtualmachine' and  (tostring(properties.hardwareProfile.vmSize) in~ ('Standard_M192is_v2')  or tostring(sku.name) in~ ('Standard_M192is_v2')) ,495
-,type contains 'microsoft.compute/virtualmachine' and  (tostring(properties.hardwareProfile.vmSize) in~ ('Standard_M192ims_v2')  or tostring(sku.name) in~ ('Standard_M192ims_v2')) ,496
-,type contains 'microsoft.compute/virtualmachine' and  (tostring(properties.hardwareProfile.vmSize) in~ ('Standard_M192ids_v2')  or tostring(sku.name) in~ ('Standard_M192ids_v2')) ,497
-,type contains 'microsoft.compute/virtualmachine' and  (tostring(properties.hardwareProfile.vmSize) in~ ('Standard_M192idms_v2')  or tostring(sku.name) in~ ('Standard_M192idms_v2')) ,498
-,type contains 'microsoft.storagecache/caches' ,500
-,type contains 'microsoft.compute/virtualmachine' and  (tostring(properties.hardwareProfile.vmSize) in~ ('Standard_NC6s_v3','Standard_NC12s_v3','Standard_NC24s_v3')  or tostring(sku.name) in~ ('Standard_NC6s_v3','Standard_NC12s_v3','Standard_NC24s_v3')) ,514
-,type contains 'microsoft.network/applicationgateways' and properties['sku']['tier'] in ('WAF_v2') and isnotnull(properties['webApplicationFirewallConfiguration']), 519
-,type contains 'microsoft.dashboard/grafana' and (properties.grafanaMajorVersion == 9),554
-,type contains 'HDInsight' and  (strcat(split(properties.clusterVersion,'.')[0],'.',split(properties.clusterVersion,'.')[1])) in ('4.0'), 562
-,type contains 'HDInsight' and  (strcat(split(properties.clusterVersion,'.')[0],'.',split(properties.clusterVersion,'.')[1])) in ('5.0'), 563
-,type contains 'microsoft.compute/virtualmachine' and  (tostring(properties.hardwareProfile.vmSize) in~ ('Standard_NC24rs_v3')  or tostring(sku.name) in~ ('Standard_NC24rs_v3')) ,582
-,type contains 'Microsoft.ApiManagement/service' and tolower(properties.platformVersion) != tolower('stv2') ,204
-,type contains 'microsoft.network/virtualnetworkgateways' and (tostring(properties.sku.name) in~ ('Standard')  or tostring(properties.sku.name) in~ ('HighPerformance') )
-and tostring(properties.gatewayType) contains ('Vpn'), 481
-,-9999)
-| where ServiceID >0
-| project ServiceID , id, resourceGroup, location
-|union
-(resources
-    | where type == 'microsoft.synapse/workspaces/bigdatapools' and todouble(properties.sparkVersion) == 3.2
-    | extend workspaceId = tostring(split(id,'/')[8])
-    | join (
-            Resources
-            | where type == 'microsoft.synapse/workspaces' and properties.adlaResourceId == ''
-            | project workspaceId = name
-                ) on workspaceId
-| project ServiceID = 583 , id, resourceGroup, location)
-|union 
-(
-    AdvisorResources
-    | where type =='microsoft.advisor/recommendations'
-    | where properties.shortDescription contains 'Cloud service caches are being retired'
-    | project id=tolower(tostring(properties.resourceMetadata.resourceId))
-    | join 
-    (
-        resources
-        | where type contains 'microsoft.cache/redis'
-        | project id=tolower(id), resourceGroup, location
-    ) on id
-    | project ServiceID=124 , id, resourceGroup, location 
-)
-"
-    
-    if ($subscriptionId) {
-        $result = Search-AzGraph -Query $query -First 1000 -Subscription $subscriptionId
-    
-    }else{
-        $result = Search-AzGraph -Query $query -First 1000 -UseTenantScope
-    }
-    
-    # Collection to store all resources
-    $allResources = @($result)
-    
-    # Loop to paginate through the results using the skip token
-    while ($result.SkipToken) {
-        # Retrieve the next set of results using the skip token
-        if ($subscriptionId) {
-            $result = Search-AzGraph -Query $query -SkipToken $result.SkipToken -First 1000 -Subscription $subscriptionId
-    
-        }else{
-            $result = Search-AzGraph -Query $query -SkipToken $result.SkipToken -First 1000 -UseTenantScope
-        }
-        # Add the results to the collection
-        $allResources += $result
-    }
-  
-    return  $allResources 
-}
   
 function parse-object {
     param ([string[]]$text)
@@ -467,13 +356,13 @@ $datecolumn = (Get-Date).ToString("yyyy-MM-dd")
 
 Write-Output "$dt - Scanning subscriptions!"
 
-$retirements = @()
+
 $mainReport = @()
 $lbreport = @()
 $pipreport = @()
 $zonemapping=@()
 $asrbackup = @()
-$RetirementsDownloadUri='https://raw.githubusercontent.com/Volkanco/AzureDeploy/refs/heads/master/ReliabilityAssessment/AzureRetirements.json'
+$sqlfgreport=@()
 $runlog=@()
 
 
@@ -571,8 +460,6 @@ foreach ($sub in $sublist | where { $_.state -eq 'Enabled' }) {
     
     if($($Allres.count) -gt 0){
     
-    $retirements += Get-AllRetirements -subscriptionId $sub.Id 
-    #add resource type
 
     $asrbackup_ = @()
     $asrbackup_ = Get-AzBAckupASR -subscriptionId $sub.Id
@@ -681,6 +568,19 @@ foreach ($sub in $sublist | where { $_.state -eq 'Enabled' }) {
     }
     
     }
+
+    ## Add sql Failover groups 
+    $server=$null
+     $servers = Get-AzSqlServer
+
+    foreach ($server in $servers) {
+        $groups = Get-AzSqlDatabaseFailoverGroup    -ResourceGroupName $server.ResourceGroupName             -ServerName $server.ServerName
+         $sqlfgreport+=$groups
+       
+    }
+
+
+
 
 
 
@@ -866,6 +766,28 @@ $asrbackup | ForEach-Object {
            
 }
 
+# Same add SQL Failover Groups Data 
+$sqlfgreport|ForEach-Object {
+    $b = $_
+    $t = $null
+    $t = $mainReport | where { $_.resourceid -match $b.servername  -and $_.resourceId -match  $b.resourcegroupname }
+    if ($t) {
+        $detail=$null
+        $detail= "$($b.PartnerLocation) - $($b.ReplicationState) - $($b.partnerservername)"
+        Add-Member -InputObject $t -Name ResiliencyDetail -Value   -MemberType Noteproperty -Force 
+        if($b.PartnerLocation -ne $b.location){
+            Add-Member -InputObject $t -Name GeoResiliency  -Value $b.PartnerLocation  -MemberType Noteproperty -Force 
+        }
+    }
+        
+               
+}
+
+
+
+
+
+
 
 $allProps = @('id', 'name', 'type','ReportDate', 'tenantId', 'kind', 'location', 'resourceGroup', 'subscriptionId', 'managedBy', 'sku', 'plan', 'tags', 'identity', 'zones', 'extendedLocation', 'vmId', 'asrId', 'ResourceId', 'Backup', 'replicationHealth', 'failoverHealth', 'protectionStateDescription', 'isReplicationAgentUpdateRequired', 'ProtectionType', 'currentProtectionState', 'protectedPrimaryRegion', 'sourceResourceId', 'lastBackupStatus', 'lastBackupTime', 'protectedItemType', 'backupManagementType', 'resourceName', 'primaryfabriclocation', 'recoveryfabriclocation', 'primaryfabricprovider', 'activelocation')
 
@@ -997,7 +919,7 @@ $processed = @()
 
 
     $filterProps =$Null
-    $filterProps = @('name', 'location','reportdate','resourceGroup', 'subscriptionId', 'subscription', 'ResourceId' , 'ResourceSubType', 'sku', 'kind', 'zones', 'ResiliencyConfig', 'ResiliencyDetail', 'PublicIP', 'PublicIPZones', 'backupdetails', 'lastbackup', 'ASRDetails', 'ASRConfig', 'skuname', 'skutier', 'customMaintenanceWindow', 'customer_comments','physicalzone','MasterFilter')
+    $filterProps = @('name', 'location','reportdate','resourceGroup', 'subscriptionId', 'subscription', 'ResourceId' , 'ResourceSubType', 'sku', 'kind', 'zones', 'ResiliencyConfig', 'ResiliencyDetail', 'GeoResiliency','PublicIP', 'PublicIPZones', 'backupdetails', 'lastbackup', 'ASRDetails', 'ASRConfig', 'skuname', 'skutier', 'customMaintenanceWindow', 'customer_comments','physicalzone','MasterFilter')
 
 
     ## Add physical locations to masterreport 
@@ -1105,54 +1027,6 @@ $processed = @()
 
 #Endforsub
 }
-
-
-#region Retirements
-
-Invoke-WebRequest -Uri $RetirementsDownloadUri -OutFile "$($folder.FullName)\Azureretirements.json"
-
-$retirementsMaster = Get-Content "$($folder.FullName)\Azureretirements.json" | ConvertFrom-Json 
-
-
-
-#convert all headers to lower case for powerbi 
-$file = Get-Content "$($folder.FullName)\MasterReport.csv"
-$firstline = $file[0]
-$firstlinelower = $firstline.ToLower()
-$tfile = $file | select -Skip 1 
-@($firstlinelower) + $tfile | Set-Content "$($folder.FullName)\MasterReport.csv"
-
-#finally merge retirements
-
-#replace $customerretirements with $retirements
-#$customerRetirements = Import-Csv "$($folder.FullName)\Retirements.csv"
-
-$Retirements | ForEach-Object {
-    $t = $_
-   
-    $r = $null
-    $r = $retirementsMaster | where { $_.id -eq $t.Serviceid }
-   
-    Add-Member -InputObject $_ -Name ServiceName -Value $r.ServiceName -MemberType Noteproperty -Force
-    Add-Member -InputObject $_ -Name RetiringFeature -Value $r.RetiringFeature -MemberType Noteproperty -Force
-    Add-Member -InputObject $_ -Name RetirementDate -Value $r.RetirementDate -MemberType Noteproperty -Force
-    Add-Member -InputObject $_ -Name Link -Value $r.Link -MemberType Noteproperty -Force
-    #add date column for report 
-    Add-Member -InputObject $_ -Name ReportDate -Value $datecolumn -MemberType Noteproperty -Force
-
-}
-
-
-
-If ( $retirements.count -eq 0) {
-
-    "ServiceID,id,resourceGroup,location,ResourceId,ServiceName,RetiringFeature,RetirementDate,Link,ReportDate" |  Out-File "$($folder.FullName)\CustomerAzRetirements.csv" -Force  
-}Else{
-    $retirements | Export-Csv "$($folder.FullName)\CustomerAzRetirements.csv" -NoTypeInformation -Force -Encoding utf8 
-}
-
-#endregion
-
 
 
 #compressfolder for easy downloading in case running from  cloud shell 
