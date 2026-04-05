@@ -774,10 +774,9 @@ $sqlfgreport|ForEach-Object {
     if ($t) {
         $detail=$null
         $detail= "$($b.PartnerLocation) - $($b.ReplicationState) - $($b.partnerservername)"
-        Add-Member -InputObject $t -Name ResiliencyDetail -Value $detail  -MemberType Noteproperty -Force 
+        Add-Member -InputObject $t -Name ResiliencyDetail -Value   -MemberType Noteproperty -Force 
         if($b.PartnerLocation -ne $b.location){
             Add-Member -InputObject $t -Name GeoResiliency  -Value $b.PartnerLocation  -MemberType Noteproperty -Force 
-            Add-Member -InputObject $t -Name ResiliencyDetail -Value 'GeoRedundant'  -MemberType Noteproperty -Force 
         }
     }
         
@@ -879,31 +878,9 @@ $processed = @()
     Write-Output "Rule engine complete — $($MasterReport.Count) resources processed"
 
 
-
-
-    # add sql Failover group detils 
-
-    # Same add SQL Failover Groups Data 
-$sqlfgreport|ForEach-Object {
-    $b = $_
-    $t = $null
-    $t = $MasterReport | where { $_.resourceid -match $b.servername  -and $_.resourceId -match  $b.resourcegroupname }
-    if ($t) {
-        $detail=$null
-        $detail= "$($b.PartnerLocation) - $($b.ReplicationState) - $($b.partnerservername)"
-        Add-Member -InputObject $t -Name ResiliencyDetail -Value $detail  -MemberType Noteproperty -Force 
-        if($b.PartnerLocation -ne $b.location){
-            Add-Member -InputObject $t -Name GeoResiliency  -Value $b.PartnerLocation  -MemberType Noteproperty -Force 
-            Add-Member -InputObject $t -Name ResiliencyDetail -Value 'GeoRedundant'  -MemberType Noteproperty -Force 
-        }
-    }
-        
-               
-}
-
     ##Filter out resources with no resiliency details 
 
-    $MasterReport=$MasterReport|where{ -not [string]::IsNullOrEmpty($_.ResiliencyConfig) }
+    $MasterReport=$MasterReport|where{-not [string]::IsNullOrEmpty($_.ResiliencyConfig)}
 
 #######
 #Check any other resource provider report s zones information
