@@ -150,7 +150,10 @@ function Invoke-ResiliencyRules {
         [Parameter(Mandatory)]
         [array]$BaseProps,
 
-        [array]$CustomerTags = @()
+        [array]$CustomerTags = @(),
+	[array]$sqlfgreport = @()
+
+
     )
 
     $MasterReport = @()
@@ -210,7 +213,7 @@ function Invoke-ResiliencyRules {
                 if ($rule.UseAllResources -eq $true) {
                     $result = & $rule.ResiliencyLogic $item $AllResources
                 } else {
-                    $result = & $rule.ResiliencyLogic $item
+                    $result = & $rule.ResiliencyLogic $item $AllResources $sqlfgreport
                 }
 
                 # Skip marker
@@ -345,9 +348,9 @@ else {
 }
 
 # Filter out non-production subscriptions
-$sublist = $sublist | Where-Object { $_.name -notlike '*DEV*' -and $_.name -notlike '*UAT*' -and $_.name -notlike '*POC*' }
+#$sublist = $sublist | Where-Object { $_.name -notlike '*DEV*' -and $_.name -notlike '*UAT*' -and $_.name -notlike '*POC*' }
 
-Write-Output "$(($sublist | Where-Object { $_.state -eq 'Enabled' }).count) subscriptions found (DEV/UAT/POC removed)"
+#Write-Output "$(($sublist | Where-Object { $_.state -eq 'Enabled' }).count) subscriptions found (DEV/UAT/POC removed)"
 
 $jobs = @()
 
@@ -772,12 +775,16 @@ $sqlfgreport|ForEach-Object {
     $t = $null
     $t = $mainReport | where { $_.resourceid -match $b.servername  -and $_.resourceId -match  $b.resourcegroupname }
     if ($t) {
+Write-output "SQL failover group found"
+$t
+
         $detail=$null
         $detail= "$($b.PartnerLocation) - $($b.ReplicationState) - $($b.partnerservername)"
+$detail
         Add-Member -InputObject $t -Name ResiliencyDetail -Value $detail  -MemberType Noteproperty -Force 
         if($b.PartnerLocation -ne $b.location){
             Add-Member -InputObject $t -Name GeoResiliency  -Value $b.PartnerLocation  -MemberType Noteproperty -Force 
-            Add-Member -InputObject $t -Name ResiliencyDetail -Value 'GeoRedundant'  -MemberType Noteproperty -Force 
+            Add-Member -InputObject $t -Name ResiliencyDetail  -Value 'GeoRedundant'  -MemberType Noteproperty -Force 
         }
     }
         
@@ -865,7 +872,7 @@ $processed = @()
         -AllResources $mainReport `
         -Rules $ResiliencyRules `
         -BaseProps $baseProps `
-        -CustomerTags $customerTags
+        -CustomerTags $customerTags -sqlfgreport $sqlfgreport
 
     $MasterReport = $engineResult.MasterReport
 
@@ -879,31 +886,9 @@ $processed = @()
     Write-Output "Rule engine complete — $($MasterReport.Count) resources processed"
 
 
-
-
-    # add sql Failover group detils 
-
-    # Same add SQL Failover Groups Data 
-$sqlfgreport|ForEach-Object {
-    $b = $_
-    $t = $null
-    $t = $MasterReport | where { $_.resourceid -match $b.servername  -and $_.resourceId -match  $b.resourcegroupname }
-    if ($t) {
-        $detail=$null
-        $detail= "$($b.PartnerLocation) - $($b.ReplicationState) - $($b.partnerservername)"
-        Add-Member -InputObject $t -Name ResiliencyDetail -Value $detail  -MemberType Noteproperty -Force 
-        if($b.PartnerLocation -ne $b.location){
-            Add-Member -InputObject $t -Name GeoResiliency  -Value $b.PartnerLocation  -MemberType Noteproperty -Force 
-            Add-Member -InputObject $t -Name ResiliencyDetail -Value 'GeoRedundant'  -MemberType Noteproperty -Force 
-        }
-    }
-        
-               
-}
-
     ##Filter out resources with no resiliency details 
 
-    $MasterReport=$MasterReport|where{ -not [string]::IsNullOrEmpty($_.ResiliencyConfig) }
+    $MasterReport=$MasterReport|where{-not [string]::IsNullOrEmpty($_.ResiliencyConfig)}
 
 #######
 #Check any other resource provider report s zones information
@@ -942,7 +927,7 @@ $sqlfgreport|ForEach-Object {
 
 
     $filterProps =$Null
-    $filterProps = @('name', 'location','reportdate','resourceGroup', 'subscriptionId', 'subscription', 'ResourceId' , 'ResourceSubType', 'sku', 'kind', 'zones', 'ResiliencyConfig', 'ResiliencyDetail', 'GeoResiliency','PublicIP', 'PublicIPZones', 'backupdetails', 'lastbackup', 'ASRDetails', 'ASRConfig', 'skuname', 'skutier', 'customMaintenanceWindow', 'customer_comments','physicalzone','MasterFilter')
+    $filterProps = @('name', 'location','reportdate','resourceGroup', 'subscriptionId', 'subscription', 'ResourceId' , 'ResourceSubType', 'sku', 'kind', 'zones', 'ResiliencyConfig', 'ResiliencyDetail','ZonalResiliency', 'GeoResiliency','ZR_Details','GR_Details','PublicIP', 'PublicIPZones', 'backupdetails', 'lastbackup', 'ASRDetails', 'ASRConfig', 'skuname', 'skutier', 'customMaintenanceWindow', 'customer_comments','physicalzone','MasterFilter')
 
 
     ## Add physical locations to masterreport 
@@ -1046,6 +1031,13 @@ $sqlfgreport|ForEach-Object {
 
 
     }
+
+
+
+
+#####################################################
+#######################################################
+######################################################
 
 
 #Endforsub

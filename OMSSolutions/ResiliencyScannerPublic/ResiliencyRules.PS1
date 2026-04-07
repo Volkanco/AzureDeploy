@@ -284,6 +284,36 @@ $ResiliencyRules = @(
         }
     }
 
+
+    # ──────────────────────────────────────────────
+    # SQL - Server
+    # ──────────────────────────────────────────────
+    @{
+        ResourceSubType  = 'Microsoft.Sql/servers'
+        MatchFilter      = { $_.Resourceid -notlike '*/databases/*'}
+
+        ResiliencyLogic  = {
+            param($item,$reslist,$sqlfgreport)
+					   
+		$splt=$item.ResourceId.split('/')
+		#check if its part of failover group
+		$fg=$null
+		$fg=$sqlfgreport |where{$_.ResourceGroupName -eq $splt[4] -and $_.servername -eq $splt[8] }
+            $config = if ($fg -and ($fg.location -ne $fg.PartnerLocation)) { 'GeoReplica' }elseif($fg) { 'SameRegionFG' }Else{'NoFailoverGroup'}
+            @{
+                ResiliencyConfig  = $config
+		ZonalResiliency="Notapplicable"
+		GeoResiliency=$config
+                ResourceSubType   = 'Microsoft.Sql/servers'
+                BackupDetails     = $item.properties.currentBackupStorageRedundancy
+                SecondaryLocation = $item.properties.defaultSecondaryLocation
+                PreferedAZ        = $item.properties.availabilityZone
+                GR_Detail  = "FailoverGroup: $($fg.PartnerLocation) , Server : $($fg.PartnerServerName), RepState=$($fg.ReplicationState)"
+            }
+        }
+    }
+
+
     # ──────────────────────────────────────────────
     # SQL - Databases
     # ──────────────────────────────────────────────
@@ -292,15 +322,22 @@ $ResiliencyRules = @(
         MatchFilter      = { $_.Resourceid -like '*/databases/*' -and $_.Resourceid -notlike '*/databases/master' }
         ExtraProperties  = @('requestedBackupStorageRedundancy', 'currentBackupStorageRedundancy', 'currentSku', 'defaultSecondaryLocation', 'zoneRedundant', 'availabilityZone', 'secondaryType')
         ResiliencyLogic  = {
-            param($item)
-            $config = if ($item.properties.zoneRedundant -eq $true) { 'ZoneRedundant' } else { 'NonZonal' }
+            param($item,$reslist,$sqlfgreport)
+		$splt=$item.ResourceId.split('/')
+		$fg=$null
+		$fg=$sqlfgreport |where{$_.ResourceGroupName -eq $splt[4] -and $_.servername -eq $splt[8] }
+            $zrconfig = if ($item.properties.zoneRedundant -eq $true) { 'ZoneRedundant' } else { 'NonZonal' }
+	    $grconfig = if ($fg -and ($fg.location -ne $fg.PartnerLocation)) { 'GeoReplica' }elseif($fg) { 'SameRegionFG' }Else{'NoFailoverGroup'}
             @{
-                ResiliencyConfig  = $config
+                ResiliencyConfig  = $zrconfig
+		ZonalResiliency=$zrconfig
+		GeoResiliency=$grconfig
                 ResourceSubType   = 'Microsoft.Sql/databases'
                 BackupDetails     = $item.properties.currentBackupStorageRedundancy
                 SecondaryLocation = $item.properties.defaultSecondaryLocation
                 PreferedAZ        = $item.properties.availabilityZone
-                ResiliencyDetail  = "ZoneRedundant:$($item.properties.zoneredundant), PreferedAZ: $($item.properties.availabilityzone)"
+                ZR_Detail  = "ZoneRedundant:$($item.properties.zoneredundant), PreferedAZ: $($item.properties.availabilityzone)"
+		GR_DEtail ="FailoverGroup: $($fg.PartnerLocation) , Server : $($fg.PartnerServerName), RepState=$($fg.ReplicationState)"
             }
         }
     }
@@ -313,18 +350,34 @@ $ResiliencyRules = @(
  	MatchFilter      = { $_.Resourceid -like '*/Microsoft.Sql/managedInstances*' -and $_.Resourceid -notlike '*/databases/*'}
         ExtraProperties  = @('maintenanceConfigurationId', 'zoneRedundant', 'requestedBackupStorageRedundancy')
         ResiliencyLogic  = {
-            param($item)
+           param($item,$reslist,$sqlfgreport)
             # Skip databases (sub-resources)
             if ($item.ResourceId -like '*/databases/*') {
               #  return @{ _skip = $true }
             }
 	
-            $config = if ($item.properties.zoneRedundant -eq $true) { 'ZoneRedundant' } else { 'NonZonal' }
+		$splt=$item.ResourceId.split('/')
+		$fg=$null
+		$fg=$sqlfgreport |where{$_.ResourceGroupName -eq $splt[4] -and $_.servername -eq $splt[8] }
+	 	   $grconfig = if ($fg -and ($fg.location -ne $fg.PartnerLocation)) { 'GeoReplica' }elseif($fg) { 'SameRegionFG' }Else{'NoFailoverGroup'}
+          	  $zrconfig = if ($item.properties.zoneRedundant -eq $true) { 'ZoneRedundant' } else { 'NonZonal' }
+
             @{
-                ResiliencyConfig = $config
+                ResiliencyConfig = $zrconfig
                 BackupDetails    = "Storage : $($item.properties.requestedBackupStorageRedundancy)"
                 Maintenance      = $item.properties.maintenanceConfigurationId
+		ZonalResiliency=$zrconfig
+		GeoResiliency=$grconfig
+                ResourceSubType   = 'Microsoft.Sql/managedInstances'
+                SecondaryLocation = $item.properties.defaultSecondaryLocation
+                PreferedAZ        = $item.properties.availabilityZone
+		GR_DEtail ="FailoverGroup: $($fg.PartnerLocation) , Server : $($fg.PartnerServerName), RepState=$($fg.ReplicationState)"
             }
+
+
+
+
+
         }
     }
 
@@ -359,21 +412,31 @@ $ResiliencyRules = @(
     # ──────────────────────────────────────────────
     @{
         ResourceSubType  = 'Microsoft.DocumentDb/databaseAccounts'
+   MatchFilter      = { $_.kind   -eq "GlobalDocumentDB"}
         ExtraProperties  = @('enableMultipleWriteLocations', 'enableAutomaticFailover', 'consistencyPolicy', 'locations', 'writeLocations')
+
+
         ResiliencyLogic  = {
             param($item)
-            $loc = $item.properties.locations
-            $locationNames = ($loc).locationname -join ", "
-            $zrCheck = ($loc | ForEach-Object { "$($_.locationName), ZoneRedundant: $($_.isZoneRedundant)" }) -join "; "
+		$pri= $item.properties.writeLocations.locationName
 
-            $config = if ($loc.count -gt 1) { 'MultiRegion' }
-                      elseif ($zrCheck -like '*false*') { 'LocallyRedundant' }
-                      else { 'ZoneRedundant' }
+        
+  		$loc = $item.properties.locations
+            $locationNames = ($loc).locationname -join ", "
+            $zrCheck = IF(($loc  | where{$_.locationName -eq $pri}).isZoneRedundant -eq $true){"ZoneRedundant"}else{"NonZonal"}
+
+            $grconfig = if ($loc.count -gt 1) { 'GeoReplica' }
+		$grdetails=($loc  | where{$_.locationName -ne $pri}).locationname -join ", "
+                   
 
             @{
-                ResiliencyConfig = $config
-                ResiliencyDetail = $zrCheck
+     
                 locations        = $locationNames
+                ResiliencyConfig  = $zrCheck
+                ResiliencyDetail = $zrCheck
+		ZonalResiliency=$zrCheck
+		GeoResiliency=$grconfig
+		GR_Details=$grdetails
             }
         }
     }
@@ -382,11 +445,41 @@ $ResiliencyRules = @(
         ResourceSubType  = 'Microsoft.DocumentDB/mongoclusters'
         ExtraProperties  = @('nodeGroupSpecs')
         ResiliencyLogic  = {
-            param($item)
-            $config = if ($item.properties.replica.role -eq 'GeoAyncReplica') { 'MultiRegion' }elseif(($item.properties.nodeGroupSpecs).enableHA -eq $true) { 'ZoneRedundant' } else { 'LocallyRedundant' }
-            @{ ResiliencyConfig = $config }
-        }
+             param($item,$reslist,$fglist)
+            $zrconfig = if ($item.properties.replica.role -eq 'GeoAyncReplica') { 'MultiRegion' }elseif(($item.properties.nodeGroupSpecs).enableHA -eq $true) { 'ZoneRedundant' } else { 'LocallyRedundant' }
+       
+
+
+			$list=$reslist|where {$_.ResourceSubType  -eq 'Microsoft.DocumentDB/mongoclusters'}
+			
+			$replica=($list| where{$_.properties.sourceServerResourceId -eq $item.resourceid})[0]
+			if($replica){
+			IF($replica.location -ne $item.location){$grconfig='GeoReplica'}
+			$grdetails="$($replica.location),  Srv:  $($replica.name) , ReplicaHA: $($replica.properties.replicationRole) with HA $($replica.properties.highAvailability.mode)"
+			}
+	
+
+
+
+            @{
+                ResiliencyConfig       = $zrconfig
+                ResiliencyDetail       = $item.properties.highAvailability
+		ZonalResiliency=$zrconfig
+		GeoResiliency=$grconfig
+		GR_Details=$grdetails
+                BackupDetails          = $backupDetail
+                customMaintenanceWindow = ($item.properties.maintenanceWindow).customWindow
+                backupRetentionDays    = ($item.properties.backup).backupRetentionDays
+                geoRedundantBackup     = $backupGeo
+                backupIntervalHours    = ($item.properties.backup).backupIntervalHours
+            }
+
+
+
+        
     }
+}
+
 
     # ──────────────────────────────────────────────
     # POSTGRESQL - Flexible Server
@@ -395,7 +488,7 @@ $ResiliencyRules = @(
         ResourceSubType  = 'Microsoft.DBforPostgreSQL/flexibleServers'
         ExtraProperties  = @('highAvailability', 'replicationRole', 'HAState', 'HAMode', 'maintenanceWindow', 'backup', 'backupredundancy')
         ResiliencyLogic  = {
-            param($item)
+              param($item,$reslist,$fglist)
             $haMode = if ($item.properties.highAvailability.mode) { $item.properties.highAvailability.mode } else { $item.properties.HAMode }
 
             $config = switch ($haMode) {
@@ -412,9 +505,23 @@ $ResiliencyRules = @(
                 default    { $null }
             }
 
+			$list=$reslist|where {$_.ResourceSubType  -eq 'Microsoft.DBforPostgreSQL/flexibleServers'}
+			
+			$replica=($list| where{$_.properties.sourceServerResourceId -eq $item.resourceid})[0]
+			if($replica){
+			IF($replica.location -ne $item.location){$grconfig='GeoReplica'}
+			$grdetails="$($replica.location),  Srv:  $($replica.name) , ReplicaHA: $($replica.properties.replicationRole) with HA $($replica.properties.highAvailability.mode)"
+			}
+	
+
+
+
             @{
                 ResiliencyConfig       = $config
                 ResiliencyDetail       = $item.properties.highAvailability
+		ZonalResiliency=$config
+		GeoResiliency=$grconfig
+		GR_Details=$grdetails
                 BackupDetails          = $backupDetail
                 customMaintenanceWindow = ($item.properties.maintenanceWindow).customWindow
                 backupRetentionDays    = ($item.properties.backup).backupRetentionDays
@@ -447,7 +554,7 @@ $ResiliencyRules = @(
         ResourceSubType  = 'Microsoft.DBforMySQL/flexibleServers'
         ExtraProperties  = @('highAvailability', 'replicationRole', 'sourceserverresourceid', 'HAState', 'HAMode', 'maintenanceWindow', 'backup')
         ResiliencyLogic  = {
-            param($item)
+            param($item,$reslist,$fglist)
             $haMode = if ($item.properties.highAvailability.mode) { $item.properties.highAvailability.mode } else { $item.properties.HAMode }
 
             $config = switch ($haMode) {
@@ -457,16 +564,28 @@ $ResiliencyRules = @(
                 default                     { 'NonZonal' }
             }
 
-            $backupGeo = ($item.properties.backup).geoRedundantBackup
-            $backupDetail = switch ($backupGeo) {
-                'Enabled'  { 'GeoRedundant' }
-                'Disabled' { 'LocallyRedundant' }
-                default    { $null }
-            }
+		#If($Item.properties.replicationRole -eq 'Source')
+		#{
+			$list=$reslist|where {$_.ResourceSubType  -eq 'Microsoft.DBforMySQL/flexibleServers'}
+			$replica=($list| where{$_.properties.sourceServerResourceId -eq $item.resourceid})[0]
+			if($replica)
+			{
+			#$replica|out-file replicalist.txt -append
+			IF($replica.location -ne $item.location){$grconfig='GeoReplica'}
+			$grdetails="$($replica.location) , Srv:  $($replica.name) , ReplicaHA: $($replica.properties.highAvailability.mode)"
+			}
+
+		#}		
+
+		
+	
 
             @{
                 ResiliencyConfig        = $config
                 ResiliencyDetail        = $item.properties.highAvailability
+		ZonalResiliency=$config
+		GeoResiliency=$grconfig
+		GR_Details=$grdetails
                 BackupDetails           = $backupDetail
                 customMaintenanceWindow = ($item.properties.maintenanceWindow).customWindow
                 backupRetentionDays     = ($item.properties.backup).backupRetentionDays
