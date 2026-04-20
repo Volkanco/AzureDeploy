@@ -206,6 +206,8 @@ function Invoke-ResiliencyRules {
             if ($rule.DefaultResiliency) {
                 # Static assignment
                 Add-Member -InputObject $item -Name ResiliencyConfig -Value $rule.DefaultResiliency -MemberType NoteProperty -Force
+                Add-Member -InputObject $item -Name ZonalResiliency -Value $rule.DefaultResiliency -MemberType NoteProperty -Force
+
             }
             elseif ($rule.ResiliencyLogic) {
                 # Dynamic evaluation
@@ -372,32 +374,42 @@ $runlog=@()
 
 $error.Clear()
 
+If($localexport){
+    If(Get-Item -Path  'ResiliencyReport' -ErrorAction SilentlyContinue)
+    {
+        $folder=Get-Item -Path  'ResiliencyReport'
+        
+        #Clean up any files from previous runs
+        Get-ChildItem -Path $folder.FullName |   Remove-Item -Force
 
-If(Get-Item -Path  $(get-date).ToString('yyyyMMdd') -ErrorAction SilentlyContinue)
-{
-    $folder=Get-Item -Path  $(get-date).ToString('yyyyMMdd')
-    
-    #Clean up any files from previous runs
-    Get-ChildItem -Path $folder.FullName |   Remove-Item -Force
+
+    }else{
+        $folder=new-item  -name 'ResiliencyReport'   -ItemType Directory
+    }
 
 
-}else{
-    $folder=new-item  -name $(get-date).ToString('yyyyMMdd')   -ItemType Directory
+}Else{
+    If(Get-Item -Path  $(get-date).ToString('yyyyMMdd') -ErrorAction SilentlyContinue)
+    {
+        $folder=Get-Item -Path  $(get-date).ToString('yyyyMMdd')
+        
+        #Clean up any files from previous runs
+        Get-ChildItem -Path $folder.FullName |   Remove-Item -Force
+
+
+    }else{
+        $folder=new-item  -name $(get-date).ToString('yyyyMMdd')   -ItemType Directory
+    }
 }
-
 
 Write-Output "$(($sublist | where { $_.state -eq 'Enabled'}).count) subsctions found"
 
 #### ADD Trim to all tags 
 #remove nonprod subscriptios
 
-$sublist=$sublist| where {$_.name -notlike  '*DEV*' -and $_.name -notlike '*UAT*' -and $_.name -notlike '*POC*'}
+#$sublist=$sublist| where {$_.name -notlike  '*DEV*' -and $_.name -notlike '*UAT*' -and $_.name -notlike '*POC*'}
 $scount=($sublist | where { $_.state -eq 'Enabled'}).count
 $sc=1
-
-
-Write-Output "$(($sublist | where { $_.state -eq 'Enabled'}).count) subsctions found (DEV/UAT/POC Removed)"
-
 
 
 
@@ -664,11 +676,22 @@ foreach ($sub in $sublist | where { $_.state -eq 'Enabled' }) {
                 }
             }
 
+            #update app public ips in regions with  AZ are nor ZR unless deployed to a specific zone 
+
+            $iploc=($zonemapping|where {$_.location  -eq $obj.location}).availabilityzone
+            
+
+            If($iploc -eq 1){
+
             $HA = $null
             if ($($obj.zones -join " ").Length -eq 0) { $HA = "Non-Zonal" }
             if ($($obj.zones -join " ").Length -eq 1) { $HA = "Zonal" }
             if ($($obj.zones -join " ").Length -eq 2) { $HA = "ZoneRedundant" }
 
+            }elseif($iploc -eq 3) {
+ 
+                   if ($($obj.zones -join " ").Length -eq 1) { $HA = "Zonal" }else{ $HA = "ZoneRedundant" }
+            }
             $cu = New-Object PSObject -Property @{ 
                 name         = $obj.name -join ','
                 reportdate   = $datecolumn  -join ','
@@ -890,7 +913,9 @@ $processed = @()
 
     $MasterReport=$MasterReport|where{-not [string]::IsNullOrEmpty($_.ResiliencyConfig)}
 
-#######
+#########################
+# POST PROCESSING RULES##
+#########################
 #Check any other resource provider report s zones information
 
 
@@ -920,6 +945,10 @@ $processed = @()
             If ($t) {
                 Add-Member -InputObject $t -Name ASRDetails -Value "Enabled- RepHealth: ($b.replicationHealth)" -MemberType Noteproperty -Force 
                 Add-Member -InputObject $t -Name ASRConfig -Value "$($_.primaryFabricLocation)-to-$($_.recoveryFabricLocation)" -MemberType Noteproperty -Force 
+                If($_.primaryFabricLocation   -ne $_.recoveryFabricLocation){
+                    Add-Member -InputObject $t -Name GeoReplication -Value "ASR Replica" -MemberType Noteproperty -Force 
+                    Add-Member -InputObject $t -Name GR_Details -Value $($_.recoveryFabricLocation) -MemberType Noteproperty -Force                
+                }
             }  
         }
     }
@@ -927,9 +956,9 @@ $processed = @()
 
 
     $filterProps =$Null
-    $filterProps = @('name', 'location','reportdate','resourceGroup', 'subscriptionId', 'subscription', 'ResourceId' , 'ResourceSubType', 'sku', 'kind', 'zones', 'ResiliencyConfig', 'ResiliencyDetail','ZonalResiliency', 'GeoResiliency','ZR_Details','GR_Details','PublicIP', 'PublicIPZones', 'backupdetails', 'lastbackup', 'ASRDetails', 'ASRConfig', 'skuname', 'skutier', 'customMaintenanceWindow', 'customer_comments','physicalzone','MasterFilter')
+    $filterProps = @('name', 'location','reportdate','resourceGroup', 'subscriptionId', 'subscription', 'ResourceId' , 'ResourceSubType', 'sku', 'kind', 'zones', 'ResiliencyConfig', 'ResiliencyDetail','PublicIP', 'PublicIPZones', 'backupdetails', 'lastbackup', 'ASRDetails', 'ASRConfig', 'skuname', 'skutier', 'customMaintenanceWindow', 'customer_comments','physicalzone')
 
-
+    $filterPropsExt=@('name', 'location','resourceGroup', 'subscriptionId', 'subscription', 'ResourceId' , 'ResourceSubType','ZonalResiliency', 'GeoResiliency','ZR_Details','GR_Details')
     ## Add physical locations to masterreport 
 
     $MasterReport|foreach{
@@ -981,24 +1010,7 @@ $processed = @()
 
         }
 
-        $customerTags|Foreach{
-		    $t1=$_
-		    if ($null -eq ($t.psobject.properties|where {$_.name -eq $t1}).value) {
-			    $t.${t1}="N/A"
-		    }
-
-            $f=$null
-            $f="$($t.Subscription), $($t.resourceGroup)"
-
-            $customerTags|Foreach{
-            $t2=$_
-                $f+=", $($t.${t2})"
-            }
-
-            Add-Member -InputObject $t -Name MasterFilter -Value $f -MemberType Noteproperty -Force 
-	
-	    }
-
+ 
 
     }
 
@@ -1014,21 +1026,31 @@ $processed = @()
 
     $MasterReport|Group-Object -Property Subscription
 
-    if( $Masterreport){
+    # Build tag_ prefixed calculated properties
+        $tagProps = $customerTags | ForEach-Object {
+        $tag = $_
+        @{
+            Name       = "tag_$tag"
+            Expression = { $_.$tag }.GetNewClosure()
+        }
+        }
 
-        $Masterreport | Select-Object -Property $($filterProps + $customerTags) |     Export-Csv "$($folder.FullName)\MasterReport.csv" -NoTypeInformation -Encoding utf8  -Append 
+
+    if( $Masterreport){
+     
+        $Masterreport | Select-Object -Property $($filterProps + $tagProps) | Export-Csv "$($folder.FullName)\MasterReport.csv" -NoTypeInformation -Encoding utf8 -Append
+        $Masterreport | Select-Object -Property $($filterPropsExt + $tagProps) |   Export-Csv "$($folder.FullName)\ResiliencyReport.csv" -NoTypeInformation -Encoding utf8  -Append 
+       #$Masterreport | Select-Object -Property $($filterProps + $customerTags) |     Export-Csv "$($folder.FullName)\MasterReport.csv" -NoTypeInformation -Encoding utf8  -Append 
+        #$Masterreport | Select-Object -Property $($filterPropsExt + $customerTags) |     Export-Csv "$($folder.FullName)\ResiliencyReport.csv" -NoTypeInformation -Encoding utf8  -Append 
+
+
     }elseif(-not (test-path  -Path "$($folder.FullName)\MasterReport.csv") ){
     ($($filterProps + $customerTags) -join ',') | Out-File "$($folder.FullName)\MasterReport.csv"  -Encoding utf8 -Force
+    ($($filterPropsExt + $customerTags) -join ',') | Out-File "$($folder.FullName)\ResiliencyReport.csv"  -Encoding utf8 -Force
     }
 
 		remove-variable MasterReport -force -ErrorAction SilentlyContinue
-		
-	
 	}
-	
-	
-
-
 
     }
 
